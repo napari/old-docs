@@ -1,0 +1,480 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.layers.volume.volume &mdash; napari  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../napari.html">napari package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.layers.volume.volume</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.layers.volume.volume</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
+<span class="kn">import</span> <span class="nn">vispy.color</span>
+<span class="kn">from</span> <span class="nn">vispy.scene.visuals</span> <span class="k">import</span> <span class="n">Volume</span> <span class="k">as</span> <span class="n">VolumeNode</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">...util.misc</span> <span class="k">import</span> <span class="n">calc_data_range</span><span class="p">,</span> <span class="n">increment_unnamed_colormap</span>
+<span class="kn">from</span> <span class="nn">...util.event</span> <span class="k">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...util.colormaps</span> <span class="k">import</span> <span class="n">AVAILABLE_COLORMAPS</span>
+<span class="kn">from</span> <span class="nn">._constants</span> <span class="k">import</span> <span class="n">Rendering</span>
+
+
+<div class="viewcode-block" id="Volume"><a class="viewcode-back" href="../../../../napari.layers.volume.html#napari.layers.volume.volume.Volume">[docs]</a><span class="k">class</span> <span class="nc">Volume</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Volume layer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    volume : array</span>
+<span class="sd">        Volumetric data, must be at least 3-dimensional.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Volume metadata.</span>
+<span class="sd">    colormap : str, vispy.Color.Colormap, tuple, dict, keyword-only</span>
+<span class="sd">        Colormap to use for luminance volumes. If a string must be the name</span>
+<span class="sd">        of a supported colormap from vispy or matplotlib. If a tuple the</span>
+<span class="sd">        first value must be a string to assign as a name to a colormap and</span>
+<span class="sd">        the second item must be a Colormap. If a dict the key must be a</span>
+<span class="sd">        string to assign as a name to a colormap and the value must be a</span>
+<span class="sd">        Colormap.</span>
+<span class="sd">    clim : list (2,), keyword-only</span>
+<span class="sd">        Color limits to be used for determining the colormap bounds for</span>
+<span class="sd">        luminance volumes. If not passed is calculated as the min and max</span>
+<span class="sd">        of the volume.</span>
+<span class="sd">    clim_range : list (2,), keyword-only</span>
+<span class="sd">        Range for the color limits. If not passed is be calculated as the</span>
+<span class="sd">        min and max of the volume. Passing a value prevents this</span>
+<span class="sd">        calculation which can be useful when working with very larg</span>
+<span class="sd">        datasets that are dynamically loaded.</span>
+<span class="sd">    opacity : float</span>
+<span class="sd">        Opacity of the layer visual, between 0.0 and 1.0.</span>
+<span class="sd">    blending : str</span>
+<span class="sd">        One of a list of preset blending modes that determines how RGB and</span>
+<span class="sd">        alpha values of the layer visual get mixed. Allowed values are</span>
+<span class="sd">        {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
+<span class="sd">    visible : bool</span>
+<span class="sd">        Whether the layer visual is currently being displayed.</span>
+<span class="sd">    spacing : list, optional</span>
+<span class="sd">        List of anisotropy factors to scale the volume by. Must be one for</span>
+<span class="sd">        each dimension.</span>
+<span class="sd">    name : str, keyword-only</span>
+<span class="sd">        Name of the layer.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : array</span>
+<span class="sd">        Volumetric data, must be at least 3-dimensional.</span>
+<span class="sd">    metadata : dict</span>
+<span class="sd">        Volume metadata.</span>
+<span class="sd">    colormap : 2-tuple of str, vispy.color.Colormap</span>
+<span class="sd">        The first is the name of the current colormap, and the second value is</span>
+<span class="sd">        the colormap. Colormaps are used for luminance volumes.</span>
+<span class="sd">    colormaps : tuple of str</span>
+<span class="sd">        Names of the available colormaps.</span>
+<span class="sd">    clim : list (2,) of float</span>
+<span class="sd">        Color limits to be used for determining the colormap bounds for</span>
+<span class="sd">        luminance volumes.</span>
+<span class="sd">    clim_range : list (2,) of float</span>
+<span class="sd">        Range for the color limits for luminace volumes.</span>
+<span class="sd">    spacing : list</span>
+<span class="sd">        List of anisotropy factors to scale the volume by. Must be one for</span>
+<span class="sd">        each dimension.</span>
+
+<span class="sd">    Extended Summary</span>
+<span class="sd">    ----------</span>
+<span class="sd">    _data_view : array (N, M, K)</span>
+<span class="sd">        Volume data for the currently viewed slice, must be 3-dimensional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_colormaps</span> <span class="o">=</span> <span class="n">AVAILABLE_COLORMAPS</span>
+    <span class="n">_default_rendering</span> <span class="o">=</span> <span class="n">Rendering</span><span class="o">.</span><span class="n">MIP</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">volume</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
+        <span class="n">clim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">clim_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
+        <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">spacing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="n">visual</span> <span class="o">=</span> <span class="n">VolumeNode</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">visual</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
+            <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
+            <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rendering</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_rendering</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">clim</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">colormap</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">rendering</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">freeze_refresh</span><span class="p">():</span>
+            <span class="c1"># Set data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">volume</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">volume</span><span class="o">.</span><span class="n">ndim</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">=</span> <span class="mi">3</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span> <span class="ow">or</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="c1"># Intitialize volume views and thumbnails with zeros</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span>
+
+            <span class="c1"># Set clims and colormaps</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_clim_msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="n">clim_range</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span> <span class="o">=</span> <span class="n">clim_range</span>
+
+            <span class="k">if</span> <span class="n">clim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clim</span> <span class="o">=</span> <span class="n">clim</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="n">colormap</span>
+
+            <span class="c1"># Set update flags</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_need_display_update</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_need_visual_update</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="c1"># Trigger generation of view slice and thumbnail</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;array: Image data.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span>
+
+    <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_get_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">spacing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;list: Anisotropy factors to scale the volume by.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spacing</span>
+
+    <span class="nd">@spacing</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">spacing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spacing</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_spacing</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;2-tuple of str, vispy.color.Colormap: colormap for luminance images.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="o">.</span><span class="n">cmap</span>
+
+    <span class="nd">@colormap</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colormap</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;[unnamed colormap]&#39;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">vispy</span><span class="o">.</span><span class="n">color</span><span class="o">.</span><span class="n">Colormap</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span>
+                <span class="n">name</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;invalid value for colormap: </span><span class="si">{colormap}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="o">.</span><span class="n">view_program</span><span class="p">[</span><span class="s1">&#39;texture2D_LUT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">cmap</span><span class="o">.</span><span class="n">texture_lut</span><span class="p">()</span> <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="s1">&#39;texture_lut&#39;</span><span class="p">))</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">cmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colormap</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">colormaps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple of str: names of available colormaps.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">clim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;list of float: Limits to use for the colormap.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clim</span><span class="p">)</span>
+
+    <span class="nd">@clim</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">clim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clim</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clim</span> <span class="o">=</span> <span class="n">clim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clim_msg</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;{float(clim[0]): 0.3}, {float(clim[1]): 0.3}&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clim_msg</span>
+        <span class="k">if</span> <span class="n">clim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">clim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">clim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_clim_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">clim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">clim</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">rendering</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rendering: Rendering mode.</span>
+<span class="sd">            Selects a preset rendering mode in vispy that determines how</span>
+<span class="sd">            volume is displayed</span>
+<span class="sd">            * translucent: voxel colors are blended along the view ray until</span>
+<span class="sd">              the result is opaque.</span>
+<span class="sd">            * mip: maxiumum intensity projection. Cast a ray and display the</span>
+<span class="sd">              maximum value that was encountered.</span>
+<span class="sd">            * additive: voxel colors are added along the view ray until</span>
+<span class="sd">              the result is saturated.</span>
+<span class="sd">            * iso: isosurface. Cast a ray until a certain threshold is</span>
+<span class="sd">              encountered. At that location, lighning calculations are</span>
+<span class="sd">              performed to give the visual appearance of a surface.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rendering</span><span class="p">)</span>
+
+    <span class="nd">@rendering</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">rendering</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rendering</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rendering</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">rendering</span> <span class="o">=</span> <span class="n">Rendering</span><span class="p">(</span><span class="n">rendering</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">rendering</span><span class="o">.</span><span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rendering</span> <span class="o">=</span> <span class="n">rendering</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">rendering</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the view given the indices to slice with.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed_order</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_node</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="p">,</span> <span class="n">clim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clim</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_need_visual_update</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update thumbnail with current image data and colormap.&quot;&quot;&quot;</span>
+        <span class="c1"># take max projection of volume along first axis</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="c1"># warning filter can be removed with scipy 1.4</span>
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+            <span class="n">downsampled</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span>
+                <span class="n">image</span><span class="p">,</span> <span class="n">zoom_factor</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
+        <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clim</span>
+        <span class="n">downsampled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">downsampled</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">)</span>
+        <span class="n">color_range</span> <span class="o">=</span> <span class="n">high</span> <span class="o">-</span> <span class="n">low</span>
+        <span class="k">if</span> <span class="n">color_range</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">downsampled</span> <span class="o">=</span> <span class="p">(</span><span class="n">downsampled</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span> <span class="o">/</span> <span class="n">color_range</span>
+        <span class="n">colormapped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">downsampled</span><span class="p">)</span>
+        <span class="n">colormapped</span> <span class="o">=</span> <span class="n">colormapped</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">downsampled</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="mi">4</span><span class="p">,))</span>
+        <span class="n">colormapped</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">colormapped</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Author
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -144,17 +144,36 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.util</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">.qt_base_layer</span> <span class="k">import</span> <span class="n">QtLayerProperties</span><span class="p">,</span> <span class="n">QtLayerControls</span>
+<span></span><span class="kn">from</span> <span class="nn">..layers</span> <span class="k">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Labels</span><span class="p">,</span> <span class="n">Points</span><span class="p">,</span> <span class="n">Pyramid</span><span class="p">,</span> <span class="n">Shapes</span><span class="p">,</span> <span class="n">Vectors</span><span class="p">,</span> <span class="n">Volume</span>
+<span class="kn">from</span> <span class="nn">.qt_base_layer</span> <span class="k">import</span> <span class="n">QtLayerProperties</span><span class="p">,</span> <span class="n">QtLayerControls</span>
 <span class="kn">from</span> <span class="nn">.qt_image_layer</span> <span class="k">import</span> <span class="n">QtImageProperties</span><span class="p">,</span> <span class="n">QtImageControls</span>
 <span class="kn">from</span> <span class="nn">.qt_points_layer</span> <span class="k">import</span> <span class="n">QtPointsProperties</span><span class="p">,</span> <span class="n">QtPointsControls</span>
 <span class="kn">from</span> <span class="nn">.qt_vectors_layer</span> <span class="k">import</span> <span class="n">QtVectorsProperties</span>
 <span class="kn">from</span> <span class="nn">.qt_shapes_layer</span> <span class="k">import</span> <span class="n">QtShapesProperties</span><span class="p">,</span> <span class="n">QtShapesControls</span>
 <span class="kn">from</span> <span class="nn">.qt_labels_layer</span> <span class="k">import</span> <span class="n">QtLabelsProperties</span><span class="p">,</span> <span class="n">QtLabelsControls</span>
 <span class="kn">from</span> <span class="nn">.qt_volume_layer</span> <span class="k">import</span> <span class="n">QtVolumeProperties</span><span class="p">,</span> <span class="n">QtVolumeControls</span>
-<span class="kn">from</span> <span class="nn">.qt_image_layer</span> <span class="k">import</span> <span class="p">(</span>
-    <span class="n">QtImageProperties</span> <span class="k">as</span> <span class="n">QtPyramidProperties</span><span class="p">,</span>
-    <span class="n">QtImageControls</span> <span class="k">as</span> <span class="n">QtPyramidControls</span><span class="p">,</span>
-<span class="p">)</span>
+
+
+<span class="n">layer_to_properties</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">Image</span><span class="p">:</span> <span class="n">QtImageProperties</span><span class="p">,</span>
+    <span class="n">Labels</span><span class="p">:</span> <span class="n">QtLabelsProperties</span><span class="p">,</span>
+    <span class="n">Points</span><span class="p">:</span> <span class="n">QtPointsProperties</span><span class="p">,</span>
+    <span class="n">Pyramid</span><span class="p">:</span> <span class="n">QtImageProperties</span><span class="p">,</span>
+    <span class="n">Shapes</span><span class="p">:</span> <span class="n">QtShapesProperties</span><span class="p">,</span>
+    <span class="n">Vectors</span><span class="p">:</span> <span class="n">QtVectorsProperties</span><span class="p">,</span>
+    <span class="n">Volume</span><span class="p">:</span> <span class="n">QtVolumeProperties</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="n">layer_to_controls</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">Image</span><span class="p">:</span> <span class="n">QtImageControls</span><span class="p">,</span>
+    <span class="n">Labels</span><span class="p">:</span> <span class="n">QtLabelsControls</span><span class="p">,</span>
+    <span class="n">Points</span><span class="p">:</span> <span class="n">QtPointsControls</span><span class="p">,</span>
+    <span class="n">Pyramid</span><span class="p">:</span> <span class="n">QtImageControls</span><span class="p">,</span>
+    <span class="n">Shapes</span><span class="p">:</span> <span class="n">QtShapesControls</span><span class="p">,</span>
+    <span class="n">Vectors</span><span class="p">:</span> <span class="n">QtLayerControls</span><span class="p">,</span>
+    <span class="n">Volume</span><span class="p">:</span> <span class="n">QtVolumeControls</span><span class="p">,</span>
+<span class="p">}</span>
 
 
 <div class="viewcode-block" id="create_qt_properties"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.util.create_qt_properties">[docs]</a><span class="k">def</span> <span class="nf">create_qt_properties</span><span class="p">(</span><span class="n">layer</span><span class="p">):</span>
@@ -171,12 +190,7 @@
 <span class="sd">        properties : napari.layers.base.QtLayerProperties</span>
 <span class="sd">            Qt propetry widget</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Qt&#39;</span> <span class="o">+</span> <span class="nb">type</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;Properties&#39;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">qt_props</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span>
-        <span class="n">properties</span> <span class="o">=</span> <span class="n">qt_props</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-        <span class="n">properties</span> <span class="o">=</span> <span class="n">QtLayerProperties</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+    <span class="n">properties</span> <span class="o">=</span> <span class="n">layer_to_properties</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">layer</span><span class="p">)](</span><span class="n">layer</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">properties</span></div>
 
@@ -195,12 +209,7 @@
 <span class="sd">        controls : napari.layers.base.QtLayerControls</span>
 <span class="sd">            Qt controls widget</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Qt&#39;</span> <span class="o">+</span> <span class="nb">type</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;Controls&#39;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">qt_controls</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span>
-        <span class="n">controls</span> <span class="o">=</span> <span class="n">qt_controls</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-        <span class="n">controls</span> <span class="o">=</span> <span class="n">QtLayerControls</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+    <span class="n">controls</span> <span class="o">=</span> <span class="n">layer_to_controls</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">layer</span><span class="p">)](</span><span class="n">layer</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">controls</span></div>
 </pre></div>

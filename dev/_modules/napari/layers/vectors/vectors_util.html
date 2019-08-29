@@ -219,9 +219,9 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    vectors : (N, 2, 2) array</span>
+<span class="sd">    vectors : (N, 2, D) array</span>
 <span class="sd">        A list of N vectors with start point and projections of the vector</span>
-<span class="sd">        in 2 dimensions.</span>
+<span class="sd">        in D dimensions, where D is 2 or 3.</span>
 <span class="sd">    width : float</span>
 <span class="sd">        width of the line to be drawn</span>
 <span class="sd">    length : float</span>
@@ -229,17 +229,57 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    ----------</span>
-<span class="sd">    vertices : (4N, 2) array</span>
+<span class="sd">    vertices : (4N, D) array</span>
 <span class="sd">        Vertices of all triangles for the lines</span>
-<span class="sd">    triangles : (2N, 2) array</span>
+<span class="sd">    triangles : (2N, 3) array</span>
 <span class="sd">        Vertex indices that form the mesh triangles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="n">vectors</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">generate_vector_meshes_2D</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">v_a</span><span class="p">,</span> <span class="n">t_a</span> <span class="o">=</span> <span class="n">generate_vector_meshes_2D</span><span class="p">(</span>
+            <span class="n">vectors</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">v_b</span><span class="p">,</span> <span class="n">t_b</span> <span class="o">=</span> <span class="n">generate_vector_meshes_2D</span><span class="p">(</span>
+            <span class="n">vectors</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">v_a</span><span class="p">,</span> <span class="n">v_b</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">t_a</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">v_a</span><span class="p">)</span> <span class="o">+</span> <span class="n">t_b</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span></div>
+
+
+<div class="viewcode-block" id="generate_vector_meshes_2D"><a class="viewcode-back" href="../../../../napari.layers.vectors.html#napari.layers.vectors.vectors_util.generate_vector_meshes_2D">[docs]</a><span class="k">def</span> <span class="nf">generate_vector_meshes_2D</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Generates list of mesh vertices and triangles from a list of vectors</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vectors : (N, 2, D) array</span>
+<span class="sd">        A list of N vectors with start point and projections of the vector</span>
+<span class="sd">        in D dimensions, where D is 2 or 3.</span>
+<span class="sd">    width : float</span>
+<span class="sd">        width of the line to be drawn</span>
+<span class="sd">    length : float</span>
+<span class="sd">        length multiplier of the line to be drawn</span>
+<span class="sd">    p : 3-tuple, optional</span>
+<span class="sd">        orthogonal vector for segment calculation in 3D.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vertices : (4N, D) array</span>
+<span class="sd">        Vertices of all triangles for the lines</span>
+<span class="sd">    triangles : (2N, 3) array</span>
+<span class="sd">        Vertex indices that form the mesh triangles</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="n">vectors</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">ndim</span><span class="p">))</span>
     <span class="n">vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">vectors</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">length</span> <span class="o">*</span> <span class="n">vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span>
+
     <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">offsets</span> <span class="o">=</span> <span class="n">segment_normal</span><span class="p">(</span><span class="n">vectors</span><span class="p">[::</span><span class="mi">2</span><span class="p">,</span> <span class="p">:],</span> <span class="n">vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="n">segment_normal</span><span class="p">(</span><span class="n">vectors</span><span class="p">[::</span><span class="mi">2</span><span class="p">,</span> <span class="p">:],</span> <span class="n">vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">,</span> <span class="p">:],</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">)</span>
     <span class="n">offsets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">signs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">offsets</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">signs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">offsets</span><span class="p">),</span> <span class="n">ndim</span><span class="p">))</span>
     <span class="n">signs</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
     <span class="n">offsets</span> <span class="o">=</span> <span class="n">offsets</span> <span class="o">*</span> <span class="n">signs</span>
 

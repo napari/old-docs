@@ -160,6 +160,17 @@
     <span class="sd">&quot;&quot;&quot;Viewer containing the rendered scene, layers, and controlling elements</span>
 <span class="sd">    including dimension sliders, and control bars for color limits.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    title : string</span>
+<span class="sd">        The title of the viewer window.</span>
+<span class="sd">    ndisplay : int</span>
+<span class="sd">        Number of displayed dimensions.</span>
+<span class="sd">    tuple of int</span>
+<span class="sd">        Order in which dimensions are displayed where the last two or last</span>
+<span class="sd">        three dimensions correspond to row x column or plane x row x column if</span>
+<span class="sd">        ndisplay is 2 or 3.</span>
+
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    window : Window</span>
@@ -174,7 +185,7 @@
 
     <span class="n">themes</span> <span class="o">=</span> <span class="n">palettes</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;napari&#39;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;napari&#39;</span><span class="p">,</span> <span class="n">ndisplay</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
@@ -190,9 +201,15 @@
             <span class="n">palette</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="c1"># Initial dimension must be set to at least the number of visible</span>
-        <span class="c1"># dimensions of the viewer</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">Dims</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ndim</span> <span class="o">=</span> <span class="n">ndisplay</span>
+            <span class="n">order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">Dims</span><span class="p">(</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">=</span> <span class="n">ndisplay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="n">order</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="n">LayerList</span><span class="p">()</span>
 
@@ -207,8 +224,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_palette</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">=</span> <span class="s1">&#39;dark&#39;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_view</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_view</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">added</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">removed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
@@ -451,6 +469,9 @@
         <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_cursor</span><span class="p">)</span>
         <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor_size</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_cursor_size</span><span class="p">)</span>
         <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">(</span><span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
 
@@ -459,29 +480,29 @@
 
 <div class="viewcode-block" id="ViewerModel.add_image"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">image</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">multichannel</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
         <span class="n">clim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">clim_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span>
+        <span class="n">rendering</span><span class="o">=</span><span class="s1">&#39;mip&#39;</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add an image layer to the layers list.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        image : array</span>
+<span class="sd">        data : array</span>
 <span class="sd">            Image data. Can be N dimensional. If the last dimension has length</span>
 <span class="sd">            3 or 4 can be interpreted as RGB or RGBA if multichannel is `True`.</span>
-<span class="sd">        metadata : dict</span>
-<span class="sd">            Image metadata.</span>
 <span class="sd">        multichannel : bool</span>
 <span class="sd">            Whether the image is multichannel RGB or RGBA if multichannel. If</span>
 <span class="sd">            not specified by user and the last dimension of the data has length</span>
@@ -506,6 +527,14 @@
 <span class="sd">        interpolation : str</span>
 <span class="sd">            Interpolation mode used by vispy. Must be one of our supported</span>
 <span class="sd">            modes.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float</span>
 <span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
@@ -514,8 +543,6 @@
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -523,58 +550,66 @@
 <span class="sd">            The newly-created image layer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span>
-            <span class="n">image</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">,</span>
             <span class="n">multichannel</span><span class="o">=</span><span class="n">multichannel</span><span class="p">,</span>
             <span class="n">colormap</span><span class="o">=</span><span class="n">colormap</span><span class="p">,</span>
             <span class="n">clim</span><span class="o">=</span><span class="n">clim</span><span class="p">,</span>
             <span class="n">clim_range</span><span class="o">=</span><span class="n">clim_range</span><span class="p">,</span>
             <span class="n">interpolation</span><span class="o">=</span><span class="n">interpolation</span><span class="p">,</span>
+            <span class="n">rendering</span><span class="o">=</span><span class="n">rendering</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
 
-<div class="viewcode-block" id="ViewerModel.add_pyramid"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_pyramid">[docs]</a>    <span class="k">def</span> <span class="nf">add_pyramid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pyramid</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ViewerModel.add_pyramid"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_pyramid">[docs]</a>    <span class="k">def</span> <span class="nf">add_pyramid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add an image pyramid layer to the layers list.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        pyramid : list</span>
+<span class="sd">        data : list</span>
 <span class="sd">            Pyramid data. List of array like image date. Each image can be N</span>
 <span class="sd">            dimensional. If the last dimensions of the images have length 3</span>
 <span class="sd">            or 4 they can be interpreted as RGB or RGBA if multichannel is</span>
 <span class="sd">            `True`.</span>
-<span class="sd">        metadata : dict, optional</span>
-<span class="sd">            Image metadata.</span>
-<span class="sd">        multichannel : bool, optional</span>
+<span class="sd">        multichannel : bool</span>
 <span class="sd">            Whether the image is multichannel RGB or RGBA if multichannel. If</span>
 <span class="sd">            not specified by user and the last dimension of the data has length</span>
 <span class="sd">            3 or 4 it will be set as `True`. If `False` the image is</span>
 <span class="sd">            interpreted as a luminance image.</span>
-<span class="sd">        colormap : str, vispy.Color.Colormap, 2-tuple, dict, optional</span>
+<span class="sd">        colormap : str, vispy.Color.Colormap, tuple, dict</span>
 <span class="sd">            Colormap to use for luminance images. If a string must be the name</span>
 <span class="sd">            of a supported colormap from vispy or matplotlib. If a tuple the</span>
 <span class="sd">            first value must be a string to assign as a name to a colormap and</span>
 <span class="sd">            the second item must be a Colormap. If a dict the key must be a</span>
 <span class="sd">            string to assign as a name to a colormap and the value must be a</span>
 <span class="sd">            Colormap.</span>
-<span class="sd">        clim : list (2,), optional</span>
+<span class="sd">        clim : list (2,)</span>
 <span class="sd">            Color limits to be used for determining the colormap bounds for</span>
 <span class="sd">            luminance images. If not passed is calculated as the min and max of</span>
 <span class="sd">            the image.</span>
-<span class="sd">        clim_range : list (2,), optional</span>
+<span class="sd">        clim_range : list (2,)</span>
 <span class="sd">            Range for the color limits. If not passed is be calculated as the</span>
-<span class="sd">            min and max of the images. Passing a value prevents this calculation</span>
+<span class="sd">            min and max of the image. Passing a value prevents this calculation</span>
 <span class="sd">            which can be useful when working with very large datasets that are</span>
 <span class="sd">            dynamically loaded.</span>
-<span class="sd">        interpolation : str, optional</span>
+<span class="sd">        interpolation : str</span>
 <span class="sd">            Interpolation mode used by vispy. Must be one of our supported</span>
 <span class="sd">            modes.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float</span>
 <span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
@@ -583,99 +618,19 @@
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        layer : :class:`napari.layers.Pyramid`</span>
 <span class="sd">            The newly-created pyramid layer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Pyramid</span><span class="p">(</span><span class="n">pyramid</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">layer</span></div>
-
-<div class="viewcode-block" id="ViewerModel.add_volume"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_volume">[docs]</a>    <span class="k">def</span> <span class="nf">add_volume</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">volume</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
-        <span class="n">clim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">clim_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
-        <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a volume layer to the layers list.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        volume : array</span>
-<span class="sd">            Volumetric data, must be at least 3-dimensional.</span>
-<span class="sd">        metadata : dict, optional</span>
-<span class="sd">            Volume metadata.</span>
-<span class="sd">        colormap : str, vispy.Color.Colormap, tuple, dict, keyword-only</span>
-<span class="sd">            Colormap to use for luminance volumes. If a string must be the name</span>
-<span class="sd">            of a supported colormap from vispy or matplotlib. If a tuple the</span>
-<span class="sd">            first value must be a string to assign as a name to a colormap and</span>
-<span class="sd">            the second item must be a Colormap. If a dict the key must be a</span>
-<span class="sd">            string to assign as a name to a colormap and the value must be a</span>
-<span class="sd">            Colormap.</span>
-<span class="sd">        clim : list (2,), keyword-only</span>
-<span class="sd">            Color limits to be used for determining the colormap bounds for</span>
-<span class="sd">            luminance volumes. If not passed is calculated as the min and max</span>
-<span class="sd">            of the volume.</span>
-<span class="sd">        clim_range : list (2,), keyword-only</span>
-<span class="sd">            Range for the color limits. If not passed is be calculated as the</span>
-<span class="sd">            min and max of the volume. Passing a value prevents this</span>
-<span class="sd">            calculation which can be useful when working with very larg</span>
-<span class="sd">            datasets that are dynamically loaded.</span>
-<span class="sd">        opacity : float</span>
-<span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
-<span class="sd">        blending : str</span>
-<span class="sd">            One of a list of preset blending modes that determines how RGB and</span>
-<span class="sd">            alpha values of the layer visual get mixed. Allowed values are</span>
-<span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
-<span class="sd">        visible : bool</span>
-<span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        scale : list, optional</span>
-<span class="sd">            List of anisotropy factors to scale the volume by. The length</span>
-<span class="sd">            should be equal to the number of dimensions.</span>
-<span class="sd">        name : str, keyword-only</span>
-<span class="sd">            Name of the layer.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        layer : :class:`napari.layers.Volume`</span>
-<span class="sd">            The newly-created volume layer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Volume</span><span class="p">(</span>
-            <span class="n">volume</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
-            <span class="n">colormap</span><span class="o">=</span><span class="n">colormap</span><span class="p">,</span>
-            <span class="n">clim</span><span class="o">=</span><span class="n">clim</span><span class="p">,</span>
-            <span class="n">clim_range</span><span class="o">=</span><span class="n">clim_range</span><span class="p">,</span>
-            <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
-            <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
-            <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="mi">3</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
 
 <div class="viewcode-block" id="ViewerModel.add_points"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_points">[docs]</a>    <span class="k">def</span> <span class="nf">add_points</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">coords</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span>
         <span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
@@ -683,16 +638,19 @@
         <span class="n">edge_color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span>
         <span class="n">face_color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span>
         <span class="n">n_dimensional</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a points layer to the layers list.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        coords : array (N, D)</span>
+<span class="sd">        data : array (N, D)</span>
 <span class="sd">            Coordinates for N points in D dimensions.</span>
 <span class="sd">        symbol : str</span>
 <span class="sd">            Symbol to be used for the point markers. Must be one of the</span>
@@ -711,6 +669,14 @@
 <span class="sd">        n_dimensional : bool</span>
 <span class="sd">            If True, renders points not just in central plane but also in all</span>
 <span class="sd">            n-dimensions according to specified point marker size.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float</span>
 <span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
@@ -719,8 +685,6 @@
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -733,34 +697,38 @@
 <span class="sd">        http://api.vispy.org/en/latest/visuals.html#vispy.visuals.MarkersVisual</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Points</span><span class="p">(</span>
-            <span class="n">coords</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">,</span>
             <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
             <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span>
             <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
             <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
             <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
             <span class="n">n_dimensional</span><span class="o">=</span><span class="n">n_dimensional</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
 
 <div class="viewcode-block" id="ViewerModel.add_labels"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_labels">[docs]</a>    <span class="k">def</span> <span class="nf">add_labels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">labels</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">num_colors</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
         <span class="n">seed</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">n_dimensional</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">n_dimensional</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a labels (or segmentation) layer to the layers list.</span>
 
@@ -769,14 +737,22 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        labels : array</span>
+<span class="sd">        data : array</span>
 <span class="sd">            Labels data.</span>
-<span class="sd">        metadata : dict</span>
-<span class="sd">            Labels metadata.</span>
 <span class="sd">        num_colors : int</span>
 <span class="sd">            Number of unique colors to use in colormap.</span>
 <span class="sd">        seed : float</span>
 <span class="sd">            Seed for colormap random generator.</span>
+<span class="sd">        n_dimensional : bool</span>
+<span class="sd">            If `True`, paint and fill edit labels across all dimensions.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float</span>
 <span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
@@ -785,10 +761,6 @@
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        n_dimensional : bool</span>
-<span class="sd">            If `True`, paint and fill edit labels across all dimensions.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -796,16 +768,17 @@
 <span class="sd">            The newly-created labels layer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Labels</span><span class="p">(</span>
-            <span class="n">labels</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">,</span>
             <span class="n">num_colors</span><span class="o">=</span><span class="n">num_colors</span><span class="p">,</span>
             <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">n_dimensional</span><span class="o">=</span><span class="n">n_dimensional</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">n_dimensional</span><span class="o">=</span><span class="n">n_dimensional</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
@@ -819,10 +792,13 @@
         <span class="n">edge_color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span>
         <span class="n">face_color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span>
         <span class="n">z_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a shapes layer to the layers list.</span>
 
@@ -861,16 +837,22 @@
 <span class="sd">            same length as the length of `data` and each element will be</span>
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
 <span class="sd">            shapes.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float or list</span>
-<span class="sd">            Opacity of the shapes, between 0.0 and 1.0.</span>
+<span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
 <span class="sd">            One of a list of preset blending modes that determines how RGB and</span>
 <span class="sd">            alpha values of the layer visual get mixed. Allowed values are</span>
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -884,31 +866,37 @@
             <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
             <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
             <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
 
 <div class="viewcode-block" id="ViewerModel.add_vectors"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_vectors">[docs]</a>    <span class="k">def</span> <span class="nf">add_vectors</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">vectors</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">edge_width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">edge_color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span>
         <span class="n">length</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a vectors layer to the layers list.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        vectors : (N, 2, D) or (N1, N2, ..., ND, D) array</span>
+<span class="sd">        data : (N, 2, D) or (N1, N2, ..., ND, D) array</span>
 <span class="sd">            An (N, 2, D) array is interpreted as &quot;coordinate-like&quot; data and a</span>
 <span class="sd">            list of N vectors with start point and projections of the vector in</span>
 <span class="sd">            D dimensions. An (N1, N2, ..., ND, D) array is interpreted as</span>
@@ -920,6 +908,14 @@
 <span class="sd">             Multiplicative factor on projections for length of all vectors.</span>
 <span class="sd">        edge_color : str</span>
 <span class="sd">            Edge color of all the vectors.</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the layer.</span>
+<span class="sd">        metadata : dict</span>
+<span class="sd">            Layer metadata.</span>
+<span class="sd">        scale : tuple of float</span>
+<span class="sd">            Scale factors for the layer.</span>
+<span class="sd">        translate : tuple of float</span>
+<span class="sd">            Translation values for the layer.</span>
 <span class="sd">        opacity : float</span>
 <span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">        blending : str</span>
@@ -928,8 +924,6 @@
 <span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">        visible : bool</span>
 <span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -937,14 +931,17 @@
 <span class="sd">            The newly-created vectors layer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Vectors</span><span class="p">(</span>
-            <span class="n">vectors</span><span class="p">,</span>
+            <span class="n">data</span><span class="p">,</span>
             <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
             <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
             <span class="n">length</span><span class="o">=</span><span class="n">length</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
@@ -993,7 +990,12 @@
             <span class="c1"># respectively</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
             <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">order</span><span class="p">[</span><span class="n">order</span> <span class="o">&gt;=</span> <span class="n">offset</span><span class="p">]</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">offset</span><span class="p">))</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">order</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">order</span><span class="p">[</span><span class="n">order</span> <span class="o">&gt;=</span> <span class="n">offset</span><span class="p">]</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="n">order</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
 
             <span class="c1"># Update the point values of the layers for the dimensions that</span>
             <span class="c1"># the layer has</span>
@@ -1069,8 +1071,8 @@
             <span class="n">min_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">)</span>
             <span class="n">max_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">min_shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">min_shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
-            <span class="n">max_shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
+            <span class="n">min_shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
+            <span class="n">max_shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
 
         <span class="k">return</span> <span class="n">min_shape</span><span class="p">,</span> <span class="n">max_shape</span>
 

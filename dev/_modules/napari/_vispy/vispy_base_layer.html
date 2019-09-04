@@ -172,8 +172,6 @@
 <span class="sd">        Scale factors for the layer visual in the scenecanvas.</span>
 <span class="sd">    translate : sequence of float</span>
 <span class="sd">        Translation values for the layer visual in the scenecanvas.</span>
-<span class="sd">    z_index : int</span>
-<span class="sd">        Depth of the layer visual relative to other visuals in the scenecanvas.</span>
 <span class="sd">    scale_factor : float</span>
 <span class="sd">        Conversion factor from canvas coordinates to image coordinates, which</span>
 <span class="sd">        depends on the current zoom level.</span>
@@ -182,9 +180,6 @@
 <span class="sd">    ----------</span>
 <span class="sd">    _master_transform : vispy.visuals.transforms.STTransform</span>
 <span class="sd">        Transform positioning the layer visual inside the scenecanvas.</span>
-<span class="sd">    _order : int</span>
-<span class="sd">        Order in which the visual is drawn in the scenegraph. Lower values</span>
-<span class="sd">        are closer to the viewer.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
@@ -230,13 +225,6 @@
 
     <span class="nd">@order</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">):</span>
-        <span class="c1"># workaround for opacity (see: #22)</span>
-        <span class="n">order</span> <span class="o">=</span> <span class="o">-</span><span class="n">order</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">z_index</span> <span class="o">=</span> <span class="n">order</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">z_index</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="c1"># end workaround</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="n">order</span>
 
     <span class="nd">@property</span>
@@ -258,18 +246,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_master_transform</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">translate</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">z_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;int: Depth of the visual in the scenecanvas.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_master_transform</span><span class="o">.</span><span class="n">translate</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-
-    <span class="nd">@z_index</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">z_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-        <span class="n">tr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_master_transform</span>
-        <span class="n">tl</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">translate</span>
-        <span class="n">tl</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">index</span>
-        <span class="n">tr</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">tl</span>
-
-    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">scale_factor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;float: Conversion factor from canvas coordinates to image</span>
 <span class="sd">        coordinates, which depends on the current zoom level.</span>
@@ -289,7 +265,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">opacity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">opacity</span>
 
     <span class="k">def</span> <span class="nf">_on_blending_change</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set_gl_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">blending</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">set_gl_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">blending</span><span class="p">,</span> <span class="n">depth_test</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_on_scale_change</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

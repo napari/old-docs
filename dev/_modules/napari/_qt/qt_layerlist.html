@@ -144,17 +144,23 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.qt_layerlist</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QMimeData</span>
+<span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QMimeData</span><span class="p">,</span> <span class="n">QTimer</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="k">import</span> <span class="n">QImage</span><span class="p">,</span> <span class="n">QPixmap</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">QWidget</span><span class="p">,</span>
     <span class="n">QVBoxLayout</span><span class="p">,</span>
     <span class="n">QFrame</span><span class="p">,</span>
     <span class="n">QScrollArea</span><span class="p">,</span>
     <span class="n">QApplication</span><span class="p">,</span>
+    <span class="n">QLineEdit</span><span class="p">,</span>
+    <span class="n">QFrame</span><span class="p">,</span>
+    <span class="n">QLabel</span><span class="p">,</span>
+    <span class="n">QCheckBox</span><span class="p">,</span>
+    <span class="n">QHBoxLayout</span><span class="p">,</span>
+    <span class="n">QSizePolicy</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="k">import</span> <span class="n">QDrag</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">.layers</span> <span class="k">import</span> <span class="n">create_qt_properties</span>
 
 
 <div class="viewcode-block" id="QtLayerList"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList">[docs]</a><span class="k">class</span> <span class="nc">QtLayerList</span><span class="p">(</span><span class="n">QScrollArea</span><span class="p">):</span>
@@ -170,9 +176,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">QtDivider</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">addStretch</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">setSpacing</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">centers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Create a timer to be used for autoscrolling the layers list up and</span>
+        <span class="c1"># down when dragging a layer near the end of the displayed area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span> <span class="o">=</span> <span class="n">QTimer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">setSingleShot</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">setInterval</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_force_scroll</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scroll_up</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_scroll_region</span> <span class="o">=</span> <span class="mi">24</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setAcceptDrops</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Layer list&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">added</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">removed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_remove</span><span class="p">)</span>
@@ -186,9 +203,10 @@
         <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">item</span>
         <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span>
         <span class="n">index</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">total</span> <span class="o">-</span> <span class="n">event</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="n">properties</span> <span class="o">=</span> <span class="n">create_qt_properties</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+        <span class="n">widget</span> <span class="o">=</span> <span class="n">QtLayerWidget</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtDivider</span><span class="p">())</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">select</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scroll_on_select</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove widget for layer at index `event.index`.&quot;&quot;&quot;</span>
@@ -238,6 +256,40 @@
                 <span class="c1"># Insert the property widget and divider into new location</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="n">index_new</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="n">index_new</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">divider</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_force_scroll</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Force the scroll bar to automattically scroll either up or down.&quot;&quot;&quot;</span>
+        <span class="n">cur_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scroll_up</span><span class="p">:</span>
+            <span class="n">new_value</span> <span class="o">=</span> <span class="n">cur_value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">/</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="n">new_value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">new_value</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">new_value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_value</span> <span class="o">=</span> <span class="n">cur_value</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">/</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="n">new_value</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">maximum</span><span class="p">():</span>
+                <span class="n">new_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">maximum</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">new_value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_scroll_on_select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Scroll to ensure that the currently selected layer is visible.&quot;&quot;&quot;</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_visible</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_ensure_visible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Ensure layer widget for at particular layer is visible.&quot;&quot;&quot;</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span>
+        <span class="n">layer_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="c1"># Find property widget and divider for layer to be removed</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">total</span> <span class="o">-</span> <span class="n">layer_index</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">itemAt</span><span class="p">(</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">widget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensureWidgetVisible</span><span class="p">(</span><span class="n">widget</span><span class="p">)</span>
+
+<div class="viewcode-block" id="QtLayerList.keyPressEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList.keyPressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">keyPressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QtLayerList.keyReleaseEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList.keyReleaseEvent">[docs]</a>    <span class="k">def</span> <span class="nf">keyReleaseEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QtLayerList.mousePressEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList.mousePressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mousePressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="c1"># Check if mouse press happens on a layer properties widget or</span>
@@ -299,11 +351,16 @@
         <span class="n">drag</span> <span class="o">=</span> <span class="n">QDrag</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">drag</span><span class="o">.</span><span class="n">setMimeData</span><span class="p">(</span><span class="n">mimeData</span><span class="p">)</span>
         <span class="n">drag</span><span class="o">.</span><span class="n">setHotSpot</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rect</span><span class="p">()</span><span class="o">.</span><span class="n">topLeft</span><span class="p">())</span>
-        <span class="n">dropAction</span> <span class="o">=</span> <span class="n">drag</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div>
+        <span class="n">dropAction</span> <span class="o">=</span> <span class="n">drag</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">drag_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drag_name</span><span class="p">)</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_visible</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtLayerList.dragLeaveEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList.dragLeaveEvent">[docs]</a>    <span class="k">def</span> <span class="nf">dragLeaveEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Unselects layer dividers.&quot;&quot;&quot;</span>
         <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">count</span><span class="p">(),</span> <span class="mi">2</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">itemAt</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">widget</span><span class="p">()</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
 
@@ -324,15 +381,34 @@
         <span class="sd">&quot;&quot;&quot;Set the appropriate layers list divider to be highlighted when</span>
 <span class="sd">        dragging a layer to a new position in the layers list.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">max_height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frameGeometry</span><span class="p">()</span><span class="o">.</span><span class="n">height</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_scroll_region</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">isActive</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scroll_up</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">max_height</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_scroll_region</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">isActive</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scroll_up</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">isActive</span><span class="p">()</span>
+            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_scroll_region</span>
+            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">max_height</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_scroll_region</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
         <span class="c1"># Determine which widget center is the mouse currently closed to</span>
-        <span class="n">cord</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span>
+        <span class="n">cord</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="n">center_list</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">cord</span><span class="p">)</span>
         <span class="n">divider_index</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">center_list</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">))</span>
         <span class="c1"># Determine the current location of the widget being dragged</span>
         <span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
         <span class="n">insert</span> <span class="o">=</span> <span class="n">total</span> <span class="o">-</span> <span class="n">divider_index</span>
-        <span class="n">layer_name</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">mimeData</span><span class="p">()</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">layer_name</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drag_name</span><span class="p">)</span>
         <span class="c1"># If the widget being dragged hasn&#39;t moved above or below any other</span>
         <span class="c1"># widgets then don&#39;t highlight any dividers</span>
         <span class="n">selected</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">insert</span> <span class="o">==</span> <span class="n">index</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">insert</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">index</span><span class="p">)</span>
@@ -344,15 +420,18 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">itemAt</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">widget</span><span class="p">()</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtLayerList.dropEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerList.dropEvent">[docs]</a>    <span class="k">def</span> <span class="nf">dropEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">isActive</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dragTimer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">count</span><span class="p">(),</span> <span class="mi">2</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">itemAt</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">widget</span><span class="p">()</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">cord</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span>
+        <span class="n">cord</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">verticalScrollBar</span><span class="p">()</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="n">center_list</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="n">cord</span><span class="p">)</span>
         <span class="n">divider_index</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">center_list</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">))</span>
         <span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vbox_layout</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
         <span class="n">insert</span> <span class="o">=</span> <span class="n">total</span> <span class="o">-</span> <span class="n">divider_index</span>
-        <span class="n">layer_name</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">mimeData</span><span class="p">()</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">layer_name</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drag_name</span><span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">index</span> <span class="o">!=</span> <span class="n">insert</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">!=</span> <span class="n">insert</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">insert</span> <span class="o">&gt;=</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">insert</span> <span class="o">-=</span> <span class="mi">1</span>
@@ -364,7 +443,9 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedSize</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
 
 <div class="viewcode-block" id="QtDivider.setSelected"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtDivider.setSelected">[docs]</a>    <span class="k">def</span> <span class="nf">setSelected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
@@ -373,6 +454,107 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;selected&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QtLayerWidget"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget">[docs]</a><span class="k">class</span> <span class="nc">QtLayerWidget</span><span class="p">(</span><span class="n">QFrame</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">layer</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">select</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">deselect</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layer_name_change</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">visible</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_visible_change</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">thumbnail</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_thumbnail_change</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;layer&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="n">tb</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">tb</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;thumbmnail&#39;</span><span class="p">)</span>
+        <span class="n">tb</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Layer thumbmnail&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnailLabel</span> <span class="o">=</span> <span class="n">tb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_thumbnail_change</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">tb</span><span class="p">)</span>
+
+        <span class="n">cb</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">cb</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;visibility&#39;</span><span class="p">)</span>
+        <span class="n">cb</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Layer visibility&#39;</span><span class="p">)</span>
+        <span class="n">cb</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">visible</span><span class="p">)</span>
+        <span class="n">cb</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;mode&#39;</span><span class="p">,</span> <span class="s1">&#39;visibility&#39;</span><span class="p">)</span>
+        <span class="n">cb</span><span class="o">.</span><span class="n">stateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">state</span><span class="o">=</span><span class="n">cb</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">changeVisible</span><span class="p">(</span><span class="n">state</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visibleCheckBox</span> <span class="o">=</span> <span class="n">cb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">cb</span><span class="p">)</span>
+
+        <span class="n">textbox</span> <span class="o">=</span> <span class="n">QLineEdit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">home</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Layer name&#39;</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">setAcceptDrops</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">textbox</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">changeText</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span> <span class="o">=</span> <span class="n">textbox</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">textbox</span><span class="p">)</span>
+
+        <span class="n">ltb</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">layer_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="n">ltb</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="n">layer_type</span><span class="p">)</span>
+        <span class="n">ltb</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Layer type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">typeLabel</span> <span class="o">=</span> <span class="n">ltb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">ltb</span><span class="p">)</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Click to select</span><span class="se">\n</span><span class="s1">Drag to rearrange&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSelected</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">selected</span><span class="p">)</span>
+
+<div class="viewcode-block" id="QtLayerWidget.setSelected"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.setSelected">[docs]</a>    <span class="k">def</span> <span class="nf">setSelected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;selected&#39;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QtLayerWidget.changeVisible"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.changeVisible">[docs]</a>    <span class="k">def</span> <span class="nf">changeVisible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="n">Qt</span><span class="o">.</span><span class="n">Checked</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="QtLayerWidget.changeText"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.changeText">[docs]</a>    <span class="k">def</span> <span class="nf">changeText</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span><span class="o">.</span><span class="n">clearFocus</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QtLayerWidget.mouseReleaseEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.mouseReleaseEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseReleaseEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QtLayerWidget.mousePressEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.mousePressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mousePressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QtLayerWidget.mouseMoveEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_layerlist.QtLayerWidget.mouseMoveEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseMoveEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_on_layer_name_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">blocker</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nameTextBox</span><span class="o">.</span><span class="n">home</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_visible_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">visible</span><span class="o">.</span><span class="n">blocker</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visibleCheckBox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">visible</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_thumbnail_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">thumbnail</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">thumbnail</span>
+        <span class="c1"># Note that QImage expects the image width followed by height</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">QImage</span><span class="p">(</span>
+            <span class="n">thumbnail</span><span class="p">,</span>
+            <span class="n">thumbnail</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">thumbnail</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">QImage</span><span class="o">.</span><span class="n">Format_RGBA8888</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnailLabel</span><span class="o">.</span><span class="n">setPixmap</span><span class="p">(</span><span class="n">QPixmap</span><span class="o">.</span><span class="n">fromImage</span><span class="p">(</span><span class="n">image</span><span class="p">))</span></div>
 </pre></div>
 
            </div>

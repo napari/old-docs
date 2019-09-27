@@ -151,6 +151,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
 
 
 <div class="viewcode-block" id="str_to_rgb"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.str_to_rgb">[docs]</a><span class="k">def</span> <span class="nf">str_to_rgb</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
@@ -202,6 +203,138 @@
         <span class="k">return</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="is_pyramid"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.is_pyramid">[docs]</a><span class="k">def</span> <span class="nf">is_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;If data is a list of arrays of decreasing size.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">size</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="should_be_pyramid"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.should_be_pyramid">[docs]</a><span class="k">def</span> <span class="nf">should_be_pyramid</span><span class="p">(</span><span class="n">shape</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if any data axes needs to be pyramidified</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    shape : tuple of int</span>
+<span class="sd">        Shape of data to be tested</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyr_axes : tuple of bool</span>
+<span class="sd">        True wherever an axis exceeds the pyramid threshold.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">13</span></div>
+
+
+<div class="viewcode-block" id="get_pyramid_and_rgb"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.get_pyramid_and_rgb">[docs]</a><span class="k">def</span> <span class="nf">get_pyramid_and_rgb</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pyramid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rgb</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if data is or needs to be a pyramid and make one if needed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : array or list</span>
+<span class="sd">        Data to be checked if pyramid or if needs to be turned into a pyramid.</span>
+<span class="sd">    pyramid : bool, optional</span>
+<span class="sd">        Value that can force data to be considered as a pyramid, otherwise</span>
+<span class="sd">        computed.</span>
+<span class="sd">    rgb : bool, optional</span>
+<span class="sd">        Value that can force data to be considered as a rgb, otherwise</span>
+<span class="sd">        computed.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndim : int</span>
+<span class="sd">        Dimensionality of the data.</span>
+<span class="sd">    rgb : bool</span>
+<span class="sd">        If data is rgb.</span>
+<span class="sd">    pyramid : bool</span>
+<span class="sd">        If data is a pyramid or a pyramid has been generated.</span>
+<span class="sd">    data_pyramid : list or None</span>
+<span class="sd">        If None then data is not and does not need to be a pyramid. Otherwise</span>
+<span class="sd">        is a list of arrays where each array is a level of the pyramid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Determine if pyramid</span>
+    <span class="k">if</span> <span class="n">pyramid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">pyramid</span><span class="p">:</span>
+        <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># Determine if rgb, and determine dimensionality</span>
+    <span class="k">if</span> <span class="n">rgb</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># If rgb is True or None then guess if rgb</span>
+        <span class="c1"># allowed or not, and if allowed set it to be True</span>
+        <span class="n">rgb</span> <span class="o">=</span> <span class="n">is_rgb</span><span class="p">(</span><span class="n">init_shape</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">rgb</span><span class="p">:</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_shape</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyramid</span><span class="p">:</span>
+        <span class="c1"># Guess if data should be pyramid</span>
+        <span class="n">pyr_axes</span> <span class="o">=</span> <span class="n">should_be_pyramid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">pyr_axes</span><span class="p">):</span>
+            <span class="n">pyramid</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># Set axes to be downsampled to have a factor of 2</span>
+            <span class="n">downscale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="n">downscale</span><span class="p">[</span><span class="n">pyr_axes</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">largest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">pyr_axes</span><span class="p">])</span>
+            <span class="c1"># Determine number of downsample steps needed</span>
+            <span class="n">max_layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">largest</span><span class="p">)</span> <span class="o">-</span> <span class="mi">9</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">fast_pyramid</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">downscale</span><span class="o">=</span><span class="n">downscale</span><span class="p">,</span> <span class="n">max_layer</span><span class="o">=</span><span class="n">max_layer</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_pyramid</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">data</span>
+
+    <span class="k">return</span> <span class="n">ndim</span><span class="p">,</span> <span class="n">rgb</span><span class="p">,</span> <span class="n">pyramid</span><span class="p">,</span> <span class="n">data_pyramid</span></div>
+
+
+<div class="viewcode-block" id="fast_pyramid"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.fast_pyramid">[docs]</a><span class="k">def</span> <span class="nf">fast_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">downscale</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_layer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute fast image pyramid.</span>
+
+<span class="sd">    In the interest of speed this method subsamples, rather than downsamples,</span>
+<span class="sd">    the input image.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : array</span>
+<span class="sd">        Data from which pyramid is to be generated.</span>
+<span class="sd">    downscale : int or list</span>
+<span class="sd">        Factor to downscale each step of the pyramid by. If a list, one value</span>
+<span class="sd">        must be provided for every axis of the array.</span>
+<span class="sd">    max_layer : int, optional</span>
+<span class="sd">        The maximum number of layers of the pyramid to be created.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyramid : list</span>
+<span class="sd">        List of arrays where each array is a level of the generated pyramid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">max_layer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">max_layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">downscale</span><span class="p">)</span>
+
+    <span class="n">pyramid</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_layer</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">pyramid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">pyramid</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">zoom_factor</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pyramid</span></div>
 
 
 <div class="viewcode-block" id="increment_unnamed_colormap"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.increment_unnamed_colormap">[docs]</a><span class="k">def</span> <span class="nf">increment_unnamed_colormap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">names</span><span class="p">):</span>

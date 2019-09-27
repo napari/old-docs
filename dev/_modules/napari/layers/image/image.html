@@ -153,7 +153,11 @@
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
 <span class="kn">import</span> <span class="nn">vispy.color</span>
 <span class="kn">from</span> <span class="nn">..base</span> <span class="k">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">...util.misc</span> <span class="k">import</span> <span class="n">is_rgb</span><span class="p">,</span> <span class="n">calc_data_range</span><span class="p">,</span> <span class="n">increment_unnamed_colormap</span>
+<span class="kn">from</span> <span class="nn">...util.misc</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">calc_data_range</span><span class="p">,</span>
+    <span class="n">increment_unnamed_colormap</span><span class="p">,</span>
+    <span class="n">get_pyramid_and_rgb</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...util.event</span> <span class="k">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...util.status_messages</span> <span class="k">import</span> <span class="n">format_float</span>
 <span class="kn">from</span> <span class="nn">._constants</span> <span class="k">import</span> <span class="n">Rendering</span><span class="p">,</span> <span class="n">Interpolation</span><span class="p">,</span> <span class="n">AVAILABLE_COLORMAPS</span>
@@ -165,13 +169,21 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    data : array</span>
+<span class="sd">    data : array or list of array</span>
 <span class="sd">        Image data. Can be N dimensional. If the last dimension has length</span>
-<span class="sd">        3 or 4 can be interpreted as RGB or RGBA if rgb is `True`.</span>
+<span class="sd">        3 or 4 can be interpreted as RGB or RGBA if rgb is `True`. If a</span>
+<span class="sd">        list and arrays are decreasing in shape then the data is treated as</span>
+<span class="sd">        an image pyramid.</span>
 <span class="sd">    rgb : bool</span>
 <span class="sd">        Whether the image is rgb RGB or RGBA. If not specified by user and</span>
 <span class="sd">        the last dimension of the data has length 3 or 4 it will be set as</span>
 <span class="sd">        `True`. If `False` the image is interpreted as a luminance image.</span>
+<span class="sd">    is_pyramid : bool</span>
+<span class="sd">        Whether the data is an image pyramid or not. Pyramid data is</span>
+<span class="sd">        represented by a list of array like image data. If not specified by</span>
+<span class="sd">        the user and if the data is a list of arrays that decrease in shape</span>
+<span class="sd">        then it will be taken to be a pyramid. The first image in the list</span>
+<span class="sd">        should be the largest.</span>
 <span class="sd">    colormap : str, vispy.Color.Colormap, tuple, dict</span>
 <span class="sd">        Colormap to use for luminance images. If a string must be the name</span>
 <span class="sd">        of a supported colormap from vispy or matplotlib. If a tuple the</span>
@@ -207,8 +219,10 @@
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : array</span>
-<span class="sd">        Image data. Can be N dimensional. If the last dimension has length 3</span>
-<span class="sd">        or 4 can be interpreted as RGB or RGBA if rgb is `True`.</span>
+<span class="sd">        Image data. Can be N dimensional. If the last dimension has length</span>
+<span class="sd">        3 or 4 can be interpreted as RGB or RGBA if rgb is `True`. If a list</span>
+<span class="sd">        and arrays are decreaing in shape then the data is treated as an</span>
+<span class="sd">        image pyramid.</span>
 <span class="sd">    metadata : dict</span>
 <span class="sd">        Image metadata.</span>
 <span class="sd">    rgb : bool</span>
@@ -216,6 +230,10 @@
 <span class="sd">        specified by user and the last dimension of the data has length 3 or 4</span>
 <span class="sd">        it will be set as `True`. If `False` the image is interpreted as a</span>
 <span class="sd">        luminance image.</span>
+<span class="sd">    is_pyramid : bool</span>
+<span class="sd">        Whether the data is an image pyramid or not. Pyramid data is</span>
+<span class="sd">        represented by a list of array like image data. The first image in the</span>
+<span class="sd">        list should be the largest.</span>
 <span class="sd">    colormap : 2-tuple of str, vispy.color.Colormap</span>
 <span class="sd">        The first is the name of the current colormap, and the second value is</span>
 <span class="sd">        the colormap. Colormaps are used for luminance images, if the image is</span>
@@ -242,12 +260,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">_colormaps</span> <span class="o">=</span> <span class="n">AVAILABLE_COLORMAPS</span>
+    <span class="n">_max_tile_shape</span> <span class="o">=</span> <span class="mi">1600</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">rgb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">is_pyramid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
         <span class="n">contrast_limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span>
@@ -260,18 +280,9 @@
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="c1"># Determine if rgb, and determine dimensionality</span>
-        <span class="k">if</span> <span class="n">rgb</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span> <span class="o">=</span> <span class="n">rgb</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># If rgb is True or None then guess if rgb</span>
-            <span class="c1"># allowed or not, and if allowed set it to be True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span> <span class="o">=</span> <span class="n">is_rgb</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
-            <span class="n">ndim</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ndim</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="n">ndim</span><span class="p">,</span> <span class="n">rgb</span><span class="p">,</span> <span class="n">is_pyramid</span><span class="p">,</span> <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">get_pyramid_and_rgb</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">pyramid</span><span class="o">=</span><span class="n">is_pyramid</span><span class="p">,</span> <span class="n">rgb</span><span class="o">=</span><span class="n">rgb</span>
+        <span class="p">)</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">ndim</span><span class="p">,</span>
@@ -292,7 +303,15 @@
         <span class="p">)</span>
 
         <span class="c1"># Set data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="o">=</span> <span class="n">rgb</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span> <span class="o">=</span> <span class="n">data_pyramid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_pyramid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="c1"># Intitialize image views and thumbnails with zeros</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
@@ -307,7 +326,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="k">if</span> <span class="n">contrast_limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+                <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span> <span class="o">=</span> <span class="n">contrast_limits</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">)</span>
@@ -326,41 +349,64 @@
 
     <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">ndim</span><span class="p">,</span> <span class="n">rgb</span><span class="p">,</span> <span class="n">is_pyramid</span><span class="p">,</span> <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">get_pyramid_and_rgb</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="o">=</span> <span class="n">rgb</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span> <span class="o">=</span> <span class="n">is_rgb</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span> <span class="o">=</span> <span class="n">data_pyramid</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_get_ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Determine number of dimensions of the layer.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
-            <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span>
-        <span class="k">return</span> <span class="n">ndim</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="nf">_get_extent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
-
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">rgb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;bool: Whether the image is rgb.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span>
+    <span class="k">def</span> <span class="nf">data_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: Current level of pyramid, or 0 if image.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span>
 
-    <span class="nd">@rgb</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">rgb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rgb</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">rgb</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span> <span class="o">=</span> <span class="n">rgb</span>
+    <span class="nd">@data_level</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">data_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">==</span> <span class="n">level</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">level_shapes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;array: Shapes of each level of the pyramid or just of image.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
+                <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># If rgb is True or None then guess if rgb</span>
-            <span class="c1"># allowed or not, and if allowed set it to be True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rgb</span> <span class="o">=</span> <span class="n">is_rgb</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
+                <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shapes</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">level_downsamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;list: Downsample factors for each level of the pyramid.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">top_left</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple: Location of top left canvas pixel in image.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span>
+
+    <span class="nd">@top_left</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">top_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">top_left</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span> <span class="o">==</span> <span class="n">top_left</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span> <span class="o">=</span> <span class="n">top_left</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -464,6 +510,8 @@
 
     <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set the view given the indices to slice with.&quot;&quot;&quot;</span>
+        <span class="n">not_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
             <span class="c1"># if rgb need to keep the final axis fixed during the</span>
             <span class="c1"># transpose. The index of the final axis depends on how many</span>
@@ -472,16 +520,82 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed_order</span>
 
-        <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="c1"># If 3d redering just show lowest level of pyramid</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+            <span class="c1"># Slice currently viewed level</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+            <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_downsamples</span><span class="p">[</span><span class="n">level</span><span class="p">,</span> <span class="n">not_disp</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span>
+                <span class="n">downsampled_indices</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+                <span class="n">downsampled_indices</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="n">level</span><span class="p">,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="p">)</span>
+            <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">]</span> <span class="o">=</span> <span class="n">downsampled_indices</span>
+
+            <span class="n">disp_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="n">level</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">:</span>
+                <span class="n">scale</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_downsamples</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">][</span><span class="n">d</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scale_view</span> <span class="o">=</span> <span class="n">scale</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">disp_shape</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_tile_shape</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">:</span>
+                    <span class="n">indices</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span><span class="p">[</span><span class="n">d</span><span class="p">],</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_tile_shape</span><span class="p">,</span>
+                        <span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_view</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">image</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Slice thumbnail</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+                <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_downsamples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">not_disp</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span>
+                    <span class="n">downsampled_indices</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">downsampled_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+                    <span class="n">downsampled_indices</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="p">)</span>
+                <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">]</span> <span class="o">=</span> <span class="n">downsampled_indices</span>
+                <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+            <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">image</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="ow">and</span> <span class="n">image</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">thumbnail</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">image</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="n">thumbnail</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_coordinates</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -547,8 +661,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        ----------</span>
-<span class="sd">        value : int, float, or sequence of int or float, or None</span>
-<span class="sd">            Value of the data at the coord, or none if coord is outside range.</span>
+<span class="sd">        value : tuple</span>
+<span class="sd">            Value of the data at the coord.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
@@ -560,6 +674,9 @@
             <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">coord</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">])]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">value</span></div>
 

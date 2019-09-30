@@ -144,9 +144,11 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.shapes.shape_util</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">...util</span> <span class="k">import</span> <span class="n">segment_normal</span>
 <span class="kn">from</span> <span class="nn">vispy.geometry</span> <span class="k">import</span> <span class="n">PolygonData</span>
+<span class="kn">from</span> <span class="nn">vispy.visuals.tube</span> <span class="k">import</span> <span class="n">_frenet_frames</span>
 
 
 <div class="viewcode-block" id="inside_triangles"><a class="viewcode-back" href="../../../../napari.layers.shapes.html#napari.layers.shapes.shape_util.inside_triangles">[docs]</a><span class="k">def</span> <span class="nf">inside_triangles</span><span class="p">(</span><span class="n">triangles</span><span class="p">):</span>
@@ -530,18 +532,18 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : np.ndarray</span>
-<span class="sd">        4x2 array of corner points to be converted to a box like representation</span>
+<span class="sd">        4xD array of corner points to be converted to a box like representation</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    box : np.ndarray</span>
-<span class="sd">        9x2 array of vertices of the interaction box. The first 8 points are</span>
+<span class="sd">        9xD array of vertices of the interaction box. The first 8 points are</span>
 <span class="sd">        the corners and midpoints of the box in clockwise order starting in the</span>
 <span class="sd">        upper-left corner. The last point is the center of the box</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sd">&quot;&quot;&quot;Data shape does not match expected `[4, 2]`</span>
+            <span class="sd">&quot;&quot;&quot;Data shape does not match expected `[4, D]`</span>
 <span class="sd">                         shape specifying corners for the rectangle&quot;&quot;&quot;</span>
         <span class="p">)</span>
     <span class="n">box</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
@@ -615,7 +617,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    corners : np.ndarray</span>
-<span class="sd">        4x2 array of four bounding corners of the ellipse. The ellipse will</span>
+<span class="sd">        4xD array of four bounding corners of the ellipse. The ellipse will</span>
 <span class="sd">        still be computed properly even if the rectangle determined by the</span>
 <span class="sd">        corners is not axis aligned</span>
 <span class="sd">    num_segments : int</span>
@@ -632,9 +634,9 @@
 <span class="sd">        Px2 array of the indices of the vertices for the triangles of the</span>
 <span class="sd">        triangulation. Has length given by `num_segments`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">corners</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">corners</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sd">&quot;&quot;&quot;Data shape does not match expected `[4, 2]`</span>
+            <span class="sd">&quot;&quot;&quot;Data shape does not match expected `[4, D]`</span>
 <span class="sd">                         shape specifying corners for the ellipse&quot;&quot;&quot;</span>
         <span class="p">)</span>
 
@@ -646,12 +648,21 @@
     <span class="k">if</span> <span class="n">len_vec</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="c1"># rotate to be axis aligned</span>
         <span class="n">norm_vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">/</span> <span class="n">len_vec</span>
-        <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">corners</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                    <span class="p">[</span><span class="n">norm_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">norm_vec</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
         <span class="n">adjusted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">adjusted</span><span class="p">,</span> <span class="n">transform</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">corners</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
     <span class="n">radii</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">adjusted</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="n">vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_segments</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
@@ -694,7 +705,7 @@
     <span class="k">return</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span></div>
 
 
-<div class="viewcode-block" id="triangulate_edge"><a class="viewcode-back" href="../../../../napari.layers.shapes.html#napari.layers.shapes.shape_util.triangulate_edge">[docs]</a><span class="k">def</span> <span class="nf">triangulate_edge</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">bevel</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="triangulate_edge"><a class="viewcode-back" href="../../../../napari.layers.shapes.html#napari.layers.shapes.shape_util.triangulate_edge">[docs]</a><span class="k">def</span> <span class="nf">triangulate_edge</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Determines the triangulation of a path. The resulting `offsets` can</span>
 <span class="sd">    mulitplied by a `width` scalar and be added to the resulting `centers`</span>
 <span class="sd">    to generate the vertices of the triangles for the triangulation, i.e.</span>
@@ -705,22 +716,16 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    path : np.ndarray</span>
-<span class="sd">        Nx2 array of central coordinates of path to be triangulated</span>
+<span class="sd">        Nx2 or Nx3 array of central coordinates of path to be triangulated</span>
 <span class="sd">    closed : bool</span>
-<span class="sd">        Bool which determines if the path is closed or not</span>
-<span class="sd">    limit : float</span>
-<span class="sd">        Miter limit which determines when to switch from a miter join to a</span>
-<span class="sd">        bevel join</span>
-<span class="sd">    bevel : bool</span>
-<span class="sd">        Bool which if True causes a bevel join to always be used. If False</span>
-<span class="sd">        a bevel join will only be used when the miter limit is exceeded</span>
+<span class="sd">        Bool which determines if the path is closed or not.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    centers : np.ndarray</span>
-<span class="sd">        Mx2 array central coordinates of path trinagles.</span>
+<span class="sd">        Mx2 or Mx3 array central coordinates of path trinagles.</span>
 <span class="sd">    offsets : np.ndarray</span>
-<span class="sd">        Mx2 array of the offests to the central coordinates that need to</span>
+<span class="sd">        Mx2 or Mx3 array of the offsets to the central coordinates that need to</span>
 <span class="sd">        be scaled by the line width and then added to the centers to</span>
 <span class="sd">        generate the actual vertices of the triangulation</span>
 <span class="sd">    triangles : np.ndarray</span>
@@ -740,6 +745,53 @@
             <span class="n">clean_path</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">clean_path</span><span class="p">,</span> <span class="n">clean_path</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">clean_path</span> <span class="o">=</span> <span class="n">path</span>
+
+    <span class="k">if</span> <span class="n">clean_path</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">generate_2D_edge_meshes</span><span class="p">(</span>
+            <span class="n">clean_path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="n">closed</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">generate_tube_meshes</span><span class="p">(</span>
+            <span class="n">clean_path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="n">closed</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span></div>
+
+
+<div class="viewcode-block" id="generate_2D_edge_meshes"><a class="viewcode-back" href="../../../../napari.layers.shapes.html#napari.layers.shapes.shape_util.generate_2D_edge_meshes">[docs]</a><span class="k">def</span> <span class="nf">generate_2D_edge_meshes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">bevel</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determines the triangulation of a path in 2D. The resulting `offsets`</span>
+<span class="sd">    can be mulitplied by a `width` scalar and be added to the resulting</span>
+<span class="sd">    `centers` to generate the vertices of the triangles for the triangulation,</span>
+<span class="sd">    i.e. `vertices = centers + width*offsets`. Using the `centers` and</span>
+<span class="sd">    `offsets` representation thus allows for the computed triangulation to be</span>
+<span class="sd">    independent of the line width.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : np.ndarray</span>
+<span class="sd">        Nx2 or Nx3 array of central coordinates of path to be triangulated</span>
+<span class="sd">    closed : bool</span>
+<span class="sd">        Bool which determines if the path is closed or not</span>
+<span class="sd">    limit : float</span>
+<span class="sd">        Miter limit which determines when to switch from a miter join to a</span>
+<span class="sd">        bevel join</span>
+<span class="sd">    bevel : bool</span>
+<span class="sd">        Bool which if True causes a bevel join to always be used. If False</span>
+<span class="sd">        a bevel join will only be used when the miter limit is exceeded</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    centers : np.ndarray</span>
+<span class="sd">        Mx2 or Mx3 array central coordinates of path trinagles.</span>
+<span class="sd">    offsets : np.ndarray</span>
+<span class="sd">        Mx2 or Mx3 array of the offsets to the central coordinates that need to</span>
+<span class="sd">        be scaled by the line width and then added to the centers to</span>
+<span class="sd">        generate the actual vertices of the triangulation</span>
+<span class="sd">    triangles : np.ndarray</span>
+<span class="sd">        Px3 array of the indices of the vertices that will form the</span>
+<span class="sd">        triangles of the triangulation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">clean_path</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">closed</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">clean_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">clean_path</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">clean_path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
@@ -876,6 +928,77 @@
     <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">central_path</span><span class="p">)</span>
     <span class="n">offsets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vertex_offsets</span><span class="p">)</span>
     <span class="n">triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">triangles</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span></div>
+
+
+<div class="viewcode-block" id="generate_tube_meshes"><a class="viewcode-back" href="../../../../napari.layers.shapes.html#napari.layers.shapes.shape_util.generate_tube_meshes">[docs]</a><span class="k">def</span> <span class="nf">generate_tube_meshes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tube_points</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates list of mesh vertices and triangles from a path</span>
+
+<span class="sd">    Adapted from vispy.visuals.TubeVisual</span>
+<span class="sd">    https://github.com/vispy/vispy/blob/master/vispy/visuals/tube.py</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : (N, 3) array</span>
+<span class="sd">        Vertices specifying the path.</span>
+<span class="sd">    closed : bool</span>
+<span class="sd">        Bool which determines if the path is closed or not.</span>
+<span class="sd">    tube_points : int</span>
+<span class="sd">        The number of points in the circle-approximating polygon of the</span>
+<span class="sd">        tube&#39;s cross section.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    ----------</span>
+<span class="sd">    centers : (M, 3) array</span>
+<span class="sd">        Vertices of all triangles for the lines</span>
+<span class="sd">    offsets : (M, D) array</span>
+<span class="sd">        offsets of all triangles for the lines</span>
+<span class="sd">    triangles : (P, 3) array</span>
+<span class="sd">        Vertex indices that form the mesh triangles</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">closed</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="p">[</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">tangents</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">binormals</span> <span class="o">=</span> <span class="n">_frenet_frames</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">closed</span><span class="p">)</span>
+
+    <span class="n">segments</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="c1"># get the positions of each vertex</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">tube_points</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">grid_off</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">tube_points</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">normal</span> <span class="o">=</span> <span class="n">normals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">binormal</span> <span class="o">=</span> <span class="n">binormals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="c1"># Add a vertex for each point on the circle</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">tube_points</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">tube_points</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">cx</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">cy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">grid</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="n">grid_off</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">cx</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">normal</span> <span class="o">+</span> <span class="n">cy</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">binormal</span>
+
+    <span class="c1"># construct the mesh</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tube_points</span><span class="p">):</span>
+            <span class="n">ip</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">segments</span> <span class="k">if</span> <span class="n">closed</span> <span class="k">else</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">jp</span> <span class="o">=</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">tube_points</span>
+
+            <span class="n">index_a</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">tube_points</span> <span class="o">+</span> <span class="n">j</span>
+            <span class="n">index_b</span> <span class="o">=</span> <span class="n">ip</span> <span class="o">*</span> <span class="n">tube_points</span> <span class="o">+</span> <span class="n">j</span>
+            <span class="n">index_c</span> <span class="o">=</span> <span class="n">ip</span> <span class="o">*</span> <span class="n">tube_points</span> <span class="o">+</span> <span class="n">jp</span>
+            <span class="n">index_d</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">tube_points</span> <span class="o">+</span> <span class="n">jp</span>
+
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">index_a</span><span class="p">,</span> <span class="n">index_b</span><span class="p">,</span> <span class="n">index_d</span><span class="p">])</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">index_b</span><span class="p">,</span> <span class="n">index_c</span><span class="p">,</span> <span class="n">index_d</span><span class="p">])</span>
+    <span class="n">triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="n">grid_off</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">grid_off</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">grid_off</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span></div>
 

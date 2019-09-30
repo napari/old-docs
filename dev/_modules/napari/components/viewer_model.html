@@ -167,7 +167,7 @@
 <span class="sd">        The title of the viewer window.</span>
 <span class="sd">    ndisplay : int</span>
 <span class="sd">        Number of displayed dimensions.</span>
-<span class="sd">    tuple of int</span>
+<span class="sd">    order : tuple of int</span>
 <span class="sd">        Order in which dimensions are displayed where the last two or last</span>
 <span class="sd">        three dimensions correspond to row x column or plane x row x column if</span>
 <span class="sd">        ndisplay is 2 or 3.</span>
@@ -363,7 +363,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="p">(</span><span class="n">item</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ViewerModel.reset_view"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.reset_view">[docs]</a>    <span class="k">def</span> <span class="nf">reset_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Resets the camera&#39;s view using `event.viewbox` a 4-tuple of the x, y</span>
+        <span class="sd">&quot;&quot;&quot;Resets the camera&#39;s view using `event.rect` a 4-tuple of the x, y</span>
 <span class="sd">        corner position followed by width and height of the camera</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Scale the camera to the contents in the scene</span>
@@ -375,16 +375,21 @@
         <span class="n">corner</span> <span class="o">=</span> <span class="p">[</span><span class="n">min_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="c1"># For a PanZoomCamera emit a 4-tuple of the viewbox</span>
+            <span class="c1"># For a PanZoomCamera emit a 4-tuple of the rect</span>
             <span class="n">corner</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">corner</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">size</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">size</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="n">rect</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">corner</span><span class="p">)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="p">(</span><span class="n">viewbox</span><span class="o">=</span><span class="n">rect</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="p">(</span><span class="n">rect</span><span class="o">=</span><span class="n">rect</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># For an ArcballCamera emit the center and scale_factor</span>
             <span class="n">center</span> <span class="o">=</span> <span class="n">centroid</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="p">(</span><span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="n">scale_factor</span><span class="p">)</span></div>
+            <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">1.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
+            <span class="c1"># set initial camera angle so that it matches top layer of 2D view</span>
+            <span class="c1"># when transitioning to 3D view</span>
+            <span class="n">quaternion</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="p">(</span>
+                <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">quaternion</span><span class="o">=</span><span class="n">quaternion</span>
+            <span class="p">)</span></div>
 
 <div class="viewcode-block" id="ViewerModel.to_svg"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.to_svg">[docs]</a>    <span class="k">def</span> <span class="nf">to_svg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">view_box</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convert the viewer state to an SVG. Non visible layers will be</span>

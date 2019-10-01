@@ -259,8 +259,8 @@
 <span class="sd">    data : array or list</span>
 <span class="sd">        Data to be checked if pyramid or if needs to be turned into a pyramid.</span>
 <span class="sd">    pyramid : bool, optional</span>
-<span class="sd">        Value that can force data to be considered as a pyramid, otherwise</span>
-<span class="sd">        computed.</span>
+<span class="sd">        Value that can force data to be considered as a pyramid or not,</span>
+<span class="sd">        otherwise computed.</span>
 <span class="sd">    rgb : bool, optional</span>
 <span class="sd">        Value that can force data to be considered as a rgb, otherwise</span>
 <span class="sd">        computed.</span>
@@ -277,12 +277,9 @@
 <span class="sd">        If None then data is not and does not need to be a pyramid. Otherwise</span>
 <span class="sd">        is a list of arrays where each array is a level of the pyramid.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="c1"># Determine if pyramid</span>
-    <span class="k">if</span> <span class="n">pyramid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">pyramid</span><span class="p">:</span>
+    <span class="c1"># Determine if data currently is a pyramid</span>
+    <span class="n">currently_pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">currently_pyramid</span><span class="p">:</span>
         <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
@@ -300,25 +297,36 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_shape</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyramid</span><span class="p">:</span>
-        <span class="c1"># Guess if data should be pyramid</span>
-        <span class="n">pyr_axes</span> <span class="o">=</span> <span class="n">should_be_pyramid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">pyr_axes</span><span class="p">):</span>
-            <span class="n">pyramid</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="c1"># Set axes to be downsampled to have a factor of 2</span>
-            <span class="n">downscale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
-            <span class="n">downscale</span><span class="p">[</span><span class="n">pyr_axes</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
-            <span class="n">largest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">pyr_axes</span><span class="p">])</span>
-            <span class="c1"># Determine number of downsample steps needed</span>
-            <span class="n">max_layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">largest</span><span class="p">)</span> <span class="o">-</span> <span class="mi">9</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-            <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">fast_pyramid</span><span class="p">(</span>
-                <span class="n">data</span><span class="p">,</span> <span class="n">downscale</span><span class="o">=</span><span class="n">downscale</span><span class="p">,</span> <span class="n">max_layer</span><span class="o">=</span><span class="n">max_layer</span>
+    <span class="k">if</span> <span class="n">pyramid</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">currently_pyramid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;Non pyramided data was requested, but pyramid</span>
+<span class="sd">                             data was passed&quot;&quot;&quot;</span>
             <span class="p">)</span>
-            <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">trim_pyramid</span><span class="p">(</span><span class="n">data_pyramid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">data_pyramid</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">trim_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">currently_pyramid</span><span class="p">:</span>
+            <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">trim_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">pyramid</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Guess if data should be pyramid</span>
+            <span class="n">pyr_axes</span> <span class="o">=</span> <span class="n">should_be_pyramid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">pyr_axes</span><span class="p">):</span>
+                <span class="n">pyramid</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="c1"># Set axes to be downsampled to have a factor of 2</span>
+                <span class="n">downscale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+                <span class="n">downscale</span><span class="p">[</span><span class="n">pyr_axes</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+                <span class="n">largest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">pyr_axes</span><span class="p">])</span>
+                <span class="c1"># Determine number of downsample steps needed</span>
+                <span class="n">max_layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">largest</span><span class="p">)</span> <span class="o">-</span> <span class="mi">9</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">fast_pyramid</span><span class="p">(</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">downscale</span><span class="o">=</span><span class="n">downscale</span><span class="p">,</span> <span class="n">max_layer</span><span class="o">=</span><span class="n">max_layer</span>
+                <span class="p">)</span>
+                <span class="n">data_pyramid</span> <span class="o">=</span> <span class="n">trim_pyramid</span><span class="p">(</span><span class="n">data_pyramid</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_pyramid</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">pyramid</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">return</span> <span class="n">ndim</span><span class="p">,</span> <span class="n">rgb</span><span class="p">,</span> <span class="n">pyramid</span><span class="p">,</span> <span class="n">data_pyramid</span></div>
 

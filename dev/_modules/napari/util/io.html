@@ -144,13 +144,20 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.util.io</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">skimage</span> <span class="k">import</span> <span class="n">io</span>
-<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+
+<span class="n">dask_available</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">dask</span> <span class="k">import</span> <span class="n">array</span> <span class="k">as</span> <span class="n">da</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">dask_available</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<div class="viewcode-block" id="read"><a class="viewcode-back" href="../../../napari.util.html#napari.util.io.read">[docs]</a><span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Read image files and return an array.</span>
+<div class="viewcode-block" id="imread"><a class="viewcode-back" href="../../../napari.util.html#napari.util.io.imread">[docs]</a><span class="k">def</span> <span class="nf">imread</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">use_dask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stack</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read image files and return an array.</span>
 
 <span class="sd">    If multiple images are selected, they are stacked along the 0th axis.</span>
 
@@ -158,19 +165,73 @@
 <span class="sd">    -------</span>
 <span class="sd">    filenames : list</span>
 <span class="sd">        List of filenames to be opened</span>
+<span class="sd">    use_dask : bool</span>
+<span class="sd">        Whether to use dask to create a lazy array, rather than NumPy.</span>
+<span class="sd">        Default is None, which is interpreted as &quot;use if available&quot;. If set</span>
+<span class="sd">        to True and dask is not installed, this function</span>
+<span class="sd">    stack : bool</span>
+<span class="sd">        Whether to stack the images in multiple files into a single array. If</span>
+<span class="sd">        False, a list of arrays will be returned.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    image : array</span>
 <span class="sd">        Array of images</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dask_available</span> <span class="ow">and</span> <span class="n">use_dask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">use_dask</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dask_available</span> <span class="ow">and</span> <span class="n">use_dask</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Dask array requested but dask is not installed.&#39;</span><span class="p">)</span>
     <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">io</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">]</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">image</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_dask</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">image</span></div>
+
+
+<div class="viewcode-block" id="magic_read"><a class="viewcode-back" href="../../../napari.util.html#napari.util.io.magic_read">[docs]</a><span class="k">def</span> <span class="nf">magic_read</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">use_dask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stack</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dispatch the appropriate reader given some files.</span>
+
+<span class="sd">    The files are assumed to all have the same type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -------</span>
+<span class="sd">    filenames : list</span>
+<span class="sd">        List of filenames to be opened</span>
+<span class="sd">    use_dask : bool</span>
+<span class="sd">        Whether to use dask to create a lazy array, rather than NumPy.</span>
+<span class="sd">        Default is None, which is interpreted as &quot;use if available&quot;. If set</span>
+<span class="sd">        to True and dask is not installed, this function</span>
+<span class="sd">    stack : bool</span>
+<span class="sd">        Whether to stack the images in multiple files into a single array. If</span>
+<span class="sd">        False, a list of arrays will be returned.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    image : array-like</span>
+<span class="sd">        Array or list of images</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.zarr&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">dask_available</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Dask is required to open zarr files.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loaded</span> <span class="o">=</span> <span class="p">[</span><span class="n">da</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">stack</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">loaded</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># assume proper image extension</span>
+        <span class="k">return</span> <span class="n">imread</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="n">use_dask</span><span class="o">=</span><span class="n">use_dask</span><span class="p">,</span> <span class="n">stack</span><span class="o">=</span><span class="n">stack</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

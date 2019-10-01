@@ -400,12 +400,26 @@
 <span class="sd">    values : list of float</span>
 <span class="sd">        Range of values.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="nb">min</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
-    <span class="nb">max</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">min</span> <span class="o">==</span> <span class="nb">max</span><span class="p">:</span>
-        <span class="nb">min</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="nb">max</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">)]</span></div>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e6</span><span class="p">:</span>
+        <span class="c1"># If data is very large take the average of the top, bottom, and</span>
+        <span class="c1"># middle slices</span>
+        <span class="n">top_plane_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">bottom_plane_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">middle_plane_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">bottom_plane_idx</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">top_plane</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">top_plane_idx</span><span class="p">)])</span>
+        <span class="n">bottom_plane</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">bottom_plane_idx</span><span class="p">)])</span>
+        <span class="n">middle_plane</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">middle_plane_idx</span><span class="p">)])</span>
+        <span class="n">reduced_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">top_plane</span><span class="p">,</span> <span class="n">bottom_plane</span><span class="p">,</span> <span class="n">middle_plane</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">reduced_data</span> <span class="o">=</span> <span class="n">data</span>
+
+    <span class="n">min_val</span> <span class="o">=</span> <span class="n">reduced_data</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+    <span class="n">max_val</span> <span class="o">=</span> <span class="n">reduced_data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">min_val</span> <span class="o">==</span> <span class="n">max_val</span><span class="p">:</span>
+        <span class="n">min_val</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">max_val</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">min_val</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_val</span><span class="p">)]</span></div>
 
 
 <div class="viewcode-block" id="compute_max_shape"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.compute_max_shape">[docs]</a><span class="k">def</span> <span class="nf">compute_max_shape</span><span class="p">(</span><span class="n">shapes</span><span class="p">,</span> <span class="n">max_dims</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>

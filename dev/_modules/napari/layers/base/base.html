@@ -280,6 +280,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_translate</span> <span class="o">=</span> <span class="n">translate</span> <span class="ow">or</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_scale_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ndim</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="o">=</span> <span class="kc">False</span>
@@ -437,6 +438,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;list: Factors to shift the layer by.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span>
+
+    <span class="nd">@translate_grid</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate_grid</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span> <span class="o">==</span> <span class="n">translate_grid</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span> <span class="o">=</span> <span class="n">translate_grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;tuple of int: Cursor position in image of displayed dimensions.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span>
@@ -484,6 +497,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span>
                 <span class="n">ndim</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span><span class="p">)</span>
             <span class="p">)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_view</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">ndim</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ndim</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="n">ndim</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span><span class="p">)</span>
+            <span class="p">)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_translate_grid</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
 

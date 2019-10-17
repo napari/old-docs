@@ -1,0 +1,721 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.layers.shapes.shape_models.shape &mdash; napari  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../napari.html">napari package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.layers.shapes.shape_models.shape</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.layers.shapes.shape_models.shape</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="k">import</span> <span class="n">Color</span>
+<span class="kn">from</span> <span class="nn">..shape_util</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">triangulate_edge</span><span class="p">,</span>
+    <span class="n">triangulate_face</span><span class="p">,</span>
+    <span class="n">is_collinear</span><span class="p">,</span>
+    <span class="n">poly_to_mask</span><span class="p">,</span>
+    <span class="n">path_to_mask</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="Shape"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape">[docs]</a><span class="k">class</span> <span class="nc">Shape</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for a single shape</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : (N, D) array</span>
+<span class="sd">        Vertices specifying the shape.</span>
+<span class="sd">    edge_width : float</span>
+<span class="sd">        thickness of lines and edges.</span>
+<span class="sd">    edge_color : str | tuple</span>
+<span class="sd">        If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">        starting with `#`. If array-like must be 1-dimensional array with 3 or</span>
+<span class="sd">        4 elements.</span>
+<span class="sd">    face_color : str | tuple</span>
+<span class="sd">        If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">        starting with `#`. If array-like must be 1-dimensional array with 3 or</span>
+<span class="sd">        4 elements.</span>
+<span class="sd">    opacity : float</span>
+<span class="sd">        Opacity of the shape, must be between 0 and 1.</span>
+<span class="sd">    z_index : int</span>
+<span class="sd">        Specifier of z order priority. Shapes with higher z order are displayed</span>
+<span class="sd">        ontop of others.</span>
+<span class="sd">    dims_order : (D,) list</span>
+<span class="sd">        Order that the dimensions are to be rendered in.</span>
+<span class="sd">    ndisplay : int</span>
+<span class="sd">        Number of displayed dimensions.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : (N, D) array</span>
+<span class="sd">        Vertices specifying the shape.</span>
+<span class="sd">    data_displayed : (N, 2) array</span>
+<span class="sd">        Vertices of the shape that are currently displayed. Only 2D rendering</span>
+<span class="sd">        currently supported.</span>
+<span class="sd">    edge_width : float</span>
+<span class="sd">        thickness of lines and edges.</span>
+<span class="sd">    edge_color : ColorArray</span>
+<span class="sd">        Color of the shape edge</span>
+<span class="sd">    face_color : ColorArray</span>
+<span class="sd">        Color of the shape face</span>
+<span class="sd">    opacity : float</span>
+<span class="sd">        Opacity of the shape, must be between 0 and 1.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of shape type.</span>
+<span class="sd">    z_index : int</span>
+<span class="sd">        Specifier of z order priority. Shapes with higher z order are displayed</span>
+<span class="sd">        ontop of others.</span>
+<span class="sd">    dims_order : (D,) list</span>
+<span class="sd">        Order that the dimensions are rendered in.</span>
+<span class="sd">    ndisplay : int</span>
+<span class="sd">        Number of dimensions to be displayed, must be 2 as only 2D rendering</span>
+<span class="sd">        currently supported.</span>
+<span class="sd">    displayed : tuple</span>
+<span class="sd">        List of dimensions that are displayed.</span>
+<span class="sd">    not_displayed : tuple</span>
+<span class="sd">        List of dimensions that are not displayed.</span>
+<span class="sd">    slice_key : (2, M) array</span>
+<span class="sd">        Min and max values of the M non-displayed dimensions, useful for</span>
+<span class="sd">        slicing multidimensional shapes.</span>
+
+<span class="sd">    Extended Summary</span>
+<span class="sd">    ----------</span>
+<span class="sd">    _edge_color_name : str</span>
+<span class="sd">        Name of edge color or six digit hex code representing edge color if not</span>
+<span class="sd">        recongnized</span>
+<span class="sd">    _face_color_name : str</span>
+<span class="sd">        Name of edge color or six digit hex code representing face color if not</span>
+<span class="sd">        recongnized</span>
+<span class="sd">    _closed : bool</span>
+<span class="sd">        Bool if shape edge is a closed path or not</span>
+<span class="sd">    _box : np.ndarray</span>
+<span class="sd">        9x2 array of vertices of the interaction box. The first 8 points are</span>
+<span class="sd">        the corners and midpoints of the box in clockwise order starting in the</span>
+<span class="sd">        upper-left corner. The last point is the center of the box</span>
+<span class="sd">    _face_vertices : np.ndarray</span>
+<span class="sd">        Qx2 array of vertices of all triangles for the shape face</span>
+<span class="sd">    _face_triangles : np.ndarray</span>
+<span class="sd">        Px3 array of vertex indices that form the triangles for the shape face</span>
+<span class="sd">    _edge_vertices : np.ndarray</span>
+<span class="sd">        Rx2 array of centers of vertices of triangles for the shape edge.</span>
+<span class="sd">        These values should be added to the scaled `_edge_offsets` to get the</span>
+<span class="sd">        actual vertex positions. The scaling corresponds to the width of the</span>
+<span class="sd">        edge</span>
+<span class="sd">    _edge_offsets : np.ndarray</span>
+<span class="sd">        Sx2 array of offsets of vertices of triangles for the shape edge. For</span>
+<span class="sd">        These values should be scaled and added to the `_edge_vertices` to get</span>
+<span class="sd">        the actual vertex positions. The scaling corresponds to the width of</span>
+<span class="sd">        the edge</span>
+<span class="sd">    _edge_triangles : np.ndarray</span>
+<span class="sd">        Tx3 array of vertex indices that form the triangles for the shape edge</span>
+<span class="sd">    _filled : bool</span>
+<span class="sd">        Flag if array is filled or not.</span>
+<span class="sd">    _use_face_vertices : bool</span>
+<span class="sd">        Flag to use face vertices for mask generation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">shape_type</span><span class="o">=</span><span class="s1">&#39;rectangle&#39;</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">dims_order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">ndisplay</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span> <span class="o">=</span> <span class="n">dims_order</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span> <span class="o">=</span> <span class="n">ndisplay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slice_key</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_offsets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_box</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_name</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_color_name</span> <span class="o">=</span> <span class="s1">&#39;white&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filled</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_use_face_vertices</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edge_width</span> <span class="o">=</span> <span class="n">edge_width</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edge_color</span> <span class="o">=</span> <span class="n">edge_color</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">face_color</span> <span class="o">=</span> <span class="n">face_color</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opacity</span> <span class="o">=</span> <span class="n">opacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_index</span> <span class="o">=</span> <span class="n">z_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># user writes own docstring</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_update_displayed_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ndisplay</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: Number of displayed dimensions.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span>
+
+    <span class="nd">@ndisplay</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">ndisplay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndisplay</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="n">ndisplay</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span> <span class="o">=</span> <span class="n">ndisplay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_displayed_data</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dims_order</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;(D,) list: Order that the dimensions are rendered in.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span>
+
+    <span class="nd">@dims_order</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">dims_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims_order</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_order</span> <span class="o">==</span> <span class="n">dims_order</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span> <span class="o">=</span> <span class="n">dims_order</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_displayed_data</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dims_displayed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple: Dimensions that are displayed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span> <span class="p">:]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dims_not_displayed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple: Dimensions that are not displayed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_order</span><span class="p">[:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">data_displayed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;(N, 2) array: Vertices of the shape that are currently displayed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">edge_width</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;float: thickness of lines and edges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_width</span>
+
+    <span class="nd">@edge_width</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">edge_width</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_width</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_width</span> <span class="o">=</span> <span class="n">edge_width</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Color, ColorArray: color of edges</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color</span>
+
+    <span class="nd">@edge_color</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_color</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color</span> <span class="o">=</span> <span class="n">Color</span><span class="p">(</span><span class="n">edge_color</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">edge_color</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_name</span> <span class="o">=</span> <span class="n">edge_color</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color</span><span class="o">.</span><span class="n">rgba</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_name</span> <span class="o">=</span> <span class="s1">&#39;#</span><span class="si">%02x%02x%02x</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">rgb</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Color, ColorArray: color of faces</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face_color</span>
+
+    <span class="nd">@face_color</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">face_color</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_color</span> <span class="o">=</span> <span class="n">Color</span><span class="p">(</span><span class="n">face_color</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">face_color</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_face_color_name</span> <span class="o">=</span> <span class="n">face_color</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face_color</span><span class="o">.</span><span class="n">rgba</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_face_color_name</span> <span class="o">=</span> <span class="s1">&#39;#</span><span class="si">%02x%02x%02x</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">rgb</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;float: opacity of shape</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span>
+
+    <span class="nd">@opacity</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opacity</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">svg_props</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;dict: color and width properties in the svg specification</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge_width</span><span class="p">)</span>
+        <span class="n">face_color</span> <span class="o">=</span> <span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_color</span><span class="o">.</span><span class="n">rgba</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="n">fill</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;rgb{tuple(face_color[:3])}&#39;</span>
+        <span class="n">edge_color</span> <span class="o">=</span> <span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_color</span><span class="o">.</span><span class="n">rgba</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="n">stroke</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;rgb{tuple(edge_color[:3])}&#39;</span>
+        <span class="n">opacity</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opacity</span><span class="p">)</span>
+
+        <span class="c1"># Currently not using fill or stroke opacity - only global opacity</span>
+        <span class="c1"># as otherwise leads to unexpected behavior when reading svg into</span>
+        <span class="c1"># other applications</span>
+        <span class="c1"># fill_opacity = f&#39;{self.opacity*self.face_color.rgba[3]}&#39;</span>
+        <span class="c1"># stroke_opacity = f&#39;{self.opacity*self.edge_color.rgba[3]}&#39;</span>
+
+        <span class="n">props</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;fill&#39;</span><span class="p">:</span> <span class="n">fill</span><span class="p">,</span>
+            <span class="s1">&#39;stroke&#39;</span><span class="p">:</span> <span class="n">stroke</span><span class="p">,</span>
+            <span class="s1">&#39;stroke-width&#39;</span><span class="p">:</span> <span class="n">width</span><span class="p">,</span>
+            <span class="s1">&#39;opacity&#39;</span><span class="p">:</span> <span class="n">opacity</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">props</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">z_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: z order priority of shape. Shapes with higher z order displayed</span>
+<span class="sd">        ontop of others.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_z_index</span>
+
+    <span class="nd">@z_index</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">z_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z_index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_z_index</span> <span class="o">=</span> <span class="n">z_index</span>
+
+    <span class="k">def</span> <span class="nf">_set_meshes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">face</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">edge</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets the face and edge meshes from a set of points.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : np.ndarray</span>
+<span class="sd">            Nx2 or Nx3 array specifying the shape to be triangulated</span>
+<span class="sd">        closed : bool</span>
+<span class="sd">            Bool which determines if the edge is closed or not</span>
+<span class="sd">        face : bool</span>
+<span class="sd">            Bool which determines if the face need to be traingulated</span>
+<span class="sd">        edge : bool</span>
+<span class="sd">            Bool which determines if the edge need to be traingulated</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">edge</span><span class="p">:</span>
+            <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">triangulate_edge</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="n">closed</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">=</span> <span class="n">centers</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_offsets</span> <span class="o">=</span> <span class="n">offsets</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_triangles</span> <span class="o">=</span> <span class="n">triangles</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_offsets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">face</span><span class="p">:</span>
+            <span class="n">clean_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">p</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_collinear</span><span class="p">(</span><span class="n">clean_data</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:]):</span>
+                <span class="k">if</span> <span class="n">clean_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">triangulate_face</span><span class="p">(</span><span class="n">clean_data</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">clean_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">clean_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+                    <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">triangulate_face</span><span class="p">(</span><span class="n">clean_data</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
+                    <span class="n">exp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">vertices</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">exp</span><span class="p">,</span> <span class="n">vertices</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">triangles</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">vertices</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">triangles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="n">vertices</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_face_triangles</span> <span class="o">=</span> <span class="n">triangles</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_face_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_face_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_face_triangles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Shape.transform"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a linear transform on the shape</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        transform : np.ndarray</span>
+<span class="sd">            2x2 array specifying linear transform.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_box</span> <span class="o">@</span> <span class="n">transform</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">@</span> <span class="n">transform</span><span class="o">.</span><span class="n">T</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">@</span> <span class="n">transform</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_displayed</span>
+
+        <span class="n">centers</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">triangulate_edge</span><span class="p">(</span>
+            <span class="n">points</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_closed</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">=</span> <span class="n">centers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_offsets</span> <span class="o">=</span> <span class="n">offsets</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_triangles</span> <span class="o">=</span> <span class="n">triangles</span></div>
+
+<div class="viewcode-block" id="Shape.shift"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.shift">[docs]</a>    <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shift</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a 2D shift on the shape</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        shift : np.ndarray</span>
+<span class="sd">            length 2 array specifying shift of shapes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shift</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span> <span class="o">+</span> <span class="n">shift</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_vertices</span> <span class="o">+</span> <span class="n">shift</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_box</span> <span class="o">+</span> <span class="n">shift</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_displayed</span> <span class="o">+</span> <span class="n">shift</span></div>
+
+<div class="viewcode-block" id="Shape.scale"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.scale">[docs]</a>    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a scaling on the shape</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        scale : float, list</span>
+<span class="sd">            scalar or list specifying rescaling of shape.</span>
+<span class="sd">        center : list</span>
+<span class="sd">            length 2 list specifying coordinate of center of scaling.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">scale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">scale</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">scale</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">scale</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">center</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">center</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shape.rotate"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.rotate">[docs]</a>    <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a rotation on the shape</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        angle : float</span>
+<span class="sd">            angle specifying rotation of shape in degrees. CCW is positive.</span>
+<span class="sd">        center : list</span>
+<span class="sd">            length 2 list specifying coordinate of fixed point of the rotation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)],</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)]]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">center</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">center</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shape.flip"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.flip">[docs]</a>    <span class="k">def</span> <span class="nf">flip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a flip on the shape, either horizontal or vertical.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            integer specifying axis of flip. `0` flips horizontal, `1` flips</span>
+<span class="sd">            vertical.</span>
+<span class="sd">        center : list</span>
+<span class="sd">            length 2 list specifying coordinate of center of flip axes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="k">elif</span> <span class="n">axis</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;Axis not recognized, must be one of &quot;{0, 1}&quot;</span>
+<span class="sd">                             &quot;&quot;&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">center</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">center</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shape.to_mask"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.to_mask">[docs]</a>    <span class="k">def</span> <span class="nf">to_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zoom_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;Convert the shape vertices to a boolean mask.</span>
+
+<span class="sd">        Set points to `True` if they are lying inside the shape if the shape is</span>
+<span class="sd">        filled, or if they are lying along the boundary of the shape if the</span>
+<span class="sd">        shape is not filled. Negative points or points outside the mask_shape</span>
+<span class="sd">        after the zoom and offset are clipped.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mask_shape : (D,) array</span>
+<span class="sd">            Shape of mask to be generated. If non specified, takes the max of</span>
+<span class="sd">            the displayed vertices.</span>
+<span class="sd">        zoom_factor : float</span>
+<span class="sd">            Premultiplier applied to coordinates before generating mask. Used</span>
+<span class="sd">            for generating as downsampled mask.</span>
+<span class="sd">        offset : 2-tuple</span>
+<span class="sd">            Offset subtracted from coordinates before multiplying by the</span>
+<span class="sd">            zoom_factor. Used for putting negative coordinates into the mask.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mask : np.ndarray</span>
+<span class="sd">            Boolean array with `True` for points inside the shape</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mask_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mask_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_displayed</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+                <span class="s1">&#39;int&#39;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask_shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">embedded</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">shape_plane</span> <span class="o">=</span> <span class="n">mask_shape</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask_shape</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">embedded</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">shape_plane</span> <span class="o">=</span> <span class="p">[</span><span class="n">mask_shape</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;&quot;&quot;mask shape length must either be 2 or the same</span>
+<span class="s2">            as the dimensionality of the shape, expected </span><span class="si">{self.data.shape[1]}</span><span class="s2"></span>
+<span class="s2">            got {len(mask_shape)}.&quot;&quot;&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_face_vertices</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face_vertices</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_displayed</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">shape_plane</span><span class="p">)</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filled</span><span class="p">:</span>
+            <span class="n">mask_p</span> <span class="o">=</span> <span class="n">poly_to_mask</span><span class="p">(</span><span class="n">shape_plane</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">*</span> <span class="n">zoom_factor</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mask_p</span> <span class="o">=</span> <span class="n">path_to_mask</span><span class="p">(</span><span class="n">shape_plane</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">*</span> <span class="n">zoom_factor</span><span class="p">)</span>
+
+        <span class="c1"># If the mask is to be embedded in a larger array, compute array</span>
+        <span class="c1"># and embed as a slice.</span>
+        <span class="k">if</span> <span class="n">embedded</span><span class="p">:</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">mask_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="n">slice_key</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask_shape</span><span class="p">)</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mask_shape</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">:</span>
+                    <span class="n">slice_key</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">slice_key</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">slice_key</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_key</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="p">)</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">displayed_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims_displayed</span><span class="p">))</span>
+            <span class="n">displayed_order</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">displayed_order</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">displayed_order</span><span class="p">))</span>
+            <span class="p">)</span>
+            <span class="n">mask</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">slice_key</span><span class="p">)]</span> <span class="o">==</span> <span class="n">mask_p</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">displayed_order</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">mask_p</span>
+
+        <span class="k">return</span> <span class="n">mask</span></div>
+
+<div class="viewcode-block" id="Shape.to_xml"><a class="viewcode-back" href="../../../../../napari.layers.shapes.shape_models.html#napari.layers.shapes.shape_models.shape.Shape.to_xml">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">to_xml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># user writes own docstring</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Author
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

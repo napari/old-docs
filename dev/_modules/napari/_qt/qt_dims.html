@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari._qt.qt_dims &mdash; napari  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../napari.html">napari package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari._qt.qt_dims</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari._qt.qt_dims</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">Signal</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">QGridLayout</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="p">,</span> <span class="n">QScrollBar</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">..components.dims</span> <span class="k">import</span> <span class="n">Dims</span>
+<span class="kn">from</span> <span class="nn">..components.dims_constants</span> <span class="k">import</span> <span class="n">DimsMode</span>
+
+
+<div class="viewcode-block" id="QtDims"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims">[docs]</a><span class="k">class</span> <span class="nc">QtDims</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Qt View for Dims model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dims : Dims</span>
+<span class="sd">        Dims object to be passed to Qt object</span>
+<span class="sd">    parent : QWidget, optional</span>
+<span class="sd">        QWidget that will be the parent of this widget</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dims : Dims</span>
+<span class="sd">        Dims object</span>
+<span class="sd">    sliders : list</span>
+<span class="sd">        List of slider widgets</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Qt Signals for sending events to Qt thread</span>
+    <span class="n">update_ndim</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
+    <span class="n">update_axis</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">update_range</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">update_display</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims</span><span class="p">:</span> <span class="n">Dims</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span> <span class="o">=</span> <span class="mi">22</span>
+
+        <span class="c1"># We keep a reference to the view:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">dims</span>
+
+        <span class="c1"># list of sliders</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># True / False if slider is or is not displayed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Initialises the layout:</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QGridLayout</span><span class="p">()</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Preferred</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
+
+        <span class="c1"># Update the number of sliders now that the dims have been added</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_nsliders</span><span class="p">()</span>
+
+        <span class="c1"># The next lines connect events coming from the model to the Qt event</span>
+        <span class="c1"># system: We need to go through Qt signals so that these events are run</span>
+        <span class="c1"># in the Qt event loop thread. This is all about changing thread</span>
+        <span class="c1"># context for thread-safety purposes</span>
+
+        <span class="c1"># ndim change listener</span>
+        <span class="k">def</span> <span class="nf">update_ndim_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_ndim</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndim</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_ndim_listener</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_ndim</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_nsliders</span><span class="p">)</span>
+
+        <span class="c1"># axis change listener</span>
+        <span class="k">def</span> <span class="nf">update_axis_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_axis</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_axis_listener</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">)</span>
+
+        <span class="c1"># range change listener</span>
+        <span class="k">def</span> <span class="nf">update_range_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_range</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_range_listener</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_range</span><span class="p">)</span>
+
+        <span class="c1"># range change listener</span>
+        <span class="k">def</span> <span class="nf">update_display_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_display</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_display_listener</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_display_listener</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_display</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nsliders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the number of sliders displayed</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nsliders: int</span>
+<span class="sd">            Number of sliders displayed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">last_used</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: Index of slider last used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span>
+
+    <span class="nd">@last_used</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">last_used</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last_used</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">last_used</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">formerly_used</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span>
+        <span class="k">if</span> <span class="n">formerly_used</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">formerly_used</span><span class="p">]</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;last_used&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span> <span class="o">=</span> <span class="n">last_used</span>
+        <span class="k">if</span> <span class="n">last_used</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">last_used</span><span class="p">]</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;last_used&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
+            <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates position for a given slider.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Axis index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">):</span>
+            <span class="k">return</span>
+
+        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+        <span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">DimsMode</span><span class="o">.</span><span class="n">POINT</span><span class="p">:</span>
+            <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
+
+    <span class="k">def</span> <span class="nf">_update_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates range for a given slider.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Axis index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">):</span>
+            <span class="k">return</span>
+
+        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+        <span class="nb">range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="nb">range</span> <span class="o">=</span> <span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">range</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span>
+                <span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
+                    <span class="n">slider</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">setPageStep</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+
+        <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_display</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates display for all sliders.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">slider</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">))):</span>
+            <span class="k">if</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">:</span>
+                <span class="c1"># Displayed dimensions correspond to non displayed sliders</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Non displayed dimensions correspond to displayed sliders</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
+                <span class="n">slider</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_nsliders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the number of sliders based on the number of dimensions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trim_sliders</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_sliders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_range</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates sliders to match new number of dimensions</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        number_of_sliders : new number of sliders</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># add extra sliders so that number_of_sliders are present</span>
+        <span class="c1"># add to the beginning of the list</span>
+        <span class="k">for</span> <span class="n">slider_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsliders</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
+            <span class="n">dim_axis</span> <span class="o">=</span> <span class="n">number_of_sliders</span> <span class="o">-</span> <span class="n">slider_num</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_range_slider_widget</span><span class="p">(</span><span class="n">dim_axis</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slider</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_trim_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Trims number of dimensions to a lower number</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        number_of_sliders : new number of sliders</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># remove extra sliders so that only number_of_sliders are left</span>
+        <span class="c1"># remove from the beginning of the list</span>
+        <span class="k">for</span> <span class="n">slider_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">number_of_sliders</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsliders</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_remove_slider</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove slider at index</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Index of slider to remove</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># remove particular slider</span>
+        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+        <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_create_range_slider_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a range slider widget for a given axis</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis : axis index</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        slider : range slider</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="c1"># Set the maximum values of the range slider to be one step less than</span>
+        <span class="c1"># the range of the layer as otherwise the slider can move beyond the</span>
+        <span class="c1"># shape of the layer as the endpoint is included</span>
+        <span class="nb">range</span> <span class="o">=</span> <span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+        <span class="n">slider</span> <span class="o">=</span> <span class="n">QScrollBar</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Horizontal</span><span class="p">)</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setFocusPolicy</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoFocus</span><span class="p">)</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setPageStep</span><span class="p">(</span><span class="nb">range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+
+        <span class="c1"># Listener to be used for sending events back to model:</span>
+        <span class="k">def</span> <span class="nf">slider_change_listener</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c1"># linking the listener to the slider:</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">slider_change_listener</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">slider_focused_listener</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
+
+        <span class="c1"># linking focus listener to the last used:</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">sliderPressed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">slider_focused_listener</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">slider</span>
+
+<div class="viewcode-block" id="QtDims.focus_up"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.focus_up">[docs]</a>    <span class="k">def</span> <span class="nf">focus_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shift focused dimension slider to be the next slider above.&quot;&quot;&quot;</span>
+        <span class="n">displayed</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">displayed</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_used</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">displayed</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="QtDims.focus_down"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.focus_down">[docs]</a>    <span class="k">def</span> <span class="nf">focus_down</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shift focused dimension slider to be the next slider bellow.&quot;&quot;&quot;</span>
+        <span class="n">displayed</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">displayed</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_used</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">displayed</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Author
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

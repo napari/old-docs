@@ -144,7 +144,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.layers.qt_image_base_layer</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QHBoxLayout</span>
+<span></span><span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QHBoxLayout</span><span class="p">,</span> <span class="n">QSlider</span>
 <span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">QHRangeSlider</span>
 <span class="kn">from</span> <span class="nn">.qt_base_layer</span> <span class="k">import</span> <span class="n">QtLayerControls</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">Qt</span>
@@ -160,6 +160,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contrast_limits</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
             <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_slider_update</span><span class="p">()</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_slider_update</span><span class="p">())</span>
 
         <span class="n">comboBox</span> <span class="o">=</span> <span class="n">QComboBox</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">cmap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">colormaps</span><span class="p">:</span>
@@ -182,6 +183,17 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_slider_changed</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_slider_update</span><span class="p">()</span>
+
+        <span class="c1"># gamma slider</span>
+        <span class="n">sld</span> <span class="o">=</span> <span class="n">QSlider</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Horizontal</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">setFocusPolicy</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoFocus</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+        <span class="n">sld</span><span class="o">.</span><span class="n">valueChanged</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_slider_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span> <span class="o">=</span> <span class="n">sld</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma_slider_update</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">colorbarLabel</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">colorbarLabel</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;colorbar&#39;</span><span class="p">)</span>
@@ -223,6 +235,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">blockSignals</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">setValues</span><span class="p">((</span><span class="n">slidermin</span><span class="p">,</span> <span class="n">slidermax</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">blockSignals</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QtBaseImageControls.gamma_slider_changed"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.gamma_slider_changed">[docs]</a>    <span class="k">def</span> <span class="nf">gamma_slider_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">value</span> <span class="o">/</span> <span class="mi">100</span></div>
+
+<div class="viewcode-block" id="QtBaseImageControls.gamma_slider_update"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.gamma_slider_update">[docs]</a>    <span class="k">def</span> <span class="nf">gamma_slider_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span><span class="o">.</span><span class="n">blockSignals</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span><span class="o">.</span><span class="n">blockSignals</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtBaseImageControls.mouseMoveEvent"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.mouseMoveEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseMoveEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">_contrast_limits_msg</span></div></div>

@@ -148,9 +148,11 @@
 <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">inf</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="k">import</span> <span class="n">Element</span><span class="p">,</span> <span class="n">tostring</span>
+
 <span class="kn">from</span> <span class="nn">.dims</span> <span class="k">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">.layerlist</span> <span class="k">import</span> <span class="n">LayerList</span>
 <span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">layers</span>
+<span class="kn">from</span> <span class="nn">..util</span> <span class="k">import</span> <span class="n">colormaps</span>
 <span class="kn">from</span> <span class="nn">..util.event</span> <span class="k">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..util.keybindings</span> <span class="k">import</span> <span class="n">KeymapMixin</span>
 <span class="kn">from</span> <span class="nn">..util.theme</span> <span class="k">import</span> <span class="n">palettes</span>
@@ -538,9 +540,10 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
+        <span class="n">channel_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">rgb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">is_pyramid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
+        <span class="n">colormap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">contrast_limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">gamma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span>
@@ -550,7 +553,7 @@
         <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
+        <span class="n">blending</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
@@ -563,6 +566,8 @@
 <span class="sd">            3 or 4 can be interpreted as RGB or RGBA if rgb is `True`. If a</span>
 <span class="sd">            list and arrays are decreasing in shape then the data is treated as</span>
 <span class="sd">            an image pyramid.</span>
+<span class="sd">        channel_axis : int, optional</span>
+<span class="sd">            Axis to expand image along.</span>
 <span class="sd">        rgb : bool</span>
 <span class="sd">            Whether the image is rgb RGB or RGBA. If not specified by user and</span>
 <span class="sd">            the last dimension of the data has length 3 or 4 it will be set as</span>
@@ -573,108 +578,15 @@
 <span class="sd">            the user and if the data is a list of arrays that decrease in shape</span>
 <span class="sd">            then it will be taken to be a pyramid. The first image in the list</span>
 <span class="sd">            should be the largest.</span>
-<span class="sd">        colormap : str, vispy.Color.Colormap, tuple, dict</span>
-<span class="sd">            Colormap to use for luminance images. If a string must be the name</span>
-<span class="sd">            of a supported colormap from vispy or matplotlib. If a tuple the</span>
-<span class="sd">            first value must be a string to assign as a name to a colormap and</span>
-<span class="sd">            the second item must be a Colormap. If a dict the key must be a</span>
-<span class="sd">            string to assign as a name to a colormap and the value must be a</span>
-<span class="sd">            Colormap.</span>
-<span class="sd">        contrast_limits : list (2,)</span>
-<span class="sd">            Color limits to be used for determining the colormap bounds for</span>
-<span class="sd">            luminance images. If not passed is calculated as the min and max of</span>
-<span class="sd">            the image.</span>
-<span class="sd">        gamma : float</span>
-<span class="sd">            Gamma correction for determining colormap linearity.  Defaults to 1.</span>
-<span class="sd">        interpolation : str</span>
-<span class="sd">            Interpolation mode used by vispy. Must be one of our supported</span>
-<span class="sd">            modes.</span>
-<span class="sd">        name : str</span>
-<span class="sd">            Name of the layer.</span>
-<span class="sd">        metadata : dict</span>
-<span class="sd">            Layer metadata.</span>
-<span class="sd">        scale : tuple of float</span>
-<span class="sd">            Scale factors for the layer.</span>
-<span class="sd">        translate : tuple of float</span>
-<span class="sd">            Translation values for the layer.</span>
-<span class="sd">        opacity : float</span>
-<span class="sd">            Opacity of the layer visual, between 0.0 and 1.0.</span>
-<span class="sd">        blending : str</span>
-<span class="sd">            One of a list of preset blending modes that determines how RGB and</span>
-<span class="sd">            alpha values of the layer visual get mixed. Allowed values are</span>
-<span class="sd">            {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
-<span class="sd">        visible : bool</span>
-<span class="sd">            Whether the layer visual is currently being displayed.</span>
-<span class="sd">        path : str or list of str</span>
-<span class="sd">            Path or list of paths to image data.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        layer : :class:`napari.layers.Image`</span>
-<span class="sd">            The newly-created image layer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;One of either data or path must be provided&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only one of data or path can be provided&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">magic_imread</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span>
-            <span class="n">data</span><span class="p">,</span>
-            <span class="n">rgb</span><span class="o">=</span><span class="n">rgb</span><span class="p">,</span>
-            <span class="n">is_pyramid</span><span class="o">=</span><span class="n">is_pyramid</span><span class="p">,</span>
-            <span class="n">colormap</span><span class="o">=</span><span class="n">colormap</span><span class="p">,</span>
-            <span class="n">contrast_limits</span><span class="o">=</span><span class="n">contrast_limits</span><span class="p">,</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
-            <span class="n">interpolation</span><span class="o">=</span><span class="n">interpolation</span><span class="p">,</span>
-            <span class="n">rendering</span><span class="o">=</span><span class="n">rendering</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
-            <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
-            <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
-            <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
-            <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
-            <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">layer</span></div>
-
-<div class="viewcode-block" id="ViewerModel.add_multichannel"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_multichannel">[docs]</a>    <span class="k">def</span> <span class="nf">add_multichannel</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span>
-        <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">colormap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">contrast_limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">gamma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span>
-        <span class="n">rendering</span><span class="o">=</span><span class="s1">&#39;mip&#39;</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">translate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;additive&#39;</span><span class="p">,</span>
-        <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add image layers to the layers list expanding along axis.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        data : array</span>
-<span class="sd">            Image data. Can be N dimensional.</span>
-<span class="sd">        axis : int</span>
-<span class="sd">            Axis to expand colors along.</span>
-<span class="sd">        colormap : list, str, vispy.Color.Colormap, tuple, dict</span>
+<span class="sd">        colormap : str, vispy.Color.Colormap, tuple, dict, list</span>
 <span class="sd">            Colormaps to use for luminance images. If a string must be the name</span>
 <span class="sd">            of a supported colormap from vispy or matplotlib. If a tuple the</span>
 <span class="sd">            first value must be a string to assign as a name to a colormap and</span>
 <span class="sd">            the second item must be a Colormap. If a dict the key must be a</span>
 <span class="sd">            string to assign as a name to a colormap and the value must be a</span>
 <span class="sd">            Colormap. If a list then must be same length as the axis that is</span>
-<span class="sd">            being expanded and then each colormap is applied to each image.</span>
+<span class="sd">            being expanded as channels, and each colormap is applied to each</span>
+<span class="sd">            new image layer.</span>
 <span class="sd">        contrast_limits : list (2,)</span>
 <span class="sd">            Color limits to be used for determining the colormap bounds for</span>
 <span class="sd">            luminance images. If not passed is calculated as the min and max of</span>
@@ -709,8 +621,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        layers : list of :class:`napari.layers.Image`</span>
-<span class="sd">            The newly-created image layers.</span>
+<span class="sd">        layer : :class:`napari.layers.Image` or list</span>
+<span class="sd">            The newly-created image layer or list of image layers.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;One of either data or path must be provided&quot;</span><span class="p">)</span>
@@ -719,37 +631,18 @@
         <span class="k">elif</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">magic_imread</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
-        <span class="n">n_images</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-
-        <span class="n">name</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-
-        <span class="n">base_colormaps</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cyan&#39;</span><span class="p">,</span> <span class="s1">&#39;yellow&#39;</span><span class="p">,</span> <span class="s1">&#39;magenta&#39;</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">colormap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">colormap</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">base_colormaps</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">colormap</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
-
-        <span class="c1"># If one pair of clim values is passed then need to iterate them to</span>
-        <span class="c1"># all layers.</span>
-        <span class="k">if</span> <span class="n">contrast_limits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_iterable</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="n">contrast_limits</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">contrast_limits</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">)</span>
-
-        <span class="n">gamma</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span>
-
-        <span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">zipped_args</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
-            <span class="nb">range</span><span class="p">(</span><span class="n">n_images</span><span class="p">),</span> <span class="n">colormap</span><span class="p">,</span> <span class="n">contrast_limits</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">name</span>
-        <span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cmap</span><span class="p">,</span> <span class="n">clims</span><span class="p">,</span> <span class="n">_gamma</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">zipped_args</span><span class="p">:</span>
-            <span class="n">image</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
-            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span>
-                <span class="n">image</span><span class="p">,</span>
-                <span class="n">rgb</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">colormap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
-                <span class="n">contrast_limits</span><span class="o">=</span><span class="n">clims</span><span class="p">,</span>
-                <span class="n">gamma</span><span class="o">=</span><span class="n">_gamma</span><span class="p">,</span>
+        <span class="k">if</span> <span class="n">channel_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">colormap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">colormap</span> <span class="o">=</span> <span class="s1">&#39;gray&#39;</span>
+            <span class="k">if</span> <span class="n">blending</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">blending</span> <span class="o">=</span> <span class="s1">&#39;translucent&#39;</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">rgb</span><span class="o">=</span><span class="n">rgb</span><span class="p">,</span>
+                <span class="n">is_pyramid</span><span class="o">=</span><span class="n">is_pyramid</span><span class="p">,</span>
+                <span class="n">colormap</span><span class="o">=</span><span class="n">colormap</span><span class="p">,</span>
+                <span class="n">contrast_limits</span><span class="o">=</span><span class="n">contrast_limits</span><span class="p">,</span>
+                <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
                 <span class="n">interpolation</span><span class="o">=</span><span class="n">interpolation</span><span class="p">,</span>
                 <span class="n">rendering</span><span class="o">=</span><span class="n">rendering</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
@@ -760,8 +653,69 @@
                 <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
                 <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">layers</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">layer</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_pyramid</span><span class="p">:</span>
+                <span class="n">n_channels</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">channel_axis</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">n_channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">channel_axis</span><span class="p">]</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">blending</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">blending</span> <span class="o">=</span> <span class="s1">&#39;additive&#39;</span>
+
+            <span class="k">if</span> <span class="n">colormap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n_channels</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">colormap</span> <span class="o">=</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">MAGENTA_GREEN</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">colormap</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">colormaps</span><span class="o">.</span><span class="n">CYMRGB</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">colormap</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+
+            <span class="c1"># If one pair of clim values is passed then need to iterate them to</span>
+            <span class="c1"># all layers.</span>
+            <span class="k">if</span> <span class="n">contrast_limits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_iterable</span><span class="p">(</span>
+                <span class="n">contrast_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">contrast_limits</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">contrast_limits</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">)</span>
+
+            <span class="n">gamma</span> <span class="o">=</span> <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span>
+
+            <span class="n">layer_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">zipped_args</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="nb">range</span><span class="p">(</span><span class="n">n_channels</span><span class="p">),</span> <span class="n">colormap</span><span class="p">,</span> <span class="n">contrast_limits</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">name</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cmap</span><span class="p">,</span> <span class="n">clims</span><span class="p">,</span> <span class="n">_gamma</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">zipped_args</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_pyramid</span><span class="p">:</span>
+                    <span class="n">image</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">data</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">channel_axis</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+                    <span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">image</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">channel_axis</span><span class="p">)</span>
+                <span class="n">layer</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span>
+                    <span class="n">image</span><span class="p">,</span>
+                    <span class="n">rgb</span><span class="o">=</span><span class="n">rgb</span><span class="p">,</span>
+                    <span class="n">colormap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+                    <span class="n">contrast_limits</span><span class="o">=</span><span class="n">clims</span><span class="p">,</span>
+                    <span class="n">gamma</span><span class="o">=</span><span class="n">_gamma</span><span class="p">,</span>
+                    <span class="n">interpolation</span><span class="o">=</span><span class="n">interpolation</span><span class="p">,</span>
+                    <span class="n">rendering</span><span class="o">=</span><span class="n">rendering</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+                    <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+                    <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
+                    <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
+                    <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
+                    <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+                <span class="n">layer_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">layer_list</span></div>
 
 <div class="viewcode-block" id="ViewerModel.add_points"><a class="viewcode-back" href="../../../napari.components.html#napari.components.viewer_model.ViewerModel.add_points">[docs]</a>    <span class="k">def</span> <span class="nf">add_points</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>

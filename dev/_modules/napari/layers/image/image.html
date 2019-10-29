@@ -659,18 +659,21 @@
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)]:</span>
             <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
-        <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
+        <span class="n">raw_zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
         <span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="n">new_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+            <span class="n">raw_zoom_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]),</span>
+            <span class="mi">1</span><span class="p">,</span>  <span class="c1"># smallest side should be 1 pixel wide</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">zoom_factor</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">new_shape</span> <span class="o">/</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
             <span class="c1"># warning filter can be removed with scipy 1.4</span>
             <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
                 <span class="n">downsampled</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span>
-                    <span class="n">image</span><span class="p">,</span>
-                    <span class="p">(</span><span class="n">zoom_factor</span><span class="p">,</span> <span class="n">zoom_factor</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-                    <span class="n">prefilter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                    <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                    <span class="n">image</span><span class="p">,</span> <span class="n">zoom_factor</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># image is RGBA</span>
                 <span class="n">colormapped</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">downsampled</span><span class="p">)</span>

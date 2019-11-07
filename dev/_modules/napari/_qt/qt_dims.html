@@ -144,12 +144,14 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.qt_dims</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">Signal</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">QGridLayout</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="p">,</span> <span class="n">QScrollBar</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">QEventLoop</span><span class="p">,</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">QTimer</span><span class="p">,</span> <span class="n">Signal</span><span class="p">,</span> <span class="n">Slot</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QGridLayout</span><span class="p">,</span> <span class="n">QScrollBar</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="p">,</span> <span class="n">QWidget</span>
 
 <span class="kn">from</span> <span class="nn">..components.dims</span> <span class="k">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">..components.dims_constants</span> <span class="k">import</span> <span class="n">DimsMode</span>
+<span class="kn">from</span> <span class="nn">..util.event</span> <span class="k">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span>
 
 
 <div class="viewcode-block" id="QtDims"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims">[docs]</a><span class="k">class</span> <span class="nc">QtDims</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
@@ -191,6 +193,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># False if currently awaiting a draw event</span>
 
         <span class="c1"># Initialises the layout:</span>
         <span class="n">layout</span> <span class="o">=</span> <span class="n">QGridLayout</span><span class="p">()</span>
@@ -473,7 +476,211 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">displayed</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_used</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">displayed</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">displayed</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="QtDims.play"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.play">[docs]</a>    <span class="k">def</span> <span class="nf">play</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">frame_range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">playback_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Animate (play) axis</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        axis: int</span>
+<span class="sd">            Index of axis to play</span>
+<span class="sd">        fps: float</span>
+<span class="sd">            Frames per second for playback.  Negative values will play in</span>
+<span class="sd">            reverse.  fps == 0 will stop the animation. The view is not</span>
+<span class="sd">            guaranteed to keep up with the requested fps, and may drop frames</span>
+<span class="sd">            at higher fps.</span>
+<span class="sd">        frame_range: tuple | list</span>
+<span class="sd">            If specified, will constrain animation to loop [first, last] frames</span>
+<span class="sd">        playback_mode: str</span>
+<span class="sd">            Mode for animation playback.  Must be one of the following options:</span>
+<span class="sd">                &#39;loop&#39;: Movie will return to the first frame after reaching</span>
+<span class="sd">                    the last frame, looping until stopped.</span>
+<span class="sd">                &#39;once&#39;: Animation will stop once movie reaches the max frame</span>
+<span class="sd">                    (if fps &gt; 0) or the first frame (if fps &lt; 0).</span>
+<span class="sd">                &#39;loop_back_and_forth&#39;:  Movie will loop back and forth until</span>
+<span class="sd">                    stopped</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ----------</span>
+<span class="sd">        IndexError</span>
+<span class="sd">            If ``axis`` requested is out of the range of the dims</span>
+<span class="sd">        IndexError</span>
+<span class="sd">            If ``frame_range`` is provided and out of the range of the dims</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If ``frame_range`` is provided and range[0] &gt;= range[1]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: No access in the GUI yet. Just keybinding.</span>
+
+        <span class="c1"># allow only one axis to be playing at a time</span>
+        <span class="c1"># if nothing is playing self.stop() will not do anything</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">fps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">&#39;axis argument out of range&#39;</span><span class="p">)</span>
+        <span class="c1"># we want to avoid playing a dimension that does not have a slider</span>
+        <span class="c1"># (like X or Y, or a third dimension in volume view.)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="n">AnimationThread</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">fps</span><span class="p">,</span> <span class="n">frame_range</span><span class="p">,</span> <span class="n">playback_mode</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span>
+        <span class="p">)</span>
+        <span class="c1"># when the thread timer increments, update the current frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">incremented</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_set_frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QtDims.stop"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop axis animation&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_playing</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_play</span><span class="p">()</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_playing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return True if any axis is currently animated.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_animation_thread&#39;</span><span class="p">)</span>
+            <span class="c1"># this is repetive, since we delete the thread each time, but safer</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">isRunning</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Safely tries to set `axis` to the requested `point`.</span>
+
+<span class="sd">        This function is debounced: if the previous frame has not yet drawn to</span>
+<span class="sd">        the canvas, it will simply do nothing.  If the timer plays faster than</span>
+<span class="sd">        the canvas can draw, this will drop the intermediate frames, keeping</span>
+<span class="sd">        the effective frame rate constant even if the canvas cannot keep up.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span><span class="p">:</span>
+            <span class="c1"># disable additional point advance requests until this one draws</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+
+<div class="viewcode-block" id="QtDims.enable_play"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.enable_play">[docs]</a>    <span class="k">def</span> <span class="nf">enable_play</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="c1"># this is mostly here to connect to the main SceneCanvas.events.draw</span>
+        <span class="c1"># event in the qt_viewer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span> <span class="o">=</span> <span class="kc">True</span></div></div>
+
+
+<div class="viewcode-block" id="AnimationThread"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread">[docs]</a><span class="k">class</span> <span class="nc">AnimationThread</span><span class="p">(</span><span class="n">QThread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A thread to keep the animation timer independent of the main event loop.</span>
+
+<span class="sd">    This prevents mouseovers and other events from causing animation lag. See</span>
+<span class="sd">    QtDims.play() for public-facing docstring.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">incremented</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>  <span class="c1"># signal for each time a frame is requested</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dims</span><span class="p">,</span>
+        <span class="n">axis</span><span class="p">,</span>
+        <span class="n">fps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">frame_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">playback_mode</span><span class="o">=</span><span class="s1">&#39;loop&#39;</span><span class="p">,</span>
+        <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="c1"># could put some limits on fps here... though the handler in the QtDims</span>
+        <span class="c1"># object above is capable of ignoring overly spammy requests.</span>
+
+        <span class="n">_mode</span> <span class="o">=</span> <span class="n">playback_mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">_modes</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="s1">&#39;once&#39;</span><span class="p">,</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">_mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_modes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">f</span><span class="s1">&#39;&quot;</span><span class="si">{_mode}</span><span class="s1">&quot; not a recognized playback_mode: (</span><span class="si">{_modes}</span><span class="s1">)&#39;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">dims</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">frame_range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;frame_range[0] must be &lt;= frame_range[1]&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;frame_range[0] out of range&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;frame_range[1] out of range&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span> <span class="o">=</span> <span class="n">frame_range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">=</span> <span class="n">_mode</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># range is inclusive</span>
+
+        <span class="c1"># after dims.set_point is called, it will emit a dims.events.axis()</span>
+        <span class="c1"># we use this to update this threads current frame (in case it</span>
+        <span class="c1"># was some other event that updated the axis)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_axis_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">fps</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># negative fps plays in reverse</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span> <span class="o">=</span> <span class="n">QTimer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">setInterval</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fps</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">moveToThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># this is necessary to avoid a warning in QtDims.stop() on del thread</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AnimationThread.run"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># immediately advance one frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">QEventLoop</span><span class="p">()</span>
+        <span class="n">loop</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AnimationThread.advance"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread.advance">[docs]</a>    <span class="k">def</span> <span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Advance the current frame in the animation.</span>
+
+<span class="sd">        Takes dims scale into account and restricts the animation to the</span>
+<span class="sd">        requested frame_range, if entered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># self.playback_mode == &#39;once&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># self.playback_mode == &#39;once&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">blocker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_axis_changed</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">incremented</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span><span class="p">)</span></div>
+
+    <span class="nd">@Slot</span><span class="p">(</span><span class="n">Event</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_on_axis_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="c1"># slot for external events to update the current frame</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span></div>
 </pre></div>
 
            </div>

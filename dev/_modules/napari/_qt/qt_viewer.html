@@ -153,6 +153,7 @@
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">QCoreApplication</span><span class="p">,</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QSize</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="k">import</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">QGridLayout</span><span class="p">,</span> <span class="n">QFileDialog</span><span class="p">,</span> <span class="n">QSplitter</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="k">import</span> <span class="n">QCursor</span><span class="p">,</span> <span class="n">QPixmap</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="k">import</span> <span class="n">QThreadPool</span>
 <span class="kn">from</span> <span class="nn">qtpy</span> <span class="k">import</span> <span class="n">API_NAME</span>
 <span class="kn">from</span> <span class="nn">vispy.scene</span> <span class="k">import</span> <span class="n">SceneCanvas</span><span class="p">,</span> <span class="n">PanZoomCamera</span><span class="p">,</span> <span class="n">ArcballCamera</span>
 <span class="kn">from</span> <span class="nn">vispy.visuals.transforms</span> <span class="k">import</span> <span class="n">ChainTransform</span>
@@ -187,6 +188,8 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="n">QThreadPool</span><span class="p">()</span>
 
         <span class="n">QCoreApplication</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span>
             <span class="n">Qt</span><span class="o">.</span><span class="n">AA_UseStyleSheetPropagationInWidgetStyles</span><span class="p">,</span> <span class="kc">True</span>
@@ -554,7 +557,12 @@
                 <span class="n">filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">toLocalFile</span><span class="p">())</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">toString</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_files</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_files</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QtViewer.closeEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.QtViewer.closeEvent">[docs]</a>    <span class="k">def</span> <span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">activeThreadCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span></div></div>
 
 
 <div class="viewcode-block" id="viewbox_key_event"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.viewbox_key_event">[docs]</a><span class="k">def</span> <span class="nf">viewbox_key_event</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>

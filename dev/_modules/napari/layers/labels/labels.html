@@ -594,7 +594,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Labels.paint"><a class="viewcode-back" href="../../../../napari.layers.labels.html#napari.layers.labels.labels.Labels.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">new_label</span><span class="p">):</span>
+<div class="viewcode-block" id="Labels.paint"><a class="viewcode-back" href="../../../../napari.layers.labels.html#napari.layers.labels.labels.Labels.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">new_label</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Paint over existing labels with a new label, using the selected</span>
 <span class="sd">        brush shape and size, either only on the visible slice or in all</span>
 <span class="sd">        n dimensions.</span>
@@ -605,8 +605,12 @@
 <span class="sd">            Position of mouse cursor in image coordinates.</span>
 <span class="sd">        new_label : int</span>
 <span class="sd">            Value of the new label to be filled in.</span>
+<span class="sd">        refresh : bool</span>
+<span class="sd">            Whether to refresh view slice or not. Set to False to batch paint</span>
+<span class="sd">            calls.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">refresh</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dimensional</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">slice_coord</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
@@ -650,7 +654,8 @@
         <span class="c1"># update the labels image</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slice_coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_label</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span></div>
+        <span class="k">if</span> <span class="n">refresh</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Labels.on_mouse_press"><a class="viewcode-back" href="../../../../napari.layers.labels.html#napari.layers.labels.labels.Labels.on_mouse_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever mouse pressed in canvas.</span>
@@ -686,16 +691,14 @@
 <span class="sd">            Vispy event</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">is_dragging</span><span class="p">:</span>
-            <span class="n">new_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_label</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_cursor_coord</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">interp_coord</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">interp_coord</span> <span class="o">=</span> <span class="n">interpolate_coordinates</span><span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_last_cursor_coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span>
                 <span class="p">)</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="o">.</span><span class="n">blocker</span><span class="p">():</span>
-                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">interp_coord</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">new_label</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">interp_coord</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_label</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_set_view_slice</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_last_cursor_coord</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span></div>
 

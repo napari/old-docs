@@ -144,7 +144,9 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.util.tests.test_misc</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
 <span class="kn">from</span> <span class="nn">skimage.transform</span> <span class="k">import</span> <span class="n">pyramid_gaussian</span>
 <span class="kn">from</span> <span class="nn">napari.util.misc</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">is_rgb</span><span class="p">,</span>
@@ -210,6 +212,25 @@
     <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">clim</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">clim</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="test_calc_data_fast_uint8"><a class="viewcode-back" href="../../../../napari.util.tests.html#napari.util.tests.test_misc.test_calc_data_fast_uint8">[docs]</a><span class="k">def</span> <span class="nf">test_calc_data_fast_uint8</span><span class="p">():</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="mi">100</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">100_000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>
+        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">assert</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="test_calc_data_range_fast_big"><a class="viewcode-back" href="../../../../napari.util.tests.html#napari.util.tests.test_misc.test_calc_data_range_fast_big">[docs]</a><span class="k">def</span> <span class="nf">test_calc_data_range_fast_big</span><span class="p">():</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">100_000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">))</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span> <span class="o">&lt;</span> <span class="mi">2</span></div>
 
 
 <div class="viewcode-block" id="test_is_pyramid"><a class="viewcode-back" href="../../../../napari.util.tests.html#napari.util.tests.test_misc.test_is_pyramid">[docs]</a><span class="k">def</span> <span class="nf">test_is_pyramid</span><span class="p">():</span>

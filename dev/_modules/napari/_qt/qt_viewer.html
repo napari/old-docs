@@ -175,6 +175,7 @@
 <span class="kn">from</span> <span class="nn">.qt_controls</span> <span class="k">import</span> <span class="n">QtControls</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer_buttons</span> <span class="k">import</span> <span class="n">QtLayerButtons</span><span class="p">,</span> <span class="n">QtViewerButtons</span>
 <span class="kn">from</span> <span class="nn">.qt_console</span> <span class="k">import</span> <span class="n">QtConsole</span>
+<span class="kn">from</span> <span class="nn">.qt_viewer_dock_widget</span> <span class="k">import</span> <span class="n">QtViewerDockWidget</span>
 <span class="kn">from</span> <span class="nn">.._vispy</span> <span class="k">import</span> <span class="n">create_vispy_visual</span>
 
 
@@ -202,16 +203,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layerButtons</span> <span class="o">=</span> <span class="n">QtLayerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span> <span class="o">=</span> <span class="n">QtViewerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">console</span> <span class="o">=</span> <span class="n">QtConsole</span><span class="p">({</span><span class="s1">&#39;viewer&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span> <span class="o">=</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;console&#39;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
 
         <span class="c1"># This dictionary holds the corresponding vispy visual for each layer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">shell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
-                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_toggle_console</span><span class="p">()</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">toggle_console</span><span class="p">()</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
@@ -247,8 +249,6 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">setOrientation</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Vertical</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">main_widget</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">shell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">())</span>
 
@@ -434,18 +434,23 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">themed_stylesheet</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">bgcolor</span> <span class="o">=</span> <span class="n">palette</span><span class="p">[</span><span class="s1">&#39;canvas&#39;</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_toggle_console</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="QtViewer.toggle_console"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.QtViewer.toggle_console">[docs]</a>    <span class="k">def</span> <span class="nf">toggle_console</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Toggle console visible and not visible.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">isVisible</span><span class="p">())</span>
+        <span class="n">viz</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
+        <span class="c1"># modulate visibility at the dock widget level as console is docakable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="n">viz</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isFloating</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setFloating</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span>
-            <span class="s1">&#39;expanded&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
+            <span class="s1">&#39;expanded&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span>
-        <span class="p">)</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_mouse_press"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.QtViewer.on_mouse_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever mouse pressed in canvas.</span>

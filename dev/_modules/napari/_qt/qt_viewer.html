@@ -145,7 +145,6 @@
             
   <h1>Source code for napari._qt.qt_viewer</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os.path</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
 
@@ -172,6 +171,7 @@
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..util.keybindings</span> <span class="k">import</span> <span class="n">components_to_key_combo</span>
 
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">QImg2array</span>
 <span class="kn">from</span> <span class="nn">.qt_controls</span> <span class="k">import</span> <span class="n">QtControls</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer_buttons</span> <span class="k">import</span> <span class="n">QtLayerButtons</span><span class="p">,</span> <span class="n">QtViewerButtons</span>
 <span class="kn">from</span> <span class="nn">.qt_console</span> <span class="k">import</span> <span class="n">QtConsole</span>
@@ -341,22 +341,7 @@
 <span class="sd">            upper-left corner of the rendered region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">native</span><span class="o">.</span><span class="n">grabFramebuffer</span><span class="p">()</span>
-        <span class="n">b</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">constBits</span><span class="p">()</span>
-        <span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">height</span><span class="p">(),</span> <span class="n">img</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="mi">4</span>
-
-        <span class="c1"># As vispy doesn&#39;t use qtpy we need to reconcile the differences</span>
-        <span class="c1"># between the `QImage` API for `PySide2` and `PyQt5` on how to convert</span>
-        <span class="c1"># a QImage to a numpy array.</span>
-        <span class="k">if</span> <span class="n">API_NAME</span> <span class="o">==</span> <span class="s1">&#39;PySide2&#39;</span><span class="p">:</span>
-            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">b</span><span class="o">.</span><span class="n">setsize</span><span class="p">(</span><span class="n">h</span> <span class="o">*</span> <span class="n">w</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span>
-            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
-
-        <span class="c1"># Format of QImage is ARGB32_Premultiplied, but color channels are</span>
-        <span class="c1"># reversed.</span>
-        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
-        <span class="k">return</span> <span class="n">arr</span></div>
+        <span class="k">return</span> <span class="n">QImg2array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_open_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add image files from the menubar.&quot;&quot;&quot;</span>

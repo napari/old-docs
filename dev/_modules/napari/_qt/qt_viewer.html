@@ -145,7 +145,6 @@
             
   <h1>Source code for napari._qt.qt_viewer</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os.path</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
@@ -172,9 +171,11 @@
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..util.keybindings</span> <span class="kn">import</span> <span class="n">components_to_key_combo</span>
 
+<span class="kn">from</span> <span class="nn">.util</span> <span class="kn">import</span> <span class="n">QImg2array</span>
 <span class="kn">from</span> <span class="nn">.qt_controls</span> <span class="kn">import</span> <span class="n">QtControls</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer_buttons</span> <span class="kn">import</span> <span class="n">QtLayerButtons</span><span class="p">,</span> <span class="n">QtViewerButtons</span>
 <span class="kn">from</span> <span class="nn">.qt_console</span> <span class="kn">import</span> <span class="n">QtConsole</span>
+<span class="kn">from</span> <span class="nn">.qt_viewer_dock_widget</span> <span class="kn">import</span> <span class="n">QtViewerDockWidget</span>
 <span class="kn">from</span> <span class="nn">.._vispy</span> <span class="kn">import</span> <span class="n">create_vispy_visual</span>
 
 
@@ -202,16 +203,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layerButtons</span> <span class="o">=</span> <span class="n">QtLayerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span> <span class="o">=</span> <span class="n">QtViewerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">console</span> <span class="o">=</span> <span class="n">QtConsole</span><span class="p">({</span><span class="s1">&#39;viewer&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span> <span class="o">=</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;console&#39;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
 
         <span class="c1"># This dictionary holds the corresponding vispy visual for each layer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">shell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
-                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_toggle_console</span><span class="p">()</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">toggle_console</span><span class="p">()</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
@@ -247,8 +249,6 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">setOrientation</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Vertical</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">main_widget</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">shell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">())</span>
 
@@ -313,7 +313,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="c1"># Set a 3D camera</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">ArcballCamera</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">ArcballCamera</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;ArcballCamera&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">ArcballCamera</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;ArcballCamera&quot;</span><span class="p">,</span> <span class="n">fov</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 <span class="c1"># flip y-axis to have correct alignment</span>
                 <span class="c1"># self.view.camera.flip = (0, 1, 0)</span>
 
@@ -341,22 +341,7 @@
 <span class="sd">            upper-left corner of the rendered region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">native</span><span class="o">.</span><span class="n">grabFramebuffer</span><span class="p">()</span>
-        <span class="n">b</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">constBits</span><span class="p">()</span>
-        <span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">height</span><span class="p">(),</span> <span class="n">img</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="mi">4</span>
-
-        <span class="c1"># As vispy doesn&#39;t use qtpy we need to reconcile the differences</span>
-        <span class="c1"># between the `QImage` API for `PySide2` and `PyQt5` on how to convert</span>
-        <span class="c1"># a QImage to a numpy array.</span>
-        <span class="k">if</span> <span class="n">API_NAME</span> <span class="o">==</span> <span class="s1">&#39;PySide2&#39;</span><span class="p">:</span>
-            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">b</span><span class="o">.</span><span class="n">setsize</span><span class="p">(</span><span class="n">h</span> <span class="o">*</span> <span class="n">w</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span>
-            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
-
-        <span class="c1"># Format of QImage is ARGB32_Premultiplied, but color channels are</span>
-        <span class="c1"># reversed.</span>
-        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
-        <span class="k">return</span> <span class="n">arr</span></div>
+        <span class="k">return</span> <span class="n">QImg2array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_open_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add image files from the menubar.&quot;&quot;&quot;</span>
@@ -365,7 +350,7 @@
             <span class="n">caption</span><span class="o">=</span><span class="s1">&#39;Select image(s)...&#39;</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span><span class="p">,</span>  <span class="c1"># home dir by default</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">filenames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">filenames</span> <span class="o">!=</span> <span class="p">[])</span> <span class="ow">and</span> <span class="p">(</span><span class="n">filenames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_files</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_open_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -375,7 +360,7 @@
             <span class="n">caption</span><span class="o">=</span><span class="s1">&#39;Select folder...&#39;</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span><span class="p">,</span>  <span class="c1"># home dir by default</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">folder</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">}:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_files</span><span class="p">([</span><span class="n">folder</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="nf">_add_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filenames</span><span class="p">):</span>
@@ -434,18 +419,23 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">themed_stylesheet</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">bgcolor</span> <span class="o">=</span> <span class="n">palette</span><span class="p">[</span><span class="s1">&#39;canvas&#39;</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_toggle_console</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="QtViewer.toggle_console"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.QtViewer.toggle_console">[docs]</a>    <span class="k">def</span> <span class="nf">toggle_console</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Toggle console visible and not visible.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">isVisible</span><span class="p">())</span>
+        <span class="n">viz</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
+        <span class="c1"># modulate visibility at the dock widget level as console is docakable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="n">viz</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isFloating</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">setFloating</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span>
-            <span class="s1">&#39;expanded&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
+            <span class="s1">&#39;expanded&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span><span class="o">.</span><span class="n">consoleButton</span>
-        <span class="p">)</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_mouse_press"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_viewer.QtViewer.on_mouse_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever mouse pressed in canvas.</span>

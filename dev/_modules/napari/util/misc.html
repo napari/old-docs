@@ -146,12 +146,12 @@
   <h1>Source code for napari.util.misc</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Miscellaneous utility functions.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">enum</span> <span class="k">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
-<span class="kn">from</span> <span class="nn">numpydoc.docscrape</span> <span class="k">import</span> <span class="n">FunctionDoc</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
+<span class="kn">from</span> <span class="nn">numpydoc.docscrape</span> <span class="kn">import</span> <span class="n">FunctionDoc</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">wrapt</span>
@@ -211,7 +211,7 @@
 <div class="viewcode-block" id="is_pyramid"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.is_pyramid">[docs]</a><span class="k">def</span> <span class="nf">is_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;If shape of arrays along first axis is strictly decreasing.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">])</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">])</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">size</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
     <span class="k">else</span><span class="p">:</span>
@@ -398,7 +398,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;[unnamed colormap]&#39;</span><span class="p">:</span>
         <span class="n">past_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;[unnamed colormap&#39;</span><span class="p">)]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;[unnamed colormap {len(past_names)}]&#39;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;[unnamed colormap {len(past_names)}]&#39;</span>
     <span class="k">return</span> <span class="n">name</span></div>
 
 
@@ -414,14 +414,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    values : list of float</span>
 <span class="sd">        Range of values.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    If the data type is uint8, no calculation is performed, and 0-255 is</span>
-<span class="sd">    returned.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e6</span><span class="p">:</span>
         <span class="c1"># If data is very large take the average of the top, bottom, and</span>
         <span class="c1"># middle slices</span>
@@ -605,7 +598,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
 
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;String representation: The string method returns the lowercase</span>
 <span class="sd">        string of the Enum name</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -621,7 +614,7 @@
 
 
 <div class="viewcode-block" id="CallDefault"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.CallDefault">[docs]</a><span class="k">class</span> <span class="nc">CallDefault</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">Parameter</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;wrap defaults&quot;&quot;&quot;</span>
         <span class="n">kind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span>
         <span class="n">formatted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
@@ -644,7 +637,7 @@
 <div class="viewcode-block" id="CallSignature"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.CallSignature">[docs]</a><span class="k">class</span> <span class="nc">CallSignature</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">Signature</span><span class="p">):</span>
     <span class="n">_parameter_cls</span> <span class="o">=</span> <span class="n">CallDefault</span>
 
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;do not render separators</span>
 
 <span class="sd">        commented code is what was taken out from</span>
@@ -704,13 +697,13 @@
 <span class="sd">    Disable item and attribute setting with the exception of  ``__wrapped__``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;__wrapped__&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;cannot set attribute </span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;cannot set attribute </span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;cannot set item </span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;cannot set item </span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="mouse_press_callbacks"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.mouse_press_callbacks">[docs]</a><span class="k">def</span> <span class="nf">mouse_press_callbacks</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -849,7 +842,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">keybindings_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keymap</span><span class="p">:</span>
-        <span class="n">func_str</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;&lt;b&gt; </span><span class="si">{key}</span><span class="s1">&lt;/b&gt;: {get_function_summary(keymap[key])}&lt;br&gt;&#39;</span>
+        <span class="n">func_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&lt;b&gt; </span><span class="si">{key}</span><span class="s1">&lt;/b&gt;: {get_function_summary(keymap[key])}&lt;br&gt;&#39;</span>
         <span class="n">keybindings_str</span> <span class="o">+=</span> <span class="n">func_str</span>
 
     <span class="k">return</span> <span class="n">keybindings_str</span></div>

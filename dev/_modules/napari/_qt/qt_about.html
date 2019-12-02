@@ -144,85 +144,86 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.qt_about</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">skimage</span>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">skimage</span>
 <span class="kn">import</span> <span class="nn">vispy</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">dask</span>
 
-<span class="kn">from</span> <span class="nn">qtpy</span> <span class="kn">import</span> <span class="n">QtCore</span>
+<span class="kn">from</span> <span class="nn">qtpy</span> <span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">API_NAME</span><span class="p">,</span> <span class="n">PYSIDE_VERSION</span><span class="p">,</span> <span class="n">PYQT_VERSION</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QLabel</span><span class="p">,</span> <span class="n">QDialog</span><span class="p">,</span> <span class="n">QFrame</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QTextEdit</span><span class="p">,</span> <span class="n">QDialog</span><span class="p">,</span> <span class="n">QLabel</span>
 
 <span class="kn">import</span> <span class="nn">napari</span>
 
 
-<div class="viewcode-block" id="QtAbout"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about.QtAbout">[docs]</a><span class="k">class</span> <span class="nc">QtAbout</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">QtAbout</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+<div class="viewcode-block" id="QtAbout"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about.QtAbout">[docs]</a><span class="k">class</span> <span class="nc">QtAbout</span><span class="p">(</span><span class="n">QDialog</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
 
         <span class="c1"># Description</span>
         <span class="n">title_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span>
-            <span class="s2">&quot;&lt;b&gt;napari&lt;/b&gt;: a fast n-dimensional image viewer&quot;</span>
+            <span class="s2">&quot;&lt;b&gt;napari: a multi-dimensional image viewer for python&lt;/b&gt;&quot;</span>
         <span class="p">)</span>
         <span class="n">title_label</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">title_label</span><span class="p">)</span>
 
-        <span class="c1"># Horizontal Line Break</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span> <span class="o">=</span> <span class="n">QFrame</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="o">.</span><span class="n">setFrameShape</span><span class="p">(</span><span class="n">QFrame</span><span class="o">.</span><span class="n">HLine</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="o">.</span><span class="n">setFrameShadow</span><span class="p">(</span><span class="n">QFrame</span><span class="o">.</span><span class="n">Sunken</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="p">)</span>
+        <span class="c1"># Add information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infoTextBox</span> <span class="o">=</span> <span class="n">QTextEdit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infoTextBox</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infoTextBox</span><span class="o">.</span><span class="n">setLineWrapMode</span><span class="p">(</span><span class="n">QTextEdit</span><span class="o">.</span><span class="n">NoWrap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">infoTextBox</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="c1"># Versions</span>
-        <span class="n">versions_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span>
-            <span class="s2">&quot;napari, &quot;</span>
-            <span class="o">+</span> <span class="n">napari</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="o">+</span> <span class="s2">&quot;Qt, &quot;</span>
-            <span class="o">+</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="o">+</span> <span class="s2">&quot;NumPy, &quot;</span>
-            <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="o">+</span> <span class="s2">&quot;SciPy, &quot;</span>
-            <span class="o">+</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="o">+</span> <span class="s2">&quot;VisPy, &quot;</span>
-            <span class="o">+</span> <span class="n">vispy</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="o">+</span> <span class="s2">&quot;scikit-image, &quot;</span>
-            <span class="o">+</span> <span class="n">skimage</span><span class="o">.</span><span class="n">__version__</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">API_NAME</span> <span class="o">==</span> <span class="s1">&#39;PySide2&#39;</span><span class="p">:</span>
+            <span class="n">API_VERSION</span> <span class="o">=</span> <span class="n">PYSIDE_VERSION</span>
+        <span class="k">elif</span> <span class="n">API_NAME</span> <span class="o">==</span> <span class="s1">&#39;PyQt5&#39;</span><span class="p">:</span>
+            <span class="n">API_VERSION</span> <span class="o">=</span> <span class="n">PYQT_VERSION</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">API_VERSION</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">sys_version</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+
+        <span class="n">versions</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;napari&lt;/b&gt;: </span><span class="si">{napari.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;Platform&lt;/b&gt;: {platform.platform()} &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;Python&lt;/b&gt;: </span><span class="si">{sys_version}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;</span><span class="si">{API_NAME}</span><span class="s2">&lt;/b&gt;: </span><span class="si">{API_VERSION}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;Qt&lt;/b&gt;: </span><span class="si">{QtCore.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;VisPy&lt;/b&gt;: </span><span class="si">{vispy.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;NumPy&lt;/b&gt;: </span><span class="si">{numpy.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;SciPy&lt;/b&gt;: </span><span class="si">{scipy.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;scikit-image&lt;/b&gt;: </span><span class="si">{skimage.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;b&gt;Dask&lt;/b&gt;: </span><span class="si">{dask.__version__}</span><span class="s2"> &lt;br&gt;&quot;</span>
         <span class="p">)</span>
-        <span class="n">versions_label</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">versions_label</span><span class="p">)</span>
 
-        <span class="c1"># Horizontal Line Break</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span> <span class="o">=</span> <span class="n">QFrame</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="o">.</span><span class="n">setFrameShape</span><span class="p">(</span><span class="n">QFrame</span><span class="o">.</span><span class="n">HLine</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="o">.</span><span class="n">setFrameShadow</span><span class="p">(</span><span class="n">QFrame</span><span class="o">.</span><span class="n">Sunken</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hline_break1</span><span class="p">)</span>
-
-        <span class="n">sys_info_lines</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="n">vispy</span><span class="o">.</span><span class="n">sys_info</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)[</span><span class="n">index</span><span class="p">]</span>
-                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">]</span>
-            <span class="p">]</span>
+        <span class="n">sys_info_text</span> <span class="o">=</span> <span class="s2">&quot;&lt;br&gt;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">vispy</span><span class="o">.</span><span class="n">sys_info</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">]]</span>
         <span class="p">)</span>
-        <span class="n">sys_info_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="n">sys_info_lines</span><span class="p">)</span>
-        <span class="n">sys_info_label</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">sys_info_label</span><span class="p">)</span>
+
+        <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{versions}</span><span class="s1"> &lt;br&gt; </span><span class="si">{sys_info_text}</span><span class="s1"> &lt;br&gt;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infoTextBox</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;&lt;b&gt;citation information:&lt;/b&gt;&#39;</span><span class="p">))</span>
+
+        <span class="n">citation_text</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;napari contributors (2019). napari: a &#39;</span>
+            <span class="s1">&#39;multi-dimensional image viewer for python. &#39;</span>
+            <span class="s1">&#39;doi:10.5281/zenodo.3555620&#39;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">citationTextBox</span> <span class="o">=</span> <span class="n">QTextEdit</span><span class="p">(</span><span class="n">citation_text</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">citationTextBox</span><span class="o">.</span><span class="n">setFixedHeight</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">citationTextBox</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
 
 <div class="viewcode-block" id="QtAbout.showAbout"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about.QtAbout.showAbout">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">showAbout</span><span class="p">(</span><span class="n">qt_viewer</span><span class="p">):</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">QDialog</span><span class="p">()</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">QtAbout</span><span class="p">()</span>
         <span class="n">d</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;QtAbout&#39;</span><span class="p">)</span>
         <span class="n">d</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">styleSheet</span><span class="p">())</span>
-        <span class="n">QtAbout</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
         <span class="n">d</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;About&#39;</span><span class="p">)</span>
         <span class="n">d</span><span class="o">.</span><span class="n">setWindowModality</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">ApplicationModal</span><span class="p">)</span>
         <span class="n">d</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div></div>

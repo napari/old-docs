@@ -148,6 +148,7 @@
 
 <span class="kn">from</span> <span class="nn">napari.components</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">napari._qt.qt_dims</span> <span class="kn">import</span> <span class="n">QtDims</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
 
 
 <div class="viewcode-block" id="test_creating_view"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_creating_view">[docs]</a><span class="k">def</span> <span class="nf">test_creating_view</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
@@ -189,6 +190,28 @@
     <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span></div>
 
 
+<div class="viewcode-block" id="test_changing_focus"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_changing_focus">[docs]</a><span class="k">def</span> <span class="nf">test_changing_focus</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Test changing focus updates the dims.last_used prop.&quot;&quot;&quot;</span>
+    <span class="c1"># too-few dims, should have no sliders to update</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">QtDims</span><span class="p">(</span><span class="n">Dims</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_down</span><span class="p">()</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_up</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="ow">is</span> <span class="kc">None</span>
+
+    <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_down</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_up</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_up</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">focus_down</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="mi">2</span></div>
+
+
 <div class="viewcode-block" id="test_changing_display"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_changing_display">[docs]</a><span class="k">def</span> <span class="nf">test_changing_display</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Test changing the displayed property of an axis</span>
@@ -218,17 +241,18 @@
 
     <span class="c1"># Check that values of the dimension slider matches the values of the</span>
     <span class="c1"># dims point at initialization</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">first_slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="c1"># Check that values of the dimension slider matches the values of the</span>
     <span class="c1"># dims point after the point has been moved within the dims</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="c1"># Check that values of the dimension slider matches the values of the</span>
     <span class="c1"># dims point after the point has been moved within the slider</span>
-    <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+    <span class="n">first_slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="test_slider_range"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_slider_range">[docs]</a><span class="k">def</span> <span class="nf">test_slider_range</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
@@ -242,22 +266,21 @@
 
     <span class="c1"># Check the range of slider matches the values of the range of the dims</span>
     <span class="c1"># at initialization</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">minimum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">first_slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">minimum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">assert</span> <span class="p">(</span>
-        <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">maximum</span><span class="p">()</span>
-        <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">first_slider</span><span class="o">.</span><span class="n">maximum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
     <span class="p">)</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
 
     <span class="c1"># Check the range of slider stays matched to the values of the range of</span>
     <span class="c1"># the dims</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">minimum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">minimum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">assert</span> <span class="p">(</span>
-        <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">maximum</span><span class="p">()</span>
-        <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">first_slider</span><span class="o">.</span><span class="n">maximum</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
     <span class="p">)</span>
-    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span></div>
+    <span class="k">assert</span> <span class="n">first_slider</span><span class="o">.</span><span class="n">singleStep</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="test_order_when_changing_ndim"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_order_when_changing_ndim">[docs]</a><span class="k">def</span> <span class="nf">test_order_when_changing_ndim</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
@@ -274,25 +297,78 @@
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+        <span class="k">assert</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
     <span class="c1"># Check the matching dimensions and sliders are preserved when</span>
     <span class="c1"># dimensions are added</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="mi">5</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+        <span class="k">assert</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
     <span class="c1"># Check the matching dimensions and sliders are preserved when dims</span>
     <span class="c1"># dimensions are removed</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="mi">4</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+        <span class="k">assert</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
     <span class="c1"># Check the matching dimensions and sliders are preserved when dims</span>
     <span class="c1"># dimensions are removed</span>
     <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="mi">3</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div>
+        <span class="n">slider</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
+        <span class="k">assert</span> <span class="n">slider</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="test_update_dims_labels"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_update_dims_labels">[docs]</a><span class="k">def</span> <span class="nf">test_update_dims_labels</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Test that the slider_widget axis labels are updated with the dims model</span>
+<span class="sd">    and vice versa.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">QtDims</span><span class="p">(</span><span class="n">Dims</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">view</span><span class="p">)</span>
+    <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">axis_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="s1">&#39;TZYX&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">]</span> <span class="o">==</span> <span class="nb">list</span><span class="p">(</span><span class="s1">&#39;TZYX&#39;</span><span class="p">)</span>
+
+    <span class="n">first_label</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span>
+    <span class="k">assert</span> <span class="n">first_label</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">first_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;napari&#39;</span><span class="p">)</span>
+    <span class="c1"># first_label.editingFinished.emit()</span>
+    <span class="k">assert</span> <span class="n">first_label</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="o">==</span> <span class="n">view</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="test_slider_press_updates_last_used"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_slider_press_updates_last_used">[docs]</a><span class="k">def</span> <span class="nf">test_slider_press_updates_last_used</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;pressing on the slider should update the dims.last_used property&quot;&quot;&quot;</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">QtDims</span><span class="p">(</span><span class="n">Dims</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">view</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">widg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">):</span>
+        <span class="n">widg</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">sliderPressed</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">last_used</span> <span class="o">==</span> <span class="n">i</span></div>
+
+
+<div class="viewcode-block" id="test_play_button"><a class="viewcode-back" href="../../../../napari._qt.tests.html#napari._qt.tests.test_qt_dims.test_play_button">[docs]</a><span class="k">def</span> <span class="nf">test_play_button</span><span class="p">(</span><span class="n">qtbot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;test that the play button and its popup dialog work&quot;&quot;&quot;</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">QtDims</span><span class="p">(</span><span class="n">Dims</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">view</span><span class="p">)</span>
+    <span class="n">button</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">play_button</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">mouseClick</span><span class="p">(</span><span class="n">button</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">LeftButton</span><span class="p">)</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">waitSignal</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">started</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">view</span><span class="o">.</span><span class="n">is_playing</span>
+    <span class="k">with</span> <span class="n">qtbot</span><span class="o">.</span><span class="n">waitSignal</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">finished</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">7000</span><span class="p">):</span>
+        <span class="n">qtbot</span><span class="o">.</span><span class="n">mouseClick</span><span class="p">(</span><span class="n">button</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">LeftButton</span><span class="p">)</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">view</span><span class="o">.</span><span class="n">is_playing</span>
+
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">button</span><span class="o">.</span><span class="n">popup</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span>
+    <span class="n">qtbot</span><span class="o">.</span><span class="n">mouseClick</span><span class="p">(</span><span class="n">button</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">RightButton</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">button</span><span class="o">.</span><span class="n">popup</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span></div>
 </pre></div>
 
            </div>

@@ -144,22 +144,17 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.qt_dims</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QEventLoop</span><span class="p">,</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">QTimer</span><span class="p">,</span> <span class="n">Signal</span><span class="p">,</span> <span class="n">Slot</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">QHBoxLayout</span><span class="p">,</span>
-    <span class="n">QVBoxLayout</span><span class="p">,</span>
-    <span class="n">QSizePolicy</span><span class="p">,</span>
-    <span class="n">QWidget</span><span class="p">,</span>
-    <span class="n">QLineEdit</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QFont</span><span class="p">,</span> <span class="n">QFontMetrics</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QLineEdit</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="p">,</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QWidget</span>
 
 <span class="kn">from</span> <span class="nn">..components.dims</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">..components.dims_constants</span> <span class="kn">import</span> <span class="n">DimsMode</span>
-<span class="kn">from</span> <span class="nn">..util.event</span> <span class="kn">import</span> <span class="n">Event</span>
-<span class="kn">from</span> <span class="nn">.qt_scrollbar</span> <span class="kn">import</span> <span class="n">ModifiedScrollBar</span>
+<span class="kn">from</span> <span class="nn">.qt_dims_slider</span> <span class="kn">import</span> <span class="n">QtDimSliderWidget</span>
+<span class="kn">from</span> <span class="nn">._constants</span> <span class="kn">import</span> <span class="n">LoopMode</span>
 
 
 <div class="viewcode-block" id="QtDims"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims">[docs]</a><span class="k">class</span> <span class="nc">QtDims</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
@@ -176,16 +171,9 @@
 <span class="sd">    ----------</span>
 <span class="sd">    dims : Dims</span>
 <span class="sd">        Dims object</span>
-<span class="sd">    sliders : list</span>
+<span class="sd">    slider_widgets : list[QtDimSliderWidget]</span>
 <span class="sd">        List of slider widgets</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="c1"># Qt Signals for sending events to Qt thread</span>
-    <span class="n">update_ndim</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
-    <span class="n">update_axis</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-    <span class="n">update_range</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-    <span class="n">update_display</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
-    <span class="n">update_axis_labels</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims</span><span class="p">:</span> <span class="n">Dims</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
@@ -197,64 +185,29 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">dims</span>
 
         <span class="c1"># list of sliders</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="c1"># True / False if slider is or is not displayed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># False if currently awaiting a draw event</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># Initialises the layout:</span>
         <span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
         <span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">setSpacing</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Preferred</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
 
         <span class="c1"># Update the number of sliders now that the dims have been added</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_nsliders</span><span class="p">()</span>
-
-        <span class="c1"># The next lines connect events coming from the model to the Qt event</span>
-        <span class="c1"># system: We need to go through Qt signals so that these events are run</span>
-        <span class="c1"># in the Qt event loop thread. This is all about changing thread</span>
-        <span class="c1"># context for thread-safety purposes</span>
-
-        <span class="c1"># ndim change listener</span>
-        <span class="k">def</span> <span class="nf">update_ndim_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_ndim</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndim</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_ndim_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_ndim</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_nsliders</span><span class="p">)</span>
-
-        <span class="c1"># axis change listener</span>
-        <span class="k">def</span> <span class="nf">update_axis_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_axis</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_axis_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">)</span>
-
-        <span class="c1"># range change listener</span>
-        <span class="k">def</span> <span class="nf">update_range_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_range</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_range_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_range</span><span class="p">)</span>
-
-        <span class="c1"># display change listener</span>
-        <span class="k">def</span> <span class="nf">update_display_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_display</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_display_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_display_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_display</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">)</span>
-
-        <span class="c1"># axis labels change listener</span>
-        <span class="k">def</span> <span class="nf">update_axis_labels_listener</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_axis_labels</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis_labels</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_axis_labels_listener</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_axis_labels</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_axis_labels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndim</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_nsliders</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ev</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">(</span><span class="n">ev</span><span class="o">.</span><span class="n">axis</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">range</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ev</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_range</span><span class="p">(</span><span class="n">ev</span><span class="o">.</span><span class="n">axis</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">nsliders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -265,7 +218,7 @@
 <span class="sd">        nsliders: int</span>
 <span class="sd">            Number of sliders displayed</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">last_used</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -274,20 +227,20 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span>
 
     <span class="nd">@last_used</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">last_used</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last_used</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">last_used</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last_used</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">last_used</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="n">formerly_used</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span>
         <span class="k">if</span> <span class="n">formerly_used</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">formerly_used</span><span class="p">]</span>
+            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">formerly_used</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;last_used&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_used</span> <span class="o">=</span> <span class="n">last_used</span>
         <span class="k">if</span> <span class="n">last_used</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">last_used</span><span class="p">]</span>
+            <span class="n">sld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">last_used</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="s1">&#39;last_used&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">unpolish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
             <span class="n">sld</span><span class="o">.</span><span class="n">style</span><span class="p">()</span><span class="o">.</span><span class="n">polish</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
@@ -301,10 +254,10 @@
 <span class="sd">            Axis index.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">):</span>
             <span class="k">return</span>
 
-        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
 
         <span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">DimsMode</span><span class="o">.</span><span class="n">POINT</span><span class="p">:</span>
@@ -319,59 +272,40 @@
 <span class="sd">        axis : int</span>
 <span class="sd">            Axis index.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">):</span>
             <span class="k">return</span>
 
-        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-
-        <span class="n">_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-        <span class="n">_range</span> <span class="o">=</span> <span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-        <span class="k">if</span> <span class="n">_range</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span>
-                    <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-                    <span class="ow">and</span> <span class="n">axis</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span>
-                <span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
-                    <span class="n">slider</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">setPageStep</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">_update_range</span><span class="p">()</span>
         <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_display</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Updates display for all sliders.&quot;&quot;&quot;</span>
-        <span class="n">slider_list</span> <span class="o">=</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="p">)))</span>
-        <span class="n">label_list</span> <span class="o">=</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">)</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">slider</span><span class="p">),</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">slider_list</span><span class="p">,</span> <span class="n">label_list</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_update_display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates display for all sliders.</span>
+
+<span class="sd">        The event parameter is there just to allow easy connection to signals,</span>
+<span class="sd">        without using `lambda event:`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span> <span class="ow">in</span> <span class="n">widgets</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">:</span>
                 <span class="c1"># Displayed dimensions correspond to non displayed sliders</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
-                <span class="n">label</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+                <span class="n">widget</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Non displayed dimensions correspond to displayed sliders</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
-                <span class="n">slider</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-                <span class="n">label</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                <span class="n">widget</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
         <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_nsliders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Updates the number of sliders based on the number of dimensions.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_update_nsliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates the number of sliders based on the number of dimensions.</span>
+
+<span class="sd">        The event parameter is there just to allow easy connection to signals,</span>
+<span class="sd">        without using `lambda event:`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_trim_sliders</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_create_sliders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_display</span><span class="p">()</span>
@@ -380,9 +314,22 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_axis_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Updates the label for the given axis.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">_resize_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;When any of the labels get updated, this method updates all label</span>
+<span class="sd">        widths to the width of the longest label. This keeps the sliders</span>
+<span class="sd">        left-aligned and allows the full label to be visible at all times,</span>
+<span class="sd">        with minimal space, without setting stretch on the layout.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fm</span> <span class="o">=</span> <span class="n">QFontMetrics</span><span class="p">(</span><span class="n">QFont</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">findChildren</span><span class="p">(</span><span class="n">QLineEdit</span><span class="p">,</span> <span class="s1">&#39;axis_label&#39;</span><span class="p">)</span>
+        <span class="n">newwidth</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">fm</span><span class="o">.</span><span class="n">width</span><span class="p">(</span><span class="n">lab</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">):</span>
+            <span class="c1"># set maximum width to no more than 20% of slider width</span>
+            <span class="n">maxwidth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">width</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.2</span>
+            <span class="n">newwidth</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">newwidth</span><span class="p">,</span> <span class="n">maxwidth</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">labl</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+            <span class="n">labl</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="n">newwidth</span> <span class="o">+</span> <span class="mi">10</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_create_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Creates sliders to match new number of dimensions.</span>
@@ -396,24 +343,15 @@
         <span class="c1"># add to the beginning of the list</span>
         <span class="k">for</span> <span class="n">slider_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsliders</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
             <span class="n">dim_axis</span> <span class="o">=</span> <span class="n">number_of_sliders</span> <span class="o">-</span> <span class="n">slider_num</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="n">axis_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_axis_label_widget</span><span class="p">(</span><span class="n">dim_axis</span><span class="p">)</span>
-            <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_range_slider_widget</span><span class="p">(</span><span class="n">dim_axis</span><span class="p">)</span>
-
-            <span class="c1"># Hard-coded 1:50 ratio. Can be more dynamic as a function</span>
-            <span class="c1"># of the name of the label, but it might be a little bit</span>
-            <span class="c1"># over the top.</span>
-            <span class="n">current_row</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">axis_label</span><span class="o">.</span><span class="n">text</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="n">current_row</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">axis_label</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-                <span class="n">current_row</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">slider</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">current_row</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">current_row</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis_label</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slider</span><span class="p">)</span>
+            <span class="n">slider_widget</span> <span class="o">=</span> <span class="n">QtDimSliderWidget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_axis</span><span class="p">)</span>
+            <span class="n">slider_widget</span><span class="o">.</span><span class="n">label_changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resize_labels</span><span class="p">)</span>
+            <span class="n">slider_widget</span><span class="o">.</span><span class="n">play_button</span><span class="o">.</span><span class="n">play_requested</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">play</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">slider_widget</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slider_widget</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
             <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resize_labels</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_trim_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Trims number of dimensions to a lower number.</span>
@@ -426,10 +364,10 @@
         <span class="c1"># remove extra sliders so that only number_of_sliders are left</span>
         <span class="c1"># remove from the beginning of the list</span>
         <span class="k">for</span> <span class="n">slider_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">number_of_sliders</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsliders</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_remove_slider</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_remove_slider_widget</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_remove_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove slider at index, including all accompanying widgets.</span>
+    <span class="k">def</span> <span class="nf">_remove_slider_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove slider_widget at index, including all sub-widgets.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -437,87 +375,13 @@
 <span class="sd">            Index of slider to remove</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># remove particular slider</span>
-        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">slider_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
-        <span class="n">axis_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="n">axis_label</span><span class="p">)</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
-        <span class="n">axis_label</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="n">slider_widget</span><span class="p">)</span>
+        <span class="n">slider_widget</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
         <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">_create_range_slider_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Creates a range slider widget for a given axis.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        axis : int</span>
-<span class="sd">            axis index</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">            slider : range slider</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-        <span class="c1"># Set the maximum values of the range slider to be one step less than</span>
-        <span class="c1"># the range of the layer as otherwise the slider can move beyond the</span>
-        <span class="c1"># shape of the layer as the endpoint is included</span>
-        <span class="n">_range</span> <span class="o">=</span> <span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-        <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-
-        <span class="n">slider</span> <span class="o">=</span> <span class="n">ModifiedScrollBar</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Horizontal</span><span class="p">)</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setFocusPolicy</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoFocus</span><span class="p">)</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setPageStep</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
-
-        <span class="c1"># Listener to be used for sending events back to model:</span>
-        <span class="k">def</span> <span class="nf">slider_change_listener</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-
-        <span class="c1"># linking the listener to the slider:</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">slider_change_listener</span><span class="p">)</span>
-
-        <span class="k">def</span> <span class="nf">slider_focused_listener</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sliders</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">slider</span><span class="p">)</span>
-
-        <span class="c1"># linking focus listener to the last used:</span>
-        <span class="n">slider</span><span class="o">.</span><span class="n">sliderPressed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">slider_focused_listener</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">slider</span>
-
-    <span class="k">def</span> <span class="nf">_create_axis_label_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create the axis label widget which accompanies its slider.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        axis : int</span>
-<span class="sd">            axis index</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        label : QLabel</span>
-<span class="sd">            A label with the given text</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">label</span> <span class="o">=</span> <span class="n">QLineEdit</span><span class="p">()</span>
-        <span class="n">label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
-        <span class="n">label</span><span class="o">.</span><span class="n">home</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s1">&#39;Axis label&#39;</span><span class="p">)</span>
-        <span class="n">label</span><span class="o">.</span><span class="n">setAcceptDrops</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">label</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-
-        <span class="k">def</span> <span class="nf">changeText</span><span class="p">():</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis_labels</span><span class="o">.</span><span class="n">blocker</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_axis_label</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
-            <span class="n">label</span><span class="o">.</span><span class="n">clearFocus</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
-
-        <span class="n">label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">changeText</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">label</span>
 
 <div class="viewcode-block" id="QtDims.focus_up"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.focus_up">[docs]</a>    <span class="k">def</span> <span class="nf">focus_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Shift focused dimension slider to be the next slider above.&quot;&quot;&quot;</span>
@@ -546,9 +410,9 @@
 <div class="viewcode-block" id="QtDims.play"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.play">[docs]</a>    <span class="k">def</span> <span class="nf">play</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">fps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">loop_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">frame_range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">playback_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Animate (play) axis.</span>
 
@@ -561,16 +425,16 @@
 <span class="sd">            reverse.  fps == 0 will stop the animation. The view is not</span>
 <span class="sd">            guaranteed to keep up with the requested fps, and may drop frames</span>
 <span class="sd">            at higher fps.</span>
+<span class="sd">        loop_mode: str</span>
+<span class="sd">            Mode for animation playback.  Must be one of the following options:</span>
+<span class="sd">                &quot;once&quot;: Animation will stop once movie reaches the</span>
+<span class="sd">                    max frame (if fps &gt; 0) or the first frame (if fps &lt; 0).</span>
+<span class="sd">                &quot;loop&quot;:  Movie will return to the first frame</span>
+<span class="sd">                    after reaching the last frame, looping until stopped.</span>
+<span class="sd">                &quot;back_and_forth&quot;:  Movie will loop back and forth until</span>
+<span class="sd">                    stopped</span>
 <span class="sd">        frame_range: tuple | list</span>
 <span class="sd">            If specified, will constrain animation to loop [first, last] frames</span>
-<span class="sd">        playback_mode: str</span>
-<span class="sd">            Mode for animation playback.  Must be one of the following options:</span>
-<span class="sd">                &#39;loop&#39;: Movie will return to the first frame after reaching</span>
-<span class="sd">                    the last frame, looping until stopped.</span>
-<span class="sd">                &#39;once&#39;: Animation will stop once movie reaches the max frame</span>
-<span class="sd">                    (if fps &gt; 0) or the first frame (if fps &lt; 0).</span>
-<span class="sd">                &#39;loop_back_and_forth&#39;:  Movie will loop back and forth until</span>
-<span class="sd">                    stopped</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -581,44 +445,52 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If ``frame_range`` is provided and range[0] &gt;= range[1]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># TODO: No access in the GUI yet. Just keybinding.</span>
-
-        <span class="c1"># allow only one axis to be playing at a time</span>
-        <span class="c1"># if nothing is playing self.stop() will not do anything</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">fps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span>
+        <span class="c1"># doing manual check here to avoid issue in StringEnum</span>
+        <span class="c1"># see https://github.com/napari/napari/issues/754</span>
+        <span class="k">if</span> <span class="n">loop_mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_modes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span> <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">LoopMode</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">loop_mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_modes</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;loop_mode must be one of </span><span class="si">{_modes}</span><span class="s1">.  Got: </span><span class="si">{loop_mode}</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
+            <span class="n">loop_mode</span> <span class="o">=</span> <span class="n">LoopMode</span><span class="p">(</span><span class="n">loop_mode</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">&#39;axis argument out of range&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_playing</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_worker</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="n">axis</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">_update_play_settings</span><span class="p">(</span>
+                    <span class="n">fps</span><span class="p">,</span> <span class="n">loop_mode</span><span class="p">,</span> <span class="n">frame_range</span>
+                <span class="p">)</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
         <span class="c1"># we want to avoid playing a dimension that does not have a slider</span>
         <span class="c1"># (like X or Y, or a third dimension in volume view.)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]:</span>
-            <span class="k">return</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="n">AnimationThread</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">fps</span><span class="p">,</span> <span class="n">frame_range</span><span class="p">,</span> <span class="n">playback_mode</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span>
-        <span class="p">)</span>
-        <span class="c1"># when the thread timer increments, update the current frame</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">incremented</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_set_frame</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">axis</span><span class="p">]:</span>
+            <span class="n">work</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">_play</span><span class="p">(</span><span class="n">fps</span><span class="p">,</span> <span class="n">loop_mode</span><span class="p">,</span> <span class="n">frame_range</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">work</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_animation_worker</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="n">work</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_animation_worker</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Refusing to play a hidden axis&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtDims.stop"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.QtDims.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Stop axis animation&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_playing</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">enable_play</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_animation_worker</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_play</span><span class="p">()</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">is_playing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return True if any axis is currently animated.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_animation_thread&#39;</span><span class="p">)</span>
-            <span class="c1"># this is repetive, since we delete the thread each time, but safer</span>
-            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">isRunning</span><span class="p">()</span>
-        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_animation_thread</span><span class="o">.</span><span class="n">isRunning</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_set_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Safely tries to set `axis` to the requested `point`.</span>
@@ -637,114 +509,6 @@
         <span class="c1"># this is mostly here to connect to the main SceneCanvas.events.draw</span>
         <span class="c1"># event in the qt_viewer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_play_ready</span> <span class="o">=</span> <span class="kc">True</span></div></div>
-
-
-<div class="viewcode-block" id="AnimationThread"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread">[docs]</a><span class="k">class</span> <span class="nc">AnimationThread</span><span class="p">(</span><span class="n">QThread</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A thread to keep the animation timer independent of the main event loop.</span>
-
-<span class="sd">    This prevents mouseovers and other events from causing animation lag. See</span>
-<span class="sd">    QtDims.play() for public-facing docstring.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">incremented</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>  <span class="c1"># signal for each time a frame is requested</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dims</span><span class="p">,</span>
-        <span class="n">axis</span><span class="p">,</span>
-        <span class="n">fps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-        <span class="n">frame_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">playback_mode</span><span class="o">=</span><span class="s1">&#39;loop&#39;</span><span class="p">,</span>
-        <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
-        <span class="c1"># could put some limits on fps here... though the handler in the QtDims</span>
-        <span class="c1"># object above is capable of ignoring overly spammy requests.</span>
-
-        <span class="n">_mode</span> <span class="o">=</span> <span class="n">playback_mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-        <span class="n">_modes</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="s1">&#39;once&#39;</span><span class="p">,</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">}</span>
-        <span class="k">if</span> <span class="n">_mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_modes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{_mode}</span><span class="s1">&quot; not a recognized playback_mode: (</span><span class="si">{_modes}</span><span class="s1">)&#39;</span>
-            <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">dims</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">frame_range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;frame_range[0] must be &lt;= frame_range[1]&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;frame_range[0] out of range&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">frame_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;frame_range[1] out of range&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span> <span class="o">=</span> <span class="n">frame_range</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">=</span> <span class="n">_mode</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_range</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-            <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># range is inclusive</span>
-
-        <span class="c1"># after dims.set_point is called, it will emit a dims.events.axis()</span>
-        <span class="c1"># we use this to update this threads current frame (in case it</span>
-        <span class="c1"># was some other event that updated the axis)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_axis_changed</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">fps</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># negative fps plays in reverse</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span> <span class="o">=</span> <span class="n">QTimer</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">setInterval</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fps</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">moveToThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="c1"># this is necessary to avoid a warning in QtDims.stop() on del thread</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">)</span>
-
-<div class="viewcode-block" id="AnimationThread.run"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># immediately advance one frame</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-        <span class="n">loop</span> <span class="o">=</span> <span class="n">QEventLoop</span><span class="p">()</span>
-        <span class="n">loop</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="AnimationThread.advance"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_dims.AnimationThread.advance">[docs]</a>    <span class="k">def</span> <span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Advance the current frame in the animation.</span>
-
-<span class="sd">        Takes dims scale into account and restricts the animation to the</span>
-<span class="sd">        requested frame_range, if entered.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span>
-            <span class="k">else</span><span class="p">:</span>  <span class="c1"># self.playback_mode == &#39;once&#39;</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop_back_and_forth&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimsrange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-                <span class="p">)</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">playback_mode</span> <span class="o">==</span> <span class="s1">&#39;loop&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_point</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_point</span>
-            <span class="k">else</span><span class="p">:</span>  <span class="c1"># self.playback_mode == &#39;once&#39;</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
-        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">blocker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_axis_changed</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">incremented</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span><span class="p">)</span></div>
-
-    <span class="nd">@Slot</span><span class="p">(</span><span class="n">Event</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">_on_axis_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="c1"># slot for external events to update the current frame</span>
-        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span></div>
 </pre></div>
 
            </div>

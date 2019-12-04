@@ -146,109 +146,102 @@
   <h1>Source code for napari._qt.qt_about_keybindings</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">QTabWidget</span><span class="p">,</span>
-    <span class="n">QWidget</span><span class="p">,</span>
-    <span class="n">QVBoxLayout</span><span class="p">,</span>
-    <span class="n">QLabel</span><span class="p">,</span>
     <span class="n">QDialog</span><span class="p">,</span>
-    <span class="n">QScrollArea</span><span class="p">,</span>
-    <span class="n">QSizePolicy</span><span class="p">,</span>
+    <span class="n">QVBoxLayout</span><span class="p">,</span>
+    <span class="n">QHBoxLayout</span><span class="p">,</span>
+    <span class="n">QTextEdit</span><span class="p">,</span>
+    <span class="n">QComboBox</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">import</span> <span class="nn">napari</span>
 <span class="kn">from</span> <span class="nn">..util.misc</span> <span class="kn">import</span> <span class="n">get_keybindings_summary</span>
 
 
-<div class="viewcode-block" id="QtAboutKeybindings"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings">[docs]</a><span class="k">class</span> <span class="nc">QtAboutKeybindings</span><span class="p">(</span><span class="n">QTabWidget</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">QtAboutKeybindings</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+<div class="viewcode-block" id="QtAboutKeybindings"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings">[docs]</a><span class="k">class</span> <span class="nc">QtAboutKeybindings</span><span class="p">(</span><span class="n">QDialog</span><span class="p">):</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span> <span class="o">=</span> <span class="n">viewer</span>
+    <span class="n">ALL_ACTIVE_KEYBINDINGS</span> <span class="o">=</span> <span class="s1">&#39;All active keybindings&#39;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtActiveKeybindings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">),</span> <span class="s1">&#39;Currently active&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">),</span> <span class="s1">&#39;Image&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Labels</span><span class="p">),</span> <span class="s1">&#39;Labels&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Points</span><span class="p">),</span> <span class="s1">&#39;Labels&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Shapes</span><span class="p">),</span> <span class="s1">&#39;Shapes&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Surface</span><span class="p">),</span> <span class="s1">&#39;Surface&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">QtLayerKeybindings</span><span class="p">(</span><span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Vectors</span><span class="p">),</span> <span class="s1">&#39;Vectors&#39;</span><span class="p">)</span>
-
-<div class="viewcode-block" id="QtAboutKeybindings.showAbout"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings.showAbout">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">showAbout</span><span class="p">(</span><span class="n">qt_viewer</span><span class="p">):</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">QDialog</span><span class="p">()</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;QtAboutKeybindings&#39;</span><span class="p">)</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">styleSheet</span><span class="p">())</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;Keybindings&#39;</span><span class="p">)</span>
-        <span class="n">qt_viewer</span><span class="o">.</span><span class="n">_about_keybindings</span> <span class="o">=</span> <span class="n">QtAboutKeybindings</span><span class="p">(</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">setWindowModality</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NonModal</span><span class="p">)</span>
-        <span class="n">d</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">)</span>
-        <span class="n">qt_viewer</span><span class="o">.</span><span class="n">_about_keybindings_dialog</span> <span class="o">=</span> <span class="n">d</span></div></div>
-
-
-<div class="viewcode-block" id="QtActiveKeybindings"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtActiveKeybindings">[docs]</a><span class="k">class</span> <span class="nc">QtActiveKeybindings</span><span class="p">(</span><span class="n">QScrollArea</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span> <span class="o">=</span> <span class="n">viewer</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setWidgetResizable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setHorizontalScrollBarPolicy</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">ScrollBarAlwaysOff</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="o">.</span><span class="n">setAlignment</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignLeft</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span>
-            <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s1">&#39;Keybindings&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowModality</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NonModal</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="c1"># stacked keybindings widgets</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span> <span class="o">=</span> <span class="n">QTextEdit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span><span class="o">.</span><span class="n">setMinimumWidth</span><span class="p">(</span><span class="mi">360</span><span class="p">)</span>
+        <span class="c1"># Can switch to a normal dict when our minimum Python is 3.7</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ALL_ACTIVE_KEYBINDINGS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">palette</span><span class="p">[</span><span class="s1">&#39;secondary&#39;</span><span class="p">]</span>
+        <span class="n">layers</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Labels</span><span class="p">,</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Points</span><span class="p">,</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Shapes</span><span class="p">,</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Surface</span><span class="p">,</span>
+            <span class="n">napari</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Vectors</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;No keybindings&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{layer.__name__}</span><span class="s2"> layer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span>
+
+        <span class="c1"># layer type selection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span> <span class="o">=</span> <span class="n">QComboBox</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="o">.</span><span class="n">activated</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_layer_type</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="o">.</span><span class="n">setCurrentText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ALL_ACTIVE_KEYBINDINGS</span><span class="p">)</span>
+        <span class="c1"># self.change_layer_type(current_layer)</span>
+        <span class="n">layer_type_layout</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">layer_type_layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">layer_type_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="p">)</span>
+        <span class="n">layer_type_layout</span><span class="o">.</span><span class="n">addStretch</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">layer_type_layout</span><span class="o">.</span><span class="n">setSpacing</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">layer_type_layout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_text</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_active_layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">palette</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_active_layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_active_layer</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-        <span class="n">scroll_widget</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">()</span>
-        <span class="n">scroll_widget</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span>
-            <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span>
-        <span class="p">)</span>
-        <span class="n">scroll_widget</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-        <span class="n">scroll_layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
-        <span class="n">scroll_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="p">)</span>
-        <span class="n">scroll_layout</span><span class="o">.</span><span class="n">addStretch</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">scroll_widget</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">scroll_layout</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setWidget</span><span class="p">(</span><span class="n">scroll_widget</span><span class="p">)</span>
+<div class="viewcode-block" id="QtAboutKeybindings.change_layer_type"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings.change_layer_type">[docs]</a>    <span class="k">def</span> <span class="nf">change_layer_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span><span class="o">.</span><span class="n">setHtml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span><span class="p">[</span><span class="n">text</span><span class="p">])</span></div>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_text</span><span class="p">)</span>
-
-<div class="viewcode-block" id="QtActiveKeybindings.update_text"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtActiveKeybindings.update_text">[docs]</a>    <span class="k">def</span> <span class="nf">update_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="n">keybindings_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<div class="viewcode-block" id="QtAboutKeybindings.update_active_layer"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings.update_active_layer">[docs]</a>    <span class="k">def</span> <span class="nf">update_active_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">palette</span><span class="p">[</span><span class="s1">&#39;secondary&#39;</span><span class="p">]</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="c1"># Add class and instance viewer keybindings</span>
-        <span class="n">keybindings_str</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">)</span>
-        <span class="n">keybindings_str</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">keymap</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">keymap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Add class and instance layer keybindings for the active layer</span>
-            <span class="n">keybindings_str</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">)</span>
-            <span class="n">keybindings_str</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">keymap</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">active_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">keybindings_str</span><span class="p">)</span></div></div>
+            <span class="n">text</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">keymap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
 
+        <span class="c1"># Update layer speficic keybindings if all active are displayed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keybindings_strs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ALL_ACTIVE_KEYBINDINGS</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">layerTypeComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ALL_ACTIVE_KEYBINDINGS</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">textEditBox</span><span class="o">.</span><span class="n">setHtml</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="QtLayerKeybindings"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtLayerKeybindings">[docs]</a><span class="k">class</span> <span class="nc">QtLayerKeybindings</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
-
-        <span class="c1"># Add class keybindings for the layer</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">keybindings_str</span> <span class="o">=</span> <span class="s1">&#39;No keybindings&#39;</span>
+<div class="viewcode-block" id="QtAboutKeybindings.toggle_visible"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_about_keybindings.QtAboutKeybindings.toggle_visible">[docs]</a>    <span class="k">def</span> <span class="nf">toggle_visible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isVisible</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">keybindings_str</span> <span class="o">=</span> <span class="n">get_keybindings_summary</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">)</span>
-
-        <span class="n">layer_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="n">keybindings_str</span><span class="p">)</span>
-        <span class="n">layer_label</span><span class="o">.</span><span class="n">setTextInteractionFlags</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">TextSelectableByMouse</span><span class="p">)</span>
-        <span class="c1"># layer_label.setAlignment(Qt.AlignLeft)</span>
-        <span class="n">layer_label</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Expanding</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">layer_label</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span></div></div>
 </pre></div>
 
            </div>

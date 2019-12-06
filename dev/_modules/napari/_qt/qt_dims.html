@@ -152,7 +152,6 @@
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QLineEdit</span><span class="p">,</span> <span class="n">QSizePolicy</span><span class="p">,</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QWidget</span>
 
 <span class="kn">from</span> <span class="nn">..components.dims</span> <span class="kn">import</span> <span class="n">Dims</span>
-<span class="kn">from</span> <span class="nn">..components.dims_constants</span> <span class="kn">import</span> <span class="n">DimsMode</span>
 <span class="kn">from</span> <span class="nn">.qt_dims_slider</span> <span class="kn">import</span> <span class="n">QtDimSliderWidget</span>
 <span class="kn">from</span> <span class="nn">._constants</span> <span class="kn">import</span> <span class="n">LoopMode</span>
 
@@ -257,11 +256,7 @@
         <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">):</span>
             <span class="k">return</span>
 
-        <span class="n">slider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">slider</span>
-
-        <span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">DimsMode</span><span class="o">.</span><span class="n">POINT</span><span class="p">:</span>
-            <span class="n">slider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="n">axis</span>
 
     <span class="k">def</span> <span class="nf">_update_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -278,6 +273,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span><span class="o">.</span><span class="n">_update_range</span><span class="p">()</span>
         <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resize_slice_labels</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Updates display for all sliders.</span>
@@ -314,7 +310,7 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_slider</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_resize_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_resize_axis_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;When any of the labels get updated, this method updates all label</span>
 <span class="sd">        widths to the width of the longest label. This keeps the sliders</span>
 <span class="sd">        left-aligned and allows the full label to be visible at all times,</span>
@@ -331,6 +327,24 @@
         <span class="k">for</span> <span class="n">labl</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
             <span class="n">labl</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="n">newwidth</span> <span class="o">+</span> <span class="mi">10</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">_resize_slice_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;When the size of any dimension changes, we want to resize all of the</span>
+<span class="sd">        slice labels to width of the longest label, to keep all the sliders</span>
+<span class="sd">        right aligned.  The width is determined by the number of digits in the</span>
+<span class="sd">        largest dimensions, plus a little padding.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">maxi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">max_indices</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">[</span><span class="n">ax</span><span class="p">]:</span>
+                <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">maxi</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="n">width</span><span class="p">:</span>
+                    <span class="n">width</span> <span class="o">=</span> <span class="n">length</span>
+        <span class="c1"># gui width of a string of length `width`</span>
+        <span class="n">fm</span> <span class="o">=</span> <span class="n">QFontMetrics</span><span class="p">(</span><span class="n">QFont</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">width</span><span class="p">(</span><span class="s2">&quot;8&quot;</span> <span class="o">*</span> <span class="n">width</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">labl</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">findChildren</span><span class="p">(</span><span class="n">QWidget</span><span class="p">,</span> <span class="s1">&#39;slice_label&#39;</span><span class="p">):</span>
+            <span class="n">labl</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="n">width</span> <span class="o">+</span> <span class="mi">6</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">_create_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Creates sliders to match new number of dimensions.</span>
 
@@ -344,14 +358,14 @@
         <span class="k">for</span> <span class="n">slider_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsliders</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
             <span class="n">dim_axis</span> <span class="o">=</span> <span class="n">number_of_sliders</span> <span class="o">-</span> <span class="n">slider_num</span> <span class="o">-</span> <span class="mi">1</span>
             <span class="n">slider_widget</span> <span class="o">=</span> <span class="n">QtDimSliderWidget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_axis</span><span class="p">)</span>
-            <span class="n">slider_widget</span><span class="o">.</span><span class="n">label_changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resize_labels</span><span class="p">)</span>
+            <span class="n">slider_widget</span><span class="o">.</span><span class="n">axis_label_changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resize_axis_labels</span><span class="p">)</span>
             <span class="n">slider_widget</span><span class="o">.</span><span class="n">play_button</span><span class="o">.</span><span class="n">play_requested</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">play</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">slider_widget</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">slider_widgets</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slider_widget</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
             <span class="n">nsliders</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displayed_sliders</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="n">nsliders</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">SLIDERHEIGHT</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_resize_labels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resize_axis_labels</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_trim_sliders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number_of_sliders</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Trims number of dimensions to a lower number.</span>

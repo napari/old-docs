@@ -195,70 +195,6 @@
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
-<div class="viewcode-block" id="increment_unnamed_colormap"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.increment_unnamed_colormap">[docs]</a><span class="k">def</span> <span class="nf">increment_unnamed_colormap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">names</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Increment name for unnamed colormap.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    name : str</span>
-<span class="sd">        Name of colormap to be incremented.</span>
-<span class="sd">    names : str</span>
-<span class="sd">        Names of existing colormaps.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    name : str</span>
-<span class="sd">        Name of colormap after incrementing.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;[unnamed colormap]&#39;</span><span class="p">:</span>
-        <span class="n">past_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;[unnamed colormap&#39;</span><span class="p">)]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;[unnamed colormap {len(past_names)}]&#39;</span>
-    <span class="k">return</span> <span class="n">name</span></div>
-
-
-<div class="viewcode-block" id="calc_data_range"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.calc_data_range">[docs]</a><span class="k">def</span> <span class="nf">calc_data_range</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Calculate range of data values. If all values are equal return [0, 1].</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    -------</span>
-<span class="sd">    data : array</span>
-<span class="sd">        Data to calculate range of values over.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    values : list of float</span>
-<span class="sd">        Range of values.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    If the data type is uint8, no calculation is performed, and 0-255 is</span>
-<span class="sd">    returned.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e6</span><span class="p">:</span>
-        <span class="c1"># If data is very large take the average of the top, bottom, and</span>
-        <span class="c1"># middle slices</span>
-        <span class="n">bottom_plane_idx</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="n">middle_plane_idx</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span> <span class="o">//</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-        <span class="n">top_plane_idx</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-        <span class="n">idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">bottom_plane_idx</span><span class="p">,</span> <span class="n">middle_plane_idx</span><span class="p">,</span> <span class="n">top_plane_idx</span><span class="p">]</span>
-        <span class="n">reduced_data</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">idxs</span><span class="p">],</span>
-            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">idxs</span><span class="p">],</span>
-        <span class="p">]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">reduced_data</span> <span class="o">=</span> <span class="n">data</span>
-
-    <span class="n">min_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">reduced_data</span><span class="p">)</span>
-    <span class="n">max_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">reduced_data</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">min_val</span> <span class="o">==</span> <span class="n">max_val</span><span class="p">:</span>
-        <span class="n">min_val</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">max_val</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">min_val</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_val</span><span class="p">)]</span></div>
-
-
 <div class="viewcode-block" id="compute_max_shape"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.compute_max_shape">[docs]</a><span class="k">def</span> <span class="nf">compute_max_shape</span><span class="p">(</span><span class="n">shapes</span><span class="p">,</span> <span class="n">max_dims</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Computes the maximum shape combination from the given shapes.</span>
 
@@ -304,48 +240,6 @@
         <span class="k">return</span> <span class="n">obj</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">del</span> <span class="n">frame</span></div>
-
-
-<div class="viewcode-block" id="segment_normal"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.segment_normal">[docs]</a><span class="k">def</span> <span class="nf">segment_normal</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
-    <span class="sd">&quot;&quot;&quot;Determines the unit normal of the vector from a to b.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    a : np.ndarray</span>
-<span class="sd">        Length 2 array of first point or Nx2 array of points</span>
-<span class="sd">    b : np.ndarray</span>
-<span class="sd">        Length 2 array of second point or Nx2 array of points</span>
-<span class="sd">    p : 3-tuple, optional</span>
-<span class="sd">        orthogonal vector for segment calculation in 3D.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    unit_norm : np.ndarray</span>
-<span class="sd">        Length the unit normal of the vector from a to b. If a == b,</span>
-<span class="sd">        then returns [0, 0] or Nx2 array of vectors</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">a</span>
-
-    <span class="k">if</span> <span class="n">d</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">normal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">normal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
-        <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">normal</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">norm</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">norm</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">normal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">d</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">d</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">normal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
-
-        <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">ind</span> <span class="o">=</span> <span class="n">norm</span> <span class="o">==</span> <span class="mi">0</span>
-        <span class="n">norm</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">unit_norm</span> <span class="o">=</span> <span class="n">normal</span> <span class="o">/</span> <span class="n">norm</span>
-
-    <span class="k">return</span> <span class="n">unit_norm</span></div>
 
 
 <div class="viewcode-block" id="segment_normal_vector"><a class="viewcode-back" href="../../../napari.util.html#napari.util.misc.segment_normal_vector">[docs]</a><span class="k">def</span> <span class="nf">segment_normal_vector</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>

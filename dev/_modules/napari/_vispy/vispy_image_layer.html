@@ -144,7 +144,8 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._vispy.vispy_image_layer</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">vispy.scene.visuals</span> <span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">ImageNode</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">vispy.scene.visuals</span> <span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">ImageNode</span>
 <span class="kn">from</span> <span class="nn">vispy.scene.visuals</span> <span class="kn">import</span> <span class="n">Volume</span> <span class="k">as</span> <span class="n">VolumeNode</span>
 <span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">Colormap</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -215,6 +216,18 @@
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Check if data exceeds MAX_TEXTURE_SIZE and downsample</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">MAX_TEXTURE_SIZE_2D</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_texture</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_TEXTURE_SIZE_2D</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">MAX_TEXTURE_SIZE_3D</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span>
+        <span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_texture</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_TEXTURE_SIZE_3D</span><span class="p">)</span>
 
         <span class="c1"># Check if ndisplay has changed current node type needs updating</span>
         <span class="k">if</span> <span class="p">(</span>
@@ -378,7 +391,50 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_colormap_change</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_rendering_change</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_on_contrast_limits_change</span><span class="p">()</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_contrast_limits_change</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="VispyImageLayer.downsample_texture"><a class="viewcode-back" href="../../../napari._vispy.html#napari._vispy.vispy_image_layer.VispyImageLayer.downsample_texture">[docs]</a>    <span class="k">def</span> <span class="nf">downsample_texture</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">MAX_TEXTURE_SIZE</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Downsample data based on maximum allowed texture size.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : array</span>
+<span class="sd">            Data to be downsampled if needed.</span>
+<span class="sd">        MAX_TEXTURE_SIZE : int</span>
+<span class="sd">            Maximum allowed texture size.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        data : array</span>
+<span class="sd">            Data that now fits inside texture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">MAX_TEXTURE_SIZE</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Shape of individual tiles in pyramid </span><span class="si">{data.shape}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;cannot exceed GL_MAX_TEXTURE_SIZE &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{MAX_TEXTURE_SIZE}</span><span class="s2">. The max tile shape &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;`layer._max_tile_shape` </span><span class="si">{self.layer._max_tile_shape}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot; must be reduced. Rendering is currently in &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{self.layer.dims.ndisplay}</span><span class="s2">D mode.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;data shape </span><span class="si">{data.shape}</span><span class="s2"> exceeds GL_MAX_TEXTURE_SIZE &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{MAX_TEXTURE_SIZE}</span><span class="s2"> in at least one axis and &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;will be downsampled. Rendering is currently in &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{self.layer.dims.ndisplay}</span><span class="s2">D mode.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">downsample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">MAX_TEXTURE_SIZE</span><span class="p">)</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">):</span>
+                <span class="n">scale</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">downsample</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">_scale_view</span> <span class="o">=</span> <span class="n">scale</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_scale_change</span><span class="p">()</span>
+            <span class="n">slices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">downsample</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">slices</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span></div></div>
 </pre></div>
 
            </div>

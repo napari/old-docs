@@ -1,0 +1,582 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.utils.colormaps.vendored.cm &mdash; napari  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../napari.html">napari package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.utils.colormaps.vendored.cm</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.utils.colormaps.vendored.cm</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Builtin colormaps, colormap handling utilities, and the `ScalarMappable` mixin.</span>
+
+<span class="sd">.. seealso::</span>
+
+<span class="sd">  :doc:`/gallery/color/colormap_reference` for a list of builtin</span>
+<span class="sd">  colormaps.</span>
+
+<span class="sd">  :doc:`/tutorials/colors/colormap-manipulation` for examples of how to</span>
+<span class="sd">  make colormaps and</span>
+
+<span class="sd">  :doc:`/tutorials/colors/colormaps` an in-depth discussion of</span>
+<span class="sd">  choosing colormaps.</span>
+
+<span class="sd">  :doc:`/tutorials/colors/colormapnorms` for more details about data</span>
+<span class="sd">  normalization</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">functools</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">ma</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">colors</span>
+<span class="kn">from</span> <span class="nn">._cm</span> <span class="kn">import</span> <span class="n">datad</span>
+<span class="kn">from</span> <span class="nn">._cm_listed</span> <span class="kn">import</span> <span class="n">cmaps</span> <span class="k">as</span> <span class="n">cmaps_listed</span>
+
+
+<span class="n">cmap_d</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="c1"># reverse all the colormaps.</span>
+<span class="c1"># reversed colormaps have &#39;_r&#39; appended to the name.</span>
+
+
+<span class="k">def</span> <span class="nf">_reverser</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Helper such that ``_reverser(f)(x) == f(1 - x)``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Returning a partial object keeps it picklable.</span>
+        <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">_reverser</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="revcmap"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.revcmap">[docs]</a><span class="k">def</span> <span class="nf">revcmap</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Can only handle specification *data* in dictionary format.&quot;&quot;&quot;</span>
+    <span class="n">data_r</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+            <span class="n">valnew</span> <span class="o">=</span> <span class="n">_reverser</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="c1"># This doesn&#39;t work: lambda x: val(1-x)</span>
+            <span class="c1"># The same &quot;val&quot; (the first one) is used</span>
+            <span class="c1"># each time, so the colors are identical</span>
+            <span class="c1"># and the result is shades of gray.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Flip x and exchange the y values facing x = 0 and x = 1.</span>
+            <span class="n">valnew</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">y0</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">y1</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">val</span><span class="p">)]</span>
+        <span class="n">data_r</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">valnew</span>
+    <span class="k">return</span> <span class="n">data_r</span></div>
+
+
+<span class="k">def</span> <span class="nf">_reverse_cmap_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reverses cmap specification *spec*, can handle both dict and tuple</span>
+<span class="sd">    type specs.&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="s1">&#39;listed&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;listed&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;listed&#39;</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]}</span>
+
+    <span class="k">if</span> <span class="s1">&#39;red&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">revcmap</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">revspec</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">spec</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">revspec</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>    <span class="c1"># e.g., (1, (1.0, 0.0, 1.0))</span>
+            <span class="n">revspec</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">revspec</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">revspec</span>
+
+
+<span class="k">def</span> <span class="nf">_generate_cmap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">lutsize</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates the requested cmap from its *name*.  The lut size is</span>
+<span class="sd">    *lutsize*.&quot;&quot;&quot;</span>
+
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">datad</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="c1"># Generate the colormap object.</span>
+    <span class="k">if</span> <span class="s1">&#39;red&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">colors</span><span class="o">.</span><span class="n">LinearSegmentedColormap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">lutsize</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s1">&#39;listed&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">colors</span><span class="o">.</span><span class="n">ListedColormap</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;listed&#39;</span><span class="p">],</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">colors</span><span class="o">.</span><span class="n">LinearSegmentedColormap</span><span class="o">.</span><span class="n">from_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">lutsize</span><span class="p">)</span>
+
+
+<span class="n">LUTSIZE</span> <span class="o">=</span> <span class="mi">256</span>
+
+<span class="c1"># Generate the reversed specifications (all at once, to avoid</span>
+<span class="c1"># modify-when-iterating).</span>
+<span class="n">datad</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">cmapname</span> <span class="o">+</span> <span class="s1">&#39;_r&#39;</span><span class="p">:</span> <span class="n">_reverse_cmap_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+              <span class="k">for</span> <span class="n">cmapname</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">datad</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+
+<span class="c1"># Precache the cmaps with ``lutsize = LUTSIZE``.</span>
+<span class="c1"># Also add the reversed ones added in the section above:</span>
+<span class="k">for</span> <span class="n">cmapname</span> <span class="ow">in</span> <span class="n">datad</span><span class="p">:</span>
+    <span class="n">cmap_d</span><span class="p">[</span><span class="n">cmapname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_generate_cmap</span><span class="p">(</span><span class="n">cmapname</span><span class="p">,</span> <span class="n">LUTSIZE</span><span class="p">)</span>
+
+<span class="n">cmap_d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cmaps_listed</span><span class="p">)</span>
+
+<span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cmap_d</span><span class="p">)</span>
+
+
+<span class="c1"># Continue with definitions ...</span>
+
+
+<div class="viewcode-block" id="register_cmap"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.register_cmap">[docs]</a><span class="k">def</span> <span class="nf">register_cmap</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lut</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add a colormap to the set recognized by :func:`get_cmap`.</span>
+
+<span class="sd">    It can be used in two ways::</span>
+
+<span class="sd">        register_cmap(name=&#39;swirly&#39;, cmap=swirly_cmap)</span>
+
+<span class="sd">        register_cmap(name=&#39;choppy&#39;, data=choppydata, lut=128)</span>
+
+<span class="sd">    In the first case, *cmap* must be a :class:`matplotlib.colors.Colormap`</span>
+<span class="sd">    instance.  The *name* is optional; if absent, the name will</span>
+<span class="sd">    be the :attr:`~matplotlib.colors.Colormap.name` attribute of the *cmap*.</span>
+
+<span class="sd">    In the second case, the three arguments are passed to</span>
+<span class="sd">    the :class:`~matplotlib.colors.LinearSegmentedColormap` initializer,</span>
+<span class="sd">    and the resulting colormap is registered.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Arguments must include a name or a Colormap&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Colormap name must be a string&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">colors</span><span class="o">.</span><span class="n">Colormap</span><span class="p">):</span>
+        <span class="n">cmap_d</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+        <span class="k">return</span>
+
+    <span class="c1"># For the remainder, let exceptions propagate.</span>
+    <span class="k">if</span> <span class="n">lut</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lut</span> <span class="o">=</span> <span class="n">LUTSIZE</span>
+    <span class="n">cmap</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">LinearSegmentedColormap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">lut</span><span class="p">)</span>
+    <span class="n">cmap_d</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span></div>
+
+
+<div class="viewcode-block" id="get_cmap"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.get_cmap">[docs]</a><span class="k">def</span> <span class="nf">get_cmap</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lut</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get a colormap instance, defaulting to rc values if *name* is None.</span>
+
+<span class="sd">    Colormaps added with :func:`register_cmap` take precedence over</span>
+<span class="sd">    built-in colormaps.</span>
+
+<span class="sd">    If *name* is a :class:`matplotlib.colors.Colormap` instance, it will be</span>
+<span class="sd">    returned.</span>
+
+<span class="sd">    If *lut* is not None it must be an integer giving the number of</span>
+<span class="sd">    entries desired in the lookup table, and *name* must be a standard</span>
+<span class="sd">    mpl colormap name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;magma&#39;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">colors</span><span class="o">.</span><span class="n">Colormap</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cmap_d</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">lut</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cmap_d</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cmap_d</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span><span class="n">lut</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Colormap </span><span class="si">%s</span><span class="s2"> is not recognized. Possible values are: </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">cmap_d</span><span class="p">))))</span></div>
+
+
+<div class="viewcode-block" id="ScalarMappable"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable">[docs]</a><span class="k">class</span> <span class="nc">ScalarMappable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a mixin class to support scalar data to RGBA mapping.</span>
+<span class="sd">    The ScalarMappable makes use of data normalization before returning</span>
+<span class="sd">    RGBA colors from the given colormap.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        norm : :class:`matplotlib.colors.Normalize` instance</span>
+<span class="sd">            The normalizing object which scales data, typically into the</span>
+<span class="sd">            interval ``[0, 1]``.</span>
+<span class="sd">            If *None*, *norm* defaults to a *colors.Normalize* object which</span>
+<span class="sd">            initializes its scaling based on the first data processed.</span>
+<span class="sd">        cmap : str or :class:`~matplotlib.colors.Colormap` instance</span>
+<span class="sd">            The colormap used to map normalized data values to RGBA colors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">cmap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="n">get_cmap</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">norm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">Normalize</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1">#: The Normalization instance of this ScalarMappable.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">norm</span>
+        <span class="c1">#: The Colormap instance of this ScalarMappable.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">get_cmap</span><span class="p">(</span><span class="n">cmap</span><span class="p">)</span>
+        <span class="c1">#: The last colorbar associated with this ScalarMappable. May be None.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">colorbar</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;array&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+
+<div class="viewcode-block" id="ScalarMappable.to_rgba"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.to_rgba">[docs]</a>    <span class="k">def</span> <span class="nf">to_rgba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">bytes</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a normalized rgba array corresponding to *x*.</span>
+
+<span class="sd">        In the normal case, *x* is a 1-D or 2-D sequence of scalars, and</span>
+<span class="sd">        the corresponding ndarray of rgba values will be returned,</span>
+<span class="sd">        based on the norm and colormap set for this ScalarMappable.</span>
+
+<span class="sd">        There is one special case, for handling images that are already</span>
+<span class="sd">        rgb or rgba, such as might have been read from an image file.</span>
+<span class="sd">        If *x* is an ndarray with 3 dimensions,</span>
+<span class="sd">        and the last dimension is either 3 or 4, then it will be</span>
+<span class="sd">        treated as an rgb or rgba array, and no mapping will be done.</span>
+<span class="sd">        The array can be uint8, or it can be floating point with</span>
+<span class="sd">        values in the 0-1 range; otherwise a ValueError will be raised.</span>
+<span class="sd">        If it is a masked array, the mask will be ignored.</span>
+<span class="sd">        If the last dimension is 3, the *alpha* kwarg (defaulting to 1)</span>
+<span class="sd">        will be used to fill in the transparency.  If the last dimension</span>
+<span class="sd">        is 4, the *alpha* kwarg is ignored; it does not</span>
+<span class="sd">        replace the pre-existing alpha.  A ValueError will be raised</span>
+<span class="sd">        if the third dimension is other than 3 or 4.</span>
+
+<span class="sd">        In either case, if *bytes* is *False* (default), the rgba</span>
+<span class="sd">        array will be floats in the 0-1 range; if it is *True*,</span>
+<span class="sd">        the returned rgba array will be uint8 in the 0 to 255 range.</span>
+
+<span class="sd">        If norm is False, no normalization of the input data is</span>
+<span class="sd">        performed, and it is assumed to be in the range (0-1).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># First check for special case, image input:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">alpha</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">alpha</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
+                        <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span>
+                    <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="n">xx</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+                    <span class="n">xx</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha</span>
+                <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="n">xx</span> <span class="o">=</span> <span class="n">x</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;third dimension must be 3 or 4&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">xx</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">norm</span> <span class="ow">and</span> <span class="p">(</span><span class="n">xx</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">xx</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Floating point image RGB values &quot;</span>
+                                         <span class="s2">&quot;must be in the 0..1 range.&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">bytes</span><span class="p">:</span>
+                        <span class="n">xx</span> <span class="o">=</span> <span class="p">(</span><span class="n">xx</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">xx</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">bytes</span><span class="p">:</span>
+                        <span class="n">xx</span> <span class="o">=</span> <span class="n">xx</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mi">255</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Image RGB array must be uint8 or &quot;</span>
+                                     <span class="s2">&quot;floating point; found </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">xx</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">xx</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># e.g., x is not an ndarray; so try mapping it</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># This is the normal case, mapping a scalar array:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">norm</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">rgba</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="nb">bytes</span><span class="o">=</span><span class="nb">bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rgba</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.set_array"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.set_array">[docs]</a>    <span class="k">def</span> <span class="nf">set_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the image array from numpy array *A*.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        A : ndarray</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">A</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">[</span><span class="s1">&#39;array&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.get_array"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.get_array">[docs]</a>    <span class="k">def</span> <span class="nf">get_array</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s1">&#39;Return the array&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.get_cmap"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.get_cmap">[docs]</a>    <span class="k">def</span> <span class="nf">get_cmap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s1">&#39;return the colormap&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.get_clim"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.get_clim">[docs]</a>    <span class="k">def</span> <span class="nf">get_clim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s1">&#39;return the min, max of the color limits for image scaling&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">vmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">vmax</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.set_clim"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.set_clim">[docs]</a>    <span class="k">def</span> <span class="nf">set_clim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set the norm limits for image scaling; if *vmin* is a length2</span>
+<span class="sd">        sequence, interpret it as ``(vmin, vmax)`` which is used to</span>
+<span class="sd">        support setp</span>
+
+<span class="sd">        ACCEPTS: a length 2 sequence of floats; may be overridden in methods</span>
+<span class="sd">        that have ``vmin`` and ``vmax`` kwargs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">vmax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span> <span class="o">=</span> <span class="n">vmin</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">vmin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">vmin</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">_sanitize_extrema</span><span class="p">(</span><span class="n">vmin</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">vmax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">vmax</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">_sanitize_extrema</span><span class="p">(</span><span class="n">vmax</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.set_cmap"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.set_cmap">[docs]</a>    <span class="k">def</span> <span class="nf">set_cmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set the colormap for luminance data</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cmap : colormap or registered colormap name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">get_cmap</span><span class="p">(</span><span class="n">cmap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">cmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.set_norm"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.set_norm">[docs]</a>    <span class="k">def</span> <span class="nf">set_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the normalization instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        norm : `.Normalize`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">norm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">Normalize</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.autoscale"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.autoscale">[docs]</a>    <span class="k">def</span> <span class="nf">autoscale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Autoscale the scalar limits on the norm instance using the</span>
+<span class="sd">        current array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;You must first set_array for mappable&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">autoscale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.autoscale_None"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.autoscale_None">[docs]</a>    <span class="k">def</span> <span class="nf">autoscale_None</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Autoscale the scalar limits on the norm instance using the</span>
+<span class="sd">        current array, changing only limits that are None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;You must first set_array for mappable&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">autoscale_None</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.add_checker"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.add_checker">[docs]</a>    <span class="k">def</span> <span class="nf">add_checker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checker</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add an entry to a dictionary of boolean flags</span>
+<span class="sd">        that are set to True when the mappable is changed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">[</span><span class="n">checker</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.check_update"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.check_update">[docs]</a>    <span class="k">def</span> <span class="nf">check_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checker</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If mappable has changed since the last check,</span>
+<span class="sd">        return True; else return False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">[</span><span class="n">checker</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">[</span><span class="n">checker</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ScalarMappable.changed"><a class="viewcode-back" href="../../../../../napari.utils.colormaps.vendored.html#napari.utils.colormaps.vendored.cm.ScalarMappable.changed">[docs]</a>    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stale</span> <span class="o">=</span> <span class="kc">True</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Author
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

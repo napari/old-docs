@@ -173,6 +173,7 @@
     <span class="n">QAction</span><span class="p">,</span>
     <span class="n">QShortcut</span><span class="p">,</span>
     <span class="n">QStatusBar</span><span class="p">,</span>
+    <span class="n">QApplication</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>  <span class="c1"># noqa: E402</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QKeySequence</span>  <span class="c1"># noqa: E402</span>
@@ -416,12 +417,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Window.show"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_main_window.Window.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Resize, show, and bring forward the window.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Resize, show, and bring forward the window.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">sizeHint</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        <span class="c1"># make sure window is not hidden, e.g. by browser window in Jupyter</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span></div>
+
+        <span class="c1"># We want to call Window._qt_window.raise_() in every case *except*</span>
+        <span class="c1"># when instantiating a viewer within a gui_qt() context for the</span>
+        <span class="c1"># _first_ time within the Qt app&#39;s lifecycle.</span>
+        <span class="c1">#</span>
+        <span class="c1"># `app_name` will be &quot;napari&quot; iff the application was instantiated in</span>
+        <span class="c1"># gui_qt(). isActiveWindow() will be True if it is the second time a</span>
+        <span class="c1"># _qt_window has been created. See #732</span>
+        <span class="n">app_name</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">app_name</span> <span class="o">!=</span> <span class="s1">&#39;napari&#39;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">isActiveWindow</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span>  <span class="c1"># for macOS</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">activateWindow</span><span class="p">()</span>  <span class="c1"># for Windows</span></div>
 
     <span class="k">def</span> <span class="nf">_update_palette</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">palette</span><span class="p">):</span>
         <span class="c1"># set window styles which don&#39;t use the primary stylesheet</span>

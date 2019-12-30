@@ -164,8 +164,9 @@
 <span class="sd">    data : 3-tuple of array</span>
 <span class="sd">        The first element of the tuple is an (N, D) array of vertices of</span>
 <span class="sd">        mesh triangles. The second is an (M, 3) array of int of indices</span>
-<span class="sd">        of the mesh triangles. The third element is the (N, ) array of</span>
-<span class="sd">        values used to color vertices.</span>
+<span class="sd">        of the mesh triangles. The third element is the (K0, ..., KL, N)</span>
+<span class="sd">        array of values used to color vertices where the additional L</span>
+<span class="sd">        dimensions are used to color the same mesh with different values.</span>
 <span class="sd">    colormap : str, vispy.Color.Colormap, tuple, dict</span>
 <span class="sd">        Colormap to use for luminance images. If a string must be the name</span>
 <span class="sd">        of a supported colormap from vispy or matplotlib. If a tuple the</span>
@@ -201,13 +202,14 @@
 <span class="sd">    data : 3-tuple of array</span>
 <span class="sd">        The first element of the tuple is an (N, D) array of vertices of</span>
 <span class="sd">        mesh triangles. The second is an (M, 3) array of int of indices</span>
-<span class="sd">        of the mesh triangles. The third element is the (N, ) array of</span>
-<span class="sd">        values used to color vertices.</span>
+<span class="sd">        of the mesh triangles. The third element is the (K0, ..., KL, N)</span>
+<span class="sd">        array of values used to color vertices where the additional L</span>
+<span class="sd">        dimensions are used to color the same mesh with different values.</span>
 <span class="sd">    vertices : (N, D) array</span>
 <span class="sd">        Vertices of mesh triangles.</span>
 <span class="sd">    faces : (M, 3) array of int</span>
 <span class="sd">        Indices of mesh triangles.</span>
-<span class="sd">    vertex_values : (N,) array</span>
+<span class="sd">    vertex_values : (K0, ..., KL, N) array</span>
 <span class="sd">        Values used to color vertices.</span>
 <span class="sd">    colormap : str, vispy.Color.Colormap, tuple, dict</span>
 <span class="sd">        Colormap to use for luminance images. If a string must be the name</span>
@@ -289,6 +291,7 @@
         <span class="c1"># Data containing vectors in the currently viewed slice</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_view_faces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_view_vertex_values</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="c1"># assign mesh data and establish default behavior</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_vertices</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -344,7 +347,7 @@
 
     <span class="k">def</span> <span class="nf">_get_ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Determine number of dimensions of the layer.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_extent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Determine ranges for slicing given by (min, max, step).&quot;&quot;&quot;</span>
@@ -354,6 +357,13 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">maxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="n">mins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># The full dimensionality and shape of the layer is determined by</span>
+        <span class="c1"># the number of additional vertex value dimensions and the</span>
+        <span class="c1"># dimensionality of the vertices themselves</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">mins</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">mins</span><span class="p">)</span>
+            <span class="n">maxs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">maxs</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">[(</span><span class="nb">min</span><span class="p">,</span> <span class="nb">max</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="nb">min</span><span class="p">,</span> <span class="nb">max</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="n">maxs</span><span class="p">)]</span>
 
@@ -427,15 +437,52 @@
 
     <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Sets the view given the indices to slice with.&quot;&quot;&quot;</span>
+        <span class="n">N</span><span class="p">,</span> <span class="n">vertex_ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">values_ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span>
 
-        <span class="n">not_disp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">)</span>
-        <span class="n">disp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">)</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+        <span class="c1"># Take vertex_values dimensionality into account if more than one value</span>
+        <span class="c1"># is provided per vertex.</span>
+        <span class="k">if</span> <span class="n">values_ndim</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Get indices for axes corresponding to values dimensions</span>
+            <span class="n">values_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">[:</span><span class="o">-</span><span class="n">vertex_ndim</span><span class="p">]</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="p">[</span><span class="n">values_indices</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sd">&quot;&quot;&quot;Assigning multiple values per vertex after slicing is</span>
+<span class="sd">                    not allowed. All dimensions corresponding to vertex_values</span>
+<span class="sd">                    must be non-displayed dimensions. Data will not be</span>
+<span class="sd">                    visible.&quot;&quot;&quot;</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_view_faces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_view_vertex_values</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">return</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_view_vertex_values</span> <span class="o">=</span> <span class="n">values</span>
+            <span class="c1"># Determine which axes of the vertices data are being displayed</span>
+            <span class="c1"># and not displayed, ignoring the additional dimensions</span>
+            <span class="c1"># corresponding to the vertex_values.</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="o">-</span><span class="n">vertex_ndim</span><span class="p">:])</span>
+            <span class="n">disp</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">d</span>
+                <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">,</span> <span class="n">values_ndim</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">d</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+            <span class="p">]</span>
+            <span class="n">not_disp</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">d</span>
+                <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">,</span> <span class="n">values_ndim</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">d</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_view_vertex_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+            <span class="n">not_disp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">)</span>
+            <span class="n">disp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="p">[:,</span> <span class="n">disp</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_view_faces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">vertex_ndim</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">:</span>
             <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vertices</span><span class="p">[:,</span> <span class="n">not_disp</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
             <span class="n">triangles</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">faces</span><span class="p">]</span>
             <span class="n">matches</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">triangles</span> <span class="o">==</span> <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>

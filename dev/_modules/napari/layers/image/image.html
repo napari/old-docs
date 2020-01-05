@@ -144,25 +144,27 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.image.image</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span>
+<span></span><span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">base64</span> <span class="kn">import</span> <span class="n">b64encode</span>
-<span class="kn">import</span> <span class="nn">types</span>
-<span class="kn">from</span> <span class="nn">imageio</span> <span class="kn">import</span> <span class="n">imwrite</span>
+<span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">imageio</span> <span class="kn">import</span> <span class="n">imwrite</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
-<span class="kn">import</span> <span class="nn">vispy.color</span>
-<span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">..layer_utils</span> <span class="kn">import</span> <span class="n">calc_data_range</span><span class="p">,</span> <span class="n">increment_unnamed_colormap</span>
+
+<span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">AVAILABLE_COLORMAPS</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
-<span class="kn">from</span> <span class="nn">._constants</span> <span class="kn">import</span> <span class="n">Rendering</span><span class="p">,</span> <span class="n">Interpolation</span>
-<span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">make_colorbar</span><span class="p">,</span> <span class="n">AVAILABLE_COLORMAPS</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">..layer_utils</span> <span class="kn">import</span> <span class="n">calc_data_range</span>
+<span class="kn">from</span> <span class="nn">..intensity_mixin</span> <span class="kn">import</span> <span class="n">IntensityVisualizationMixin</span>
+<span class="kn">from</span> <span class="nn">._constants</span> <span class="kn">import</span> <span class="n">Interpolation</span><span class="p">,</span> <span class="n">Rendering</span>
 <span class="kn">from</span> <span class="nn">.image_utils</span> <span class="kn">import</span> <span class="n">get_pyramid_and_rgb</span>
 
 
-<div class="viewcode-block" id="Image"><a class="viewcode-back" href="../../../../napari.layers.image.html#napari.layers.image.image.Image">[docs]</a><span class="k">class</span> <span class="nc">Image</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
+<span class="c1"># Mixin must come before Layer</span>
+<div class="viewcode-block" id="Image"><a class="viewcode-back" href="../../../../napari.layers.image.html#napari.layers.image.image.Image">[docs]</a><span class="k">class</span> <span class="nc">Image</span><span class="p">(</span><span class="n">IntensityVisualizationMixin</span><span class="p">,</span> <span class="n">Layer</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Image layer.</span>
 
 <span class="sd">    Parameters</span>
@@ -307,12 +309,7 @@
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-            <span class="n">contrast_limits</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">colormap</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">interpolation</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">rendering</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">iso_threshold</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">interpolation</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">rendering</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">iso_threshold</span><span class="o">=</span><span class="n">Event</span>
         <span class="p">)</span>
 
         <span class="c1"># Set data</span>
@@ -339,17 +336,11 @@
         <span class="c1"># Set contrast_limits and colormaps</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="n">gamma</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_iso_threshold</span> <span class="o">=</span> <span class="n">iso_threshold</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="k">if</span> <span class="n">contrast_limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
-                <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span> <span class="o">=</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_data_range</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span> <span class="o">=</span> <span class="n">contrast_limits</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="n">contrast_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="n">colormap</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span> <span class="o">=</span> <span class="n">interpolation</span>
@@ -357,6 +348,17 @@
 
         <span class="c1"># Trigger generation of view slice and thumbnail</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+            <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">return</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -426,74 +428,6 @@
             <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_top_left</span> <span class="o">=</span> <span class="n">top_left</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;2-tuple of str, vispy.color.Colormap: colormap for luminance images.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span>
-
-    <span class="nd">@colormap</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colormap</span><span class="p">):</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;[unnamed colormap]&#39;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-            <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">vispy</span><span class="o">.</span><span class="n">color</span><span class="o">.</span><span class="n">Colormap</span><span class="p">):</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span>
-                <span class="n">name</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;invalid value for colormap: </span><span class="si">{colormap}</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_colorbar</span> <span class="o">=</span> <span class="n">make_colorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colormap</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">colormaps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;tuple of str: names of available colormaps.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">contrast_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list of float: Limits to use for the colormap.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span><span class="p">)</span>
-
-    <span class="nd">@contrast_limits</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">contrast_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contrast_limits</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_msg</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">format_float</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="o">+</span> <span class="s1">&#39;, &#39;</span>
-            <span class="o">+</span> <span class="n">format_float</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_msg</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span> <span class="o">=</span> <span class="n">contrast_limits</span>
-        <span class="k">if</span> <span class="n">contrast_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">if</span> <span class="n">contrast_limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">contrast_limits</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">gamma</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span>
-
-    <span class="nd">@gamma</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">gamma</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="n">value</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">gamma</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">iso_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

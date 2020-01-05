@@ -1,0 +1,365 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari._qt.qt_range_slider_popup &mdash; napari  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../napari.html">napari package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari._qt.qt_range_slider_popup</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari._qt.qt_range_slider_popup</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QPoint</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QDoubleValidator</span><span class="p">,</span> <span class="n">QFontMetrics</span><span class="p">,</span> <span class="n">QFont</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QHBoxLayout</span><span class="p">,</span> <span class="n">QLineEdit</span>
+
+<span class="kn">from</span> <span class="nn">.qt_modal</span> <span class="kn">import</span> <span class="n">QtPopup</span>
+<span class="kn">from</span> <span class="nn">.qt_range_slider</span> <span class="kn">import</span> <span class="n">QHRangeSlider</span><span class="p">,</span> <span class="n">QVRangeSlider</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">qt_signals_blocked</span>
+
+
+<div class="viewcode-block" id="LabelEdit"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider_popup.LabelEdit">[docs]</a><span class="k">class</span> <span class="nc">LabelEdit</span><span class="p">(</span><span class="n">QLineEdit</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">get_pos</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper class to position LineEdits above the slider handle</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : str, optional</span>
+<span class="sd">            starting value, by default &#39;&#39;</span>
+<span class="sd">        parent : QRangeSliderPopup, optional</span>
+<span class="sd">            required for proper label positioning above handle, by default None</span>
+<span class="sd">        get_pos : callable, optional</span>
+<span class="sd">            function that returns the position of the appropriate slider handle</span>
+<span class="sd">            by default None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fm</span> <span class="o">=</span> <span class="n">QFontMetrics</span><span class="p">(</span><span class="n">QFont</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;slice_label&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_width</span> <span class="o">=</span> <span class="mi">30</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_width</span> <span class="o">=</span> <span class="mi">200</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">IBeamCursor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setValidator</span><span class="p">(</span><span class="n">QDoubleValidator</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_text_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_text_changed</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_pos</span> <span class="o">=</span> <span class="n">get_pos</span>
+        <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_width</span> <span class="o">=</span> <span class="mi">50</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slider</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">slider</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setAlignment</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignCenter</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_text_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="c1"># with non mono-spaced fonts, an &quot;n-digit&quot; number isn&#39;t always the same</span>
+        <span class="c1"># width... so we convert all numbers to &quot;n 8s&quot; before measuring width</span>
+        <span class="c1"># so as to avoid visual jitter in the width of the label</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fm</span><span class="o">.</span><span class="n">boundingRect</span><span class="p">(</span><span class="s1">&#39;8&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">))</span><span class="o">.</span><span class="n">width</span><span class="p">()</span> <span class="o">+</span> <span class="mi">4</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_width</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_width</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_width</span><span class="p">:</span>
+            <span class="c1"># don&#39;t ever make the label smaller ... it causes visual jitter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_width</span> <span class="o">=</span> <span class="n">width</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LabelEdit.update_position"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider_popup.LabelEdit.update_position">[docs]</a>    <span class="k">def</span> <span class="nf">update_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pos</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">handle_radius</span> <span class="o">+</span> <span class="mi">6</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">QPoint</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">pos</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="LabelEdit.mouseDoubleClickEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider_popup.LabelEdit.mouseDoubleClickEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseDoubleClickEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selectAll</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="QRangeSliderPopup"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider_popup.QRangeSliderPopup">[docs]</a><span class="k">class</span> <span class="nc">QRangeSliderPopup</span><span class="p">(</span><span class="n">QtPopup</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">horizontal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A popup window that contains a range slider and linked LineEdits.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        parent : QWidget, optional</span>
+<span class="sd">            Will like be an instance of QtLayerControls.  Note, providing</span>
+<span class="sd">            parent can be useful to inherit stylesheets.</span>
+<span class="sd">        horizontal : bool, optional</span>
+<span class="sd">            Whether the slider is oriented horizontally, by default True.</span>
+<span class="sd">            (Vertical orientation has not been tested much)</span>
+<span class="sd">        precision : int, optional</span>
+<span class="sd">            Number of decimal values in the labels, by default 0</span>
+<span class="sd">        **kwargs</span>
+<span class="sd">            all additional keyword arguments will be passed to the RangeSlider</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precision</span> <span class="o">=</span> <span class="n">precision</span>
+
+        <span class="c1"># create slider</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">QHRangeSlider</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">horizontal</span>
+            <span class="k">else</span> <span class="n">QVRangeSlider</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setMinimumHeight</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">valuesChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_values_change</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">rangeChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_range_change</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">resized</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_cur_label_positions</span><span class="p">)</span>
+
+        <span class="c1"># create &quot;floating&quot; min/max value labels</span>
+        <span class="n">cmin</span><span class="p">,</span> <span class="n">cmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">get_min_pos</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">getattr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">,</span> <span class="s1">&#39;display_min&#39;</span><span class="p">)</span>
+        <span class="n">get_max_pos</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">getattr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">,</span> <span class="s1">&#39;display_max&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span> <span class="o">=</span> <span class="n">LabelEdit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmin</span><span class="p">),</span> <span class="bp">self</span><span class="p">,</span> <span class="n">get_min_pos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span> <span class="o">=</span> <span class="n">LabelEdit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmax</span><span class="p">),</span> <span class="bp">self</span><span class="p">,</span> <span class="n">get_max_pos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_curmin_label_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_curmax_label_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;current minimum contrast limit&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;current maximum contrast limit&quot;</span><span class="p">)</span>
+
+        <span class="c1"># create range min/max labels (left &amp; right of slider)</span>
+        <span class="n">rmin</span><span class="p">,</span> <span class="n">rmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span> <span class="o">=</span> <span class="n">LabelEdit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">rmin</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span> <span class="o">=</span> <span class="n">LabelEdit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">rmax</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_range_label_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_range_label_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;minimum contrast range&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;maximum contrast range&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="o">.</span><span class="n">setAlignment</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">AlignRight</span><span class="p">)</span>
+
+        <span class="c1"># add widgets to layout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_numformat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">number</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">round</span><span class="p">(</span><span class="n">number</span><span class="p">)</span> <span class="o">==</span> <span class="n">number</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;{:.</span><span class="si">{}</span><span class="s2">f}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;{:.</span><span class="si">{}</span><span class="s2">f}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_cur_label_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">update_position</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">update_position</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_values_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="n">cmin_</span><span class="p">,</span> <span class="n">cmax_</span> <span class="o">=</span> <span class="n">values</span>
+        <span class="k">with</span> <span class="n">qt_signals_blocked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmin_</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmax_</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_cur_label_positions</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_range_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="n">cmin_</span><span class="p">,</span> <span class="n">cmax_</span> <span class="o">=</span> <span class="n">values</span>
+        <span class="k">with</span> <span class="n">qt_signals_blocked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmin_</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">cmax_</span><span class="p">))</span>
+            <span class="c1"># changing range may also change values</span>
+            <span class="n">vmin_</span><span class="p">,</span> <span class="n">vmax_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">vmin_</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_numformat</span><span class="p">(</span><span class="n">vmax_</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_curmin_label_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">cmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">cmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">cmin</span> <span class="o">&gt;</span> <span class="n">cmax</span><span class="p">:</span>
+            <span class="n">cmin</span> <span class="o">=</span> <span class="n">cmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setValues</span><span class="p">((</span><span class="n">cmin</span><span class="p">,</span> <span class="n">cmax</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_curmax_label_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">cmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curmin_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">cmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curmax_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">cmax</span> <span class="o">&lt;</span> <span class="n">cmin</span><span class="p">:</span>
+            <span class="n">cmax</span> <span class="o">=</span> <span class="n">cmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setValues</span><span class="p">((</span><span class="n">cmin</span><span class="p">,</span> <span class="n">cmax</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_range_label_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">rmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_min_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">rmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_max_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">rmin</span> <span class="o">&gt;=</span> <span class="n">rmax</span><span class="p">:</span>
+            <span class="n">rmax</span> <span class="o">=</span> <span class="n">rmin</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setRange</span><span class="p">((</span><span class="n">rmin</span><span class="p">,</span> <span class="n">rmax</span><span class="p">))</span>
+
+<div class="viewcode-block" id="QRangeSliderPopup.keyPressEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider_popup.QRangeSliderPopup.keyPressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">keyPressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="c1"># we override the parent keyPressEvent so that hitting enter does not</span>
+        <span class="c1"># hide the window... but we do want to lose focus on the lineEdits</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">Key_Return</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">Key_Enter</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">keyPressEvent</span><span class="p">(</span><span class="n">event</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Author
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

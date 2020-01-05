@@ -148,8 +148,13 @@
 <span class="sd">Range slider, extended QWidget slider for napari.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">qtpy</span> <span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QPainter</span><span class="p">,</span> <span class="n">QColor</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Signal</span><span class="p">,</span> <span class="n">Property</span><span class="p">,</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QWidget</span>
+<span class="kn">from</span> <span class="nn">..utils.validators</span> <span class="kn">import</span> <span class="n">validate_n_seq</span>
+
+
+<span class="n">validate_2_tuple</span> <span class="o">=</span> <span class="n">validate_n_seq</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="QRangeSlider"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider">[docs]</a><span class="k">class</span> <span class="nc">QRangeSlider</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
@@ -157,10 +162,11 @@
 <span class="sd">    QRangeSlider class, super class for QVRangeSlider and QHRangeSlider.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">valuesChanged</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
-    <span class="n">rangeChanged</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
-    <span class="n">collapsedChanged</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Signal</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
-    <span class="n">focused</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Signal</span><span class="p">()</span>
+    <span class="n">valuesChanged</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="n">rangeChanged</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="n">collapsedChanged</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">focused</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
+    <span class="n">resized</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -171,6 +177,26 @@
         <span class="n">collapsed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A range slider with two handles for min/max values.</span>
+
+<span class="sd">        Values should be provided in the range of the underlying data.</span>
+<span class="sd">        (normalization to 0-1 happens internally in the slider.sliderValues())</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        initial_values : 2-tuple, optional</span>
+<span class="sd">            Initial min &amp; max values of the slider, defaults to (0.2, 0.8)</span>
+<span class="sd">        data_range : 2-tuple, optional</span>
+<span class="sd">            Min and max of the slider range, defaults to (0, 1)</span>
+<span class="sd">        step_size : float, optional</span>
+<span class="sd">            Single step size for the slider, defaults to 1</span>
+<span class="sd">        collapsible : bool</span>
+<span class="sd">            Whether the slider is collapsible, defaults to True.</span>
+<span class="sd">        collapsed : bool</span>
+<span class="sd">            Whether the slider begins collapsed, defaults to False.</span>
+<span class="sd">        parent : qtpy.QtWidgets.QWidget</span>
+<span class="sd">            Parent widget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">handle_radius</span> <span class="o">=</span> <span class="mi">8</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slider_width</span> <span class="o">=</span> <span class="mi">8</span>
@@ -182,24 +208,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">bc_max</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># Variables initialized in methods</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">value_min</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">value_max</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value_min</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value_max</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_display_min</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_display_max</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_pos</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">display_min</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">display_max</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">setBarColor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setBackgroundColor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setHandleColor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setHandleBorderColor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setBarColor</span><span class="p">(</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setBackgroundColor</span><span class="p">(</span><span class="n">QColor</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setHandleColor</span><span class="p">(</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setHandleBorderColor</span><span class="p">(</span><span class="n">QColor</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">setRange</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span> <span class="k">if</span> <span class="n">data_range</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data_range</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setValues</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span> <span class="k">if</span> <span class="n">initial_values</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">initial_values</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setStep</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">step_size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">step_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStep</span><span class="p">(</span><span class="mf">0.01</span> <span class="k">if</span> <span class="n">step_size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">step_size</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">parent</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;HRange&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">setGeometry</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
@@ -213,8 +237,10 @@
 
 <div class="viewcode-block" id="QRangeSlider.setRange"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setRange">[docs]</a>    <span class="k">def</span> <span class="nf">setRange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Min and max possible values for the slider range. In data units.&quot;&quot;&quot;</span>
+        <span class="n">validate_2_tuple</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_range_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_range_max</span> <span class="o">=</span> <span class="n">values</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rangeChanged</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rangeChanged</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">updateDisplayPositions</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.values"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.values">[docs]</a>    <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Current slider values.</span>
@@ -229,7 +255,7 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.setValues"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setValues">[docs]</a>    <span class="k">def</span> <span class="nf">setValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setSliderValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_to_slider_value</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setSliderValues</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_to_slider_value</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.sliderValues"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.sliderValues">[docs]</a>    <span class="k">def</span> <span class="nf">sliderValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Current slider values, as a fraction of slider width.</span>
@@ -249,16 +275,20 @@
 <span class="sd">        values : 2-tuple of float or int</span>
 <span class="sd">            Start and end of the range.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># assert hasattr(values, &#39;__len__&#39;) and len(values) == 2</span>
+        <span class="n">validate_2_tuple</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">value_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value_max</span> <span class="o">=</span> <span class="n">values</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">valuesChanged</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">updateDisplayPositions</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.setStep"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setStep">[docs]</a>    <span class="k">def</span> <span class="nf">setStep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">single_step</span> <span class="o">=</span> <span class="n">step</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step</span> <span class="o">=</span> <span class="n">step</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">single_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
 
 <div class="viewcode-block" id="QRangeSlider.mouseMoveEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.mouseMoveEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseMoveEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isEnabled</span><span class="p">():</span>
             <span class="k">return</span>
 
         <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rangeSliderSize</span><span class="p">()</span>
@@ -294,12 +324,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">updateValuesFromDisplay</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.mousePressEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.mousePressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mousePressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isEnabled</span><span class="p">():</span>
             <span class="k">return</span>
 
         <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getPos</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
         <span class="n">top</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rangeSliderSize</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_radius</span>
-        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">button</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">LeftButton</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">button</span><span class="p">()</span> <span class="o">==</span> <span class="n">Qt</span><span class="o">.</span><span class="n">LeftButton</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">collapsed</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">display_min</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_radius</span><span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">=</span> <span class="s2">&quot;min&quot;</span>
@@ -310,9 +340,11 @@
                 <span class="k">elif</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">display_max</span> <span class="ow">and</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">top</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">display_max</span> <span class="o">=</span> <span class="n">pos</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">=</span> <span class="s2">&quot;max&quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">updateValuesFromDisplay</span><span class="p">()</span>
                 <span class="k">elif</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">display_min</span> <span class="ow">and</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_radius</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">display_min</span> <span class="o">=</span> <span class="n">pos</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">=</span> <span class="s2">&quot;min&quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">updateValuesFromDisplay</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">=</span> <span class="s2">&quot;bar&quot;</span>
                 <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_radius</span> <span class="ow">and</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">top</span><span class="p">:</span>
@@ -332,7 +364,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">focused</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.mouseReleaseEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.mouseReleaseEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseReleaseEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isEnabled</span><span class="p">():</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">==</span> <span class="s2">&quot;none&quot;</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">valuesChanged</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">moving</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span></div>
@@ -359,7 +391,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">collapsed</span> <span class="o">=</span> <span class="kc">False</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.resizeEvent"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.resizeEvent">[docs]</a>    <span class="k">def</span> <span class="nf">resizeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">updateDisplayPositions</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">updateDisplayPositions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resized</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="QRangeSlider.updateDisplayPositions"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.updateDisplayPositions">[docs]</a>    <span class="k">def</span> <span class="nf">updateDisplayPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rangeSliderSize</span><span class="p">()</span>
@@ -400,7 +433,7 @@
 <div class="viewcode-block" id="QRangeSlider.setBarColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setBarColor">[docs]</a>    <span class="k">def</span> <span class="nf">setBarColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barColor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bar_color</span> <span class="o">=</span> <span class="n">barColor</span></div>
 
-    <span class="n">barColor</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Property</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getBarColor</span><span class="p">,</span> <span class="n">setBarColor</span><span class="p">)</span>
+    <span class="n">barColor</span> <span class="o">=</span> <span class="n">Property</span><span class="p">(</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getBarColor</span><span class="p">,</span> <span class="n">setBarColor</span><span class="p">)</span>
 
 <div class="viewcode-block" id="QRangeSlider.getBackgroundColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.getBackgroundColor">[docs]</a>    <span class="k">def</span> <span class="nf">getBackgroundColor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">background_color</span></div>
@@ -408,9 +441,7 @@
 <div class="viewcode-block" id="QRangeSlider.setBackgroundColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setBackgroundColor">[docs]</a>    <span class="k">def</span> <span class="nf">setBackgroundColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">backgroundColor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">background_color</span> <span class="o">=</span> <span class="n">backgroundColor</span></div>
 
-    <span class="n">backgroundColor</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Property</span><span class="p">(</span>
-        <span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getBackgroundColor</span><span class="p">,</span> <span class="n">setBackgroundColor</span>
-    <span class="p">)</span>
+    <span class="n">backgroundColor</span> <span class="o">=</span> <span class="n">Property</span><span class="p">(</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getBackgroundColor</span><span class="p">,</span> <span class="n">setBackgroundColor</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">handle_width</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -422,7 +453,7 @@
 <div class="viewcode-block" id="QRangeSlider.setHandleColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setHandleColor">[docs]</a>    <span class="k">def</span> <span class="nf">setHandleColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handleColor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">handle_color</span> <span class="o">=</span> <span class="n">handleColor</span></div>
 
-    <span class="n">handleColor</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Property</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getHandleColor</span><span class="p">,</span> <span class="n">setHandleColor</span><span class="p">)</span>
+    <span class="n">handleColor</span> <span class="o">=</span> <span class="n">Property</span><span class="p">(</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getHandleColor</span><span class="p">,</span> <span class="n">setHandleColor</span><span class="p">)</span>
 
 <div class="viewcode-block" id="QRangeSlider.getHandleBorderColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.getHandleBorderColor">[docs]</a>    <span class="k">def</span> <span class="nf">getHandleBorderColor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_border_color</span></div>
@@ -430,15 +461,12 @@
 <div class="viewcode-block" id="QRangeSlider.setHandleBorderColor"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setHandleBorderColor">[docs]</a>    <span class="k">def</span> <span class="nf">setHandleBorderColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handleBorderColor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">handle_border_color</span> <span class="o">=</span> <span class="n">handleBorderColor</span></div>
 
-    <span class="n">handleBorderColor</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Property</span><span class="p">(</span>
-        <span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">,</span> <span class="n">getHandleBorderColor</span><span class="p">,</span> <span class="n">setHandleBorderColor</span>
+    <span class="n">handleBorderColor</span> <span class="o">=</span> <span class="n">Property</span><span class="p">(</span>
+        <span class="n">QColor</span><span class="p">,</span> <span class="n">getHandleBorderColor</span><span class="p">,</span> <span class="n">setHandleBorderColor</span>
     <span class="p">)</span>
 
 <div class="viewcode-block" id="QRangeSlider.setEnabled"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_range_slider.QRangeSlider.setEnabled">[docs]</a>    <span class="k">def</span> <span class="nf">setEnabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">bool</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span></div></div>
 
 
@@ -467,7 +495,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
+<span class="sd">        event : qtpy.QEvent</span>
 <span class="sd">            Event from the Qt context.</span>
 
 <span class="sd">        Returns</span>
@@ -482,10 +510,10 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
+<span class="sd">        event : qtpy.QEvent</span>
 <span class="sd">            Event from the Qt context.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">painter</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPainter</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">()</span>
+        <span class="n">painter</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">QPainter</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">()</span>
 
         <span class="n">half_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_width</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">halfdiff</span> <span class="o">=</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">half_width</span>
@@ -508,6 +536,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">slider_width</span><span class="p">,</span>
             <span class="p">)</span>
 
+        <span class="n">painter</span><span class="o">.</span><span class="n">setRenderHints</span><span class="p">(</span><span class="n">QPainter</span><span class="o">.</span><span class="n">Antialiasing</span><span class="p">)</span>
         <span class="c1"># Splitters</span>
         <span class="n">painter</span><span class="o">.</span><span class="n">setPen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_border_color</span><span class="p">)</span>
         <span class="n">painter</span><span class="o">.</span><span class="n">setBrush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_color</span><span class="p">)</span>
@@ -561,7 +590,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
+<span class="sd">        event : qtpy.QEvent</span>
 <span class="sd">            Event from the Qt context.</span>
 
 <span class="sd">        Returns</span>
@@ -576,10 +605,11 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
+<span class="sd">        event : qtpy.QEvent</span>
 <span class="sd">            Event from the Qt context.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">painter</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPainter</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">()</span>
+        <span class="n">painter</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">QPainter</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">()</span>
+
         <span class="n">half_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slider_width</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">halfdiff</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">half_width</span>
         <span class="c1"># Background</span>
@@ -605,6 +635,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">display_max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">display_min</span><span class="p">,</span>
             <span class="p">)</span>
 
+        <span class="n">painter</span><span class="o">.</span><span class="n">setRenderHints</span><span class="p">(</span><span class="n">QPainter</span><span class="o">.</span><span class="n">Antialiasing</span><span class="p">)</span>
         <span class="c1"># Splitters</span>
         <span class="n">painter</span><span class="o">.</span><span class="n">setPen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_border_color</span><span class="p">)</span>
         <span class="n">painter</span><span class="o">.</span><span class="n">setBrush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_color</span><span class="p">)</span>

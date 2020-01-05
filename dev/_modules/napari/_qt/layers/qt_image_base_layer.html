@@ -145,12 +145,15 @@
             
   <h1>Source code for napari._qt.layers.qt_image_base_layer</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">suppress</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QImage</span><span class="p">,</span> <span class="n">QPixmap</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QComboBox</span><span class="p">,</span> <span class="n">QLabel</span><span class="p">,</span> <span class="n">QSlider</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QComboBox</span><span class="p">,</span> <span class="n">QLabel</span><span class="p">,</span> <span class="n">QSlider</span><span class="p">,</span> <span class="n">QPushButton</span>
 
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">QHRangeSlider</span>
+<span class="kn">from</span> <span class="nn">..qt_range_slider</span> <span class="kn">import</span> <span class="n">QHRangeSlider</span>
+<span class="kn">from</span> <span class="nn">..qt_range_slider_popup</span> <span class="kn">import</span> <span class="n">QRangeSliderPopup</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">qt_signals_blocked</span>
 <span class="kn">from</span> <span class="nn">.qt_base_layer</span> <span class="kn">import</span> <span class="n">QtLayerControls</span>
 
@@ -160,8 +163,8 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_colormap_change</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma_slider_update</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contrast_limits</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_clim_change</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_slider_update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contrast_limits</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_clims_change</span><span class="p">)</span>
 
         <span class="n">comboBox</span> <span class="o">=</span> <span class="n">QComboBox</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">cmap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">colormaps</span><span class="p">:</span>
@@ -174,11 +177,12 @@
 
         <span class="c1"># Create contrast_limits slider</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span> <span class="o">=</span> <span class="n">QHRangeSlider</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">_contrast_limits_range</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits_range</span>
         <span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">mousePressEvent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clim_mousepress</span>
         <span class="n">set_clim</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">setattr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="s1">&#39;contrast_limits&#39;</span><span class="p">)</span>
-        <span class="n">set_climrange</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">setattr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="s1">&#39;_contrast_limits_range&#39;</span><span class="p">)</span>
+        <span class="n">set_climrange</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">setattr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="s1">&#39;contrast_limits_range&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">valuesChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">set_clim</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">rangeChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">set_climrange</span><span class="p">)</span>
 
@@ -202,12 +206,43 @@
 <div class="viewcode-block" id="QtBaseImageControls.changeColor"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.changeColor">[docs]</a>    <span class="k">def</span> <span class="nf">changeColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="n">text</span></div>
 
-    <span class="k">def</span> <span class="nf">_on_clim_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_clim_mousepress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the slider, or, on right-click, pop-up an expanded slider.</span>
+
+<span class="sd">        The expanded slider provides finer control, directly editable values,</span>
+<span class="sd">        and the ability to change the available range of the sliders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">button</span><span class="p">()</span> <span class="o">==</span> <span class="n">Qt</span><span class="o">.</span><span class="n">RightButton</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span> <span class="o">=</span> <span class="n">create_range_popup</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="s1">&#39;contrast_limits&#39;</span><span class="p">,</span> <span class="bp">self</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">)</span>
+            <span class="n">reset</span><span class="p">,</span> <span class="n">fullrange</span> <span class="o">=</span> <span class="n">create_clim_reset_buttons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">reset</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fullrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">fullrange</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">show_at</span><span class="p">(</span><span class="s1">&#39;top&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">QHRangeSlider</span><span class="o">.</span><span class="n">mousePressEvent</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="p">,</span> <span class="n">event</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_clims_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">with</span> <span class="n">qt_signals_blocked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">_contrast_limits_range</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits_range</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">contrastLimitsSlider</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">)</span>
+
+        <span class="c1"># clim_popup will throw an AttributeError if not yet created</span>
+        <span class="c1"># and a RuntimeError if it has already been cleaned up.</span>
+        <span class="c1"># we only want to update the slider if it&#39;s active</span>
+        <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits_range</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">qt_signals_blocked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">slider</span><span class="p">):</span>
+                <span class="n">clims</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="n">clims</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clim_pop</span><span class="o">.</span><span class="n">_on_values_change</span><span class="p">(</span><span class="n">clims</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_on_colormap_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">colormap</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -229,12 +264,103 @@
 <div class="viewcode-block" id="QtBaseImageControls.gamma_slider_changed"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.gamma_slider_changed">[docs]</a>    <span class="k">def</span> <span class="nf">gamma_slider_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">value</span> <span class="o">/</span> <span class="mi">100</span></div>
 
-<div class="viewcode-block" id="QtBaseImageControls.gamma_slider_update"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.gamma_slider_update">[docs]</a>    <span class="k">def</span> <span class="nf">gamma_slider_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="QtBaseImageControls.gamma_slider_update"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.gamma_slider_update">[docs]</a>    <span class="k">def</span> <span class="nf">gamma_slider_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">with</span> <span class="n">qt_signals_blocked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">gammaSlider</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtBaseImageControls.mouseMoveEvent"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.QtBaseImageControls.mouseMoveEvent">[docs]</a>    <span class="k">def</span> <span class="nf">mouseMoveEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">_contrast_limits_msg</span></div></div>
+
+
+<div class="viewcode-block" id="create_range_popup"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.create_range_popup">[docs]</a><span class="k">def</span> <span class="nf">create_range_popup</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a QRangeSliderPopup linked to a specific layer attribute.</span>
+
+<span class="sd">    This assumes the layer has an attribute named both `attr` and `attr`_range.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layer : napari.Layer</span>
+<span class="sd">        probably an instance of Image or Surface layer</span>
+<span class="sd">    attr : str</span>
+<span class="sd">        the attribute to control with the slider.</span>
+<span class="sd">    parent : QWidget</span>
+<span class="sd">        probably an instance of QtLayerControls. important for styling.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    QRangeSliderPopup</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    AttributeError</span>
+<span class="sd">        if `layer` does not have an attribute named `{attr}_range`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">range_attr</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{attr}</span><span class="s1">_range&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">range_attr</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;Layer </span><span class="si">{layer}</span><span class="s1"> must have attribute </span><span class="si">{range_attr}</span><span class="s1"> &#39;</span>
+            <span class="s1">&#39;to use &quot;create_range_popup&quot;&#39;</span>
+        <span class="p">)</span>
+    <span class="n">is_integer_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)</span>
+
+    <span class="n">popup</span> <span class="o">=</span> <span class="n">QRangeSliderPopup</span><span class="p">(</span>
+        <span class="n">initial_values</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">attr</span><span class="p">),</span>
+        <span class="n">data_range</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">range_attr</span><span class="p">),</span>
+        <span class="n">collapsible</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">precision</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="n">is_integer_type</span> <span class="k">else</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">set_values</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">setattr</span><span class="p">,</span> <span class="n">layer</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+    <span class="n">set_range</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="nb">setattr</span><span class="p">,</span> <span class="n">layer</span><span class="p">,</span> <span class="n">range_attr</span><span class="p">)</span>
+    <span class="n">popup</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">valuesChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">set_values</span><span class="p">)</span>
+    <span class="n">popup</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">rangeChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">set_range</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">popup</span></div>
+
+
+<div class="viewcode-block" id="create_clim_reset_buttons"><a class="viewcode-back" href="../../../../napari._qt.layers.html#napari._qt.layers.qt_image_base_layer.create_clim_reset_buttons">[docs]</a><span class="k">def</span> <span class="nf">create_clim_reset_buttons</span><span class="p">(</span><span class="n">layer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create contrast limits reset and full range buttons.</span>
+
+<span class="sd">    Important: consumers of this function should check whether range_btn is</span>
+<span class="sd">    not None before adding the widget to a layout.  Adding None to a layout</span>
+<span class="sd">    can cause a segmentation fault.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layer : Image or Surface Layer</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    2-tuple</span>
+<span class="sd">        If layer data type is integer type, returns (reset_btn, range_btn).</span>
+<span class="sd">        Else, returns (reset_btn, None)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">reset</span><span class="p">():</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">reset_contrast_limits</span><span class="p">()</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">contrast_limits</span>
+
+    <span class="k">def</span> <span class="nf">reset_range</span><span class="p">():</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">reset_contrast_limits_range</span><span class="p">()</span>
+
+    <span class="n">reset_btn</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;reset&quot;</span><span class="p">)</span>
+    <span class="n">reset_btn</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;reset_clims_button&quot;</span><span class="p">)</span>
+    <span class="n">reset_btn</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;autoscale contrast to data range&quot;</span><span class="p">)</span>
+    <span class="n">reset_btn</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="mi">40</span><span class="p">)</span>
+    <span class="n">reset_btn</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">reset</span><span class="p">)</span>
+
+    <span class="n">range_btn</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1"># the &quot;full range&quot; button doesn&#39;t do anything if it&#39;s not an</span>
+    <span class="c1"># unsigned integer type (it&#39;s unclear what range should be set)</span>
+    <span class="c1"># so we don&#39;t show create it at all.</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+        <span class="n">range_btn</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;full range&quot;</span><span class="p">)</span>
+        <span class="n">range_btn</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;full_clim_range_button&quot;</span><span class="p">)</span>
+        <span class="n">range_btn</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;set contrast range to full bit-depth&quot;</span><span class="p">)</span>
+        <span class="n">range_btn</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="mi">65</span><span class="p">)</span>
+        <span class="n">range_btn</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">reset_range</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">reset_btn</span><span class="p">,</span> <span class="n">range_btn</span></div>
 </pre></div>
 
            </div>

@@ -296,6 +296,10 @@ spatial filters. The filters are built in the file below:</p>
 the result is opaque.</p></li>
 <li><p>mip: maxiumum intensity projection. Cast a ray and display the
 maximum value that was encountered.</p></li>
+<li><p>attenuated_mip: attenuated maxiumum intensity projection. Cast a
+ray and attenuate values based on integral of encountered values,
+display the maximum value that was encountered after attenuation.
+This will make nearer objects appear more prominent.</p></li>
 <li><p>additive: voxel colors are added along the view ray until
 the result is saturated.</p></li>
 <li><p>iso: isosurface. Cast a ray until a certain threshold is
@@ -307,6 +311,11 @@ performed to give the visual appearance of a surface.</p></li>
 <dl class="attribute">
 <dt id="napari.layers.image._constants.Rendering.ADDITIVE">
 <code class="sig-name descname">ADDITIVE</code><em class="property"> = 'additive'</em><a class="headerlink" href="#napari.layers.image._constants.Rendering.ADDITIVE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="napari.layers.image._constants.Rendering.ATTENUATED_MIP">
+<code class="sig-name descname">ATTENUATED_MIP</code><em class="property"> = 'attenuated_mip'</em><a class="headerlink" href="#napari.layers.image._constants.Rendering.ATTENUATED_MIP" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
@@ -331,7 +340,7 @@ performed to give the visual appearance of a surface.</p></li>
 <span id="napari-layers-image-image-module"></span><h2>napari.layers.image.image module<a class="headerlink" href="#module-napari.layers.image.image" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="napari.layers.image.image.Image">
-<em class="property">class </em><code class="sig-prename descclassname">napari.layers.image.image.</code><code class="sig-name descname">Image</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">*</em>, <em class="sig-param">rgb=None</em>, <em class="sig-param">is_pyramid=None</em>, <em class="sig-param">colormap='gray'</em>, <em class="sig-param">contrast_limits=None</em>, <em class="sig-param">gamma=1</em>, <em class="sig-param">interpolation='nearest'</em>, <em class="sig-param">rendering='mip'</em>, <em class="sig-param">iso_threshold=0.5</em>, <em class="sig-param">name=None</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">scale=None</em>, <em class="sig-param">translate=None</em>, <em class="sig-param">opacity=1</em>, <em class="sig-param">blending='translucent'</em>, <em class="sig-param">visible=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/napari/layers/image/image.html#Image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.image.Image" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">napari.layers.image.image.</code><code class="sig-name descname">Image</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">*</em>, <em class="sig-param">rgb=None</em>, <em class="sig-param">is_pyramid=None</em>, <em class="sig-param">colormap='gray'</em>, <em class="sig-param">contrast_limits=None</em>, <em class="sig-param">gamma=1</em>, <em class="sig-param">interpolation='nearest'</em>, <em class="sig-param">rendering='mip'</em>, <em class="sig-param">iso_threshold=0.5</em>, <em class="sig-param">attenuation=0.5</em>, <em class="sig-param">name=None</em>, <em class="sig-param">metadata=None</em>, <em class="sig-param">scale=None</em>, <em class="sig-param">translate=None</em>, <em class="sig-param">opacity=1</em>, <em class="sig-param">blending='translucent'</em>, <em class="sig-param">visible=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/napari/layers/image/image.html#Image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.image.Image" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="napari.layers.html#napari.layers.intensity_mixin.IntensityVisualizationMixin" title="napari.layers.intensity_mixin.IntensityVisualizationMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">napari.layers.intensity_mixin.IntensityVisualizationMixin</span></code></a>, <a class="reference internal" href="napari.layers.base.html#napari.layers.base.base.Layer" title="napari.layers.base.base.Layer"><code class="xref py py-class docutils literal notranslate"><span class="pre">napari.layers.base.base.Layer</span></code></a></p>
 <p>Image layer.</p>
 <dl class="field-list simple">
@@ -361,7 +370,10 @@ the image.</p></li>
 <li><p><strong>gamma</strong> (<em>float</em>) – Gamma correction for determining colormap linearity. Defaults to 1.</p></li>
 <li><p><strong>interpolation</strong> (<em>str</em>) – Interpolation mode used by vispy. Must be one of our supported
 modes.</p></li>
+<li><p><strong>rendering</strong> (<em>str</em>) – Rendering mode used by vispy. Must be one of our supported
+modes.</p></li>
 <li><p><strong>iso_threshold</strong> (<em>float</em>) – Threshold for isosurface.</p></li>
+<li><p><strong>attenuation</strong> (<em>float</em>) – Attenuation rate for attenuated maximum intensity projection.</p></li>
 <li><p><strong>name</strong> (<em>str</em>) – Name of the layer.</p></li>
 <li><p><strong>metadata</strong> (<em>dict</em>) – Layer metadata.</p></li>
 <li><p><strong>scale</strong> (<em>tuple of float</em>) – Scale factors for the layer.</p></li>
@@ -486,6 +498,30 @@ rgb the contrast_limits_range is ignored.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="napari.layers.image.image.Image.interpolation">
+<code class="sig-name descname">interpolation</code><a class="headerlink" href="#napari.layers.image.image.Image.interpolation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Interpolation mode used by vispy. Must be one of our supported
+modes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="napari.layers.image.image.Image.rendering">
+<code class="sig-name descname">rendering</code><a class="headerlink" href="#napari.layers.image.image.Image.rendering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rendering mode used by vispy. Must be one of our supported
+modes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="napari.layers.image.image.Image.iso_threshold">
 <code class="sig-name descname">iso_threshold</code><a class="headerlink" href="#napari.layers.image.image.Image.iso_threshold" title="Permalink to this definition">¶</a></dt>
 <dd><p>Threshold for isosurface.</p>
@@ -497,12 +533,12 @@ rgb the contrast_limits_range is ignored.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="napari.layers.image.image.Image.interpolation">
-<code class="sig-name descname">interpolation</code><a class="headerlink" href="#napari.layers.image.image.Image.interpolation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Interpolation mode used by vispy. Must be one of our supported modes.</p>
+<dt id="napari.layers.image.image.Image.attenuation">
+<code class="sig-name descname">attenuation</code><a class="headerlink" href="#napari.layers.image.image.Image.attenuation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attenuation rate for attenuated maximum intensity projection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>str</p>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -537,6 +573,17 @@ can be multidimensional for RGB or RGBA images if multidimensional is
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">attenuation</code></dt>
+<dd><p>attenuation rate for attenuated_mip rendering.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -617,8 +664,8 @@ can be multidimensional for RGB or RGBA images if multidimensional is
 </dd></dl>
 
 <dl class="method">
-<dt id="napari.layers.image.image.Image.rendering">
-<em class="property">property </em><code class="sig-name descname">rendering</code><a class="headerlink" href="#napari.layers.image.image.Image.rendering" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">rendering</code></dt>
 <dd><p>Rendering mode.
 Selects a preset rendering mode in vispy that determines how
 volume is displayed
@@ -634,6 +681,10 @@ the result is saturated.</p></li>
 <li><p>iso: isosurface. Cast a ray until a certain threshold is
 encountered. At that location, lighning calculations are
 performed to give the visual appearance of a surface.</p></li>
+<li><p>attenuated_mip: attenuated maxiumum intensity projection. Cast a
+ray and attenuate values based on integral of encountered values,
+display the maximum value that was encountered after attenuation.
+This will make nearer objects appear more prominent.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>

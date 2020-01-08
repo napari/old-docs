@@ -463,11 +463,35 @@
 
 <span class="n">ISO_FRAG_SHADER</span> <span class="o">=</span> <span class="n">FRAG_SHADER</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">ISO_SNIPPETS</span><span class="p">)</span>
 
+<span class="n">ATTENUATED_MIP_SNIPPETS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">before_loop</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        float maxval = -99999.0; // The maximum encountered value</span>
+<span class="s2">        float sumval = 0.0; // The sum of the encountered values</span>
+<span class="s2">        float scaled = 0.0; // The scaled value</span>
+<span class="s2">        int maxi = 0;  // Where the maximum value was encountered</span>
+<span class="s2">        vec3 maxloc = vec3(0.0);  // Location where the maximum value was encountered</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="n">in_loop</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        sumval = sumval + val;</span>
+<span class="s2">        scaled = val * exp(-u_threshold * (sumval - 1) / u_relative_step_size);</span>
+<span class="s2">        if( scaled &gt; maxval ) {</span>
+<span class="s2">            maxval = scaled;</span>
+<span class="s2">            maxi = iter;</span>
+<span class="s2">            maxloc = loc;</span>
+<span class="s2">        }</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="n">after_loop</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        gl_FragColor = $cmap(maxval);</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ATTENUATED_MIP_FRAG_SHADER</span> <span class="o">=</span> <span class="n">FRAG_SHADER</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">ATTENUATED_MIP_SNIPPETS</span><span class="p">)</span>
+
 <span class="n">frag_dict</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;mip&#39;</span><span class="p">:</span> <span class="n">MIP_FRAG_SHADER</span><span class="p">,</span>
     <span class="s1">&#39;iso&#39;</span><span class="p">:</span> <span class="n">ISO_FRAG_SHADER</span><span class="p">,</span>
     <span class="s1">&#39;translucent&#39;</span><span class="p">:</span> <span class="n">TRANSLUCENT_FRAG_SHADER</span><span class="p">,</span>
     <span class="s1">&#39;additive&#39;</span><span class="p">:</span> <span class="n">ADDITIVE_FRAG_SHADER</span><span class="p">,</span>
+    <span class="s1">&#39;attenuated_mip&#39;</span><span class="p">:</span> <span class="n">ATTENUATED_MIP_FRAG_SHADER</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -477,6 +501,7 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_threshold</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="nd">@property</span>
@@ -507,10 +532,6 @@
                 <span class="o">%</span> <span class="p">(</span><span class="n">known_methods</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_method</span> <span class="o">=</span> <span class="n">method</span>
-        <span class="c1"># Get rid of specific variables - they may become invalid</span>
-        <span class="k">if</span> <span class="s1">&#39;u_threshold&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">[</span><span class="s1">&#39;u_threshold&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="o">.</span><span class="n">frag</span> <span class="o">=</span> <span class="n">frag_dict</span><span class="p">[</span><span class="n">method</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="o">.</span><span class="n">frag</span><span class="p">[</span><span class="s1">&#39;sampler_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tex</span><span class="o">.</span><span class="n">glsl_sampler_type</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="o">.</span><span class="n">frag</span><span class="p">[</span><span class="s1">&#39;sample&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tex</span><span class="o">.</span><span class="n">glsl_sample</span>
@@ -520,6 +541,21 @@
             <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmap</span><span class="p">,</span> <span class="s1">&#39;texture_lut&#39;</span><span class="p">))</span>
             <span class="k">else</span> <span class="kc">None</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;u_threshold&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">[</span><span class="s1">&#39;u_threshold&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The threshold value to apply for the isosurface render method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_threshold</span>
+
+    <span class="nd">@threshold</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_threshold</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;u_threshold&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared_program</span><span class="p">[</span><span class="s1">&#39;u_threshold&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_threshold</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="nd">@property</span>

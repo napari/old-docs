@@ -354,6 +354,99 @@ than <code class="docutils literal notranslate"><span class="pre">map()</span></
 </dd></dl>
 
 </div>
+<div class="section" id="module-napari.utils.colormaps.standardize_color">
+<span id="napari-utils-colormaps-standardize-color-module"></span><h2>napari.utils.colormaps.standardize_color module<a class="headerlink" href="#module-napari.utils.colormaps.standardize_color" title="Permalink to this headline">¶</a></h2>
+<p>This module contains functions that ‘standardize’ the color handling
+of napari layers by supplying functions that are able to convert most
+color representation the user had in mind into a single representation -
+a numpy Nx4 array of float32 values between 0 and 1 - that is used across
+the codebase. The color is always in an RGBA format. To handle colors in
+HSV, for example, we should point users to skimage, matplotlib and others.</p>
+<p>The main function of the module is “transform_color”, which might call
+a cascade of other, private, function in the module to do the hard work
+of converting the input. This function will either be called directly, or
+used by the function “transform_color_with_defaults”, which is a helper
+function for the layer objects located in
+<code class="docutils literal notranslate"><span class="pre">layers.utils.color_transformations.py</span></code>.</p>
+<p>In general, when handling colors we try to catch invalid color
+representations, warn the users of their misbehaving and return a default
+white color array, since it seems unreasonable to crash the entire napari
+session due to mis-represented colors.</p>
+<dl class="function">
+<dt id="napari.utils.colormaps.standardize_color.get_color_namelist">
+<code class="sig-prename descclassname">napari.utils.colormaps.standardize_color.</code><code class="sig-name descname">get_color_namelist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/napari/utils/colormaps/standardize_color.html#get_color_namelist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.colormaps.standardize_color.get_color_namelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around vispy’s get_color_names designed to add a
+“transparent” (alpha = 0) color to it.</p>
+<p>Once <a class="reference external" href="https://github.com/vispy/vispy/pull/1794">https://github.com/vispy/vispy/pull/1794</a> is merged this
+function is no longer necessary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>color_dict</strong> – A list of all valid vispy color names plus “transparent”.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="napari.utils.colormaps.standardize_color.handle_nested_colors">
+<code class="sig-prename descclassname">napari.utils.colormaps.standardize_color.</code><code class="sig-name descname">handle_nested_colors</code><span class="sig-paren">(</span><em class="sig-param">colors</em><span class="sig-paren">)</span> &#x2192; vispy.color.color_array.ColorArray<a class="reference internal" href="_modules/napari/utils/colormaps/standardize_color.html#handle_nested_colors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.colormaps.standardize_color.handle_nested_colors" title="Permalink to this definition">¶</a></dt>
+<dd><p>In case of an array-like container holding colors, unpack it.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="napari.utils.colormaps.standardize_color.rgb_to_hex">
+<code class="sig-prename descclassname">napari.utils.colormaps.standardize_color.</code><code class="sig-name descname">rgb_to_hex</code><span class="sig-paren">(</span><em class="sig-param">rgbs: Sequence</em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="reference internal" href="_modules/napari/utils/colormaps/standardize_color.html#rgb_to_hex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.colormaps.standardize_color.rgb_to_hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert RGB to hex quadruplet.</p>
+<p>Taken from vispy with slight modifications.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rgbs</strong> (<em>Sequence</em>) – A list-like container of colors in RGBA format with values
+between [0, 1]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>arr</strong> – An array of the hex representation of the input colors</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="napari.utils.colormaps.standardize_color.transform_color">
+<code class="sig-prename descclassname">napari.utils.colormaps.standardize_color.</code><code class="sig-name descname">transform_color</code><span class="sig-paren">(</span><em class="sig-param">colors: Any</em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="reference internal" href="_modules/napari/utils/colormaps/standardize_color.html#transform_color"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.colormaps.standardize_color.transform_color" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms provided color(s) to an Nx4 array of RGBA np.float32
+values.</p>
+<p>N is the number of given colors. The function is designed to parse all
+valid color representations a user might have and convert them properly.
+That being said, combinations of different color representation in the
+same list of colors is prohibited, and will error. This means that a list
+of [‘red’, np.array([1, 0, 0])] cannot be parsed and has to be manually
+pre-processed by the user before sent to this function. In addition, the
+provided colors - if numeric - should already be in an RGB(A) format. To
+convert an existing numeric color array to RGBA format use skimage before
+calling this function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>colors</strong> (<em>string and array-like.</em>) – The color(s) to interpret and convert</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>colors</strong> – An instance of np.ndarray with a data type of float32, 4 columns in
+RGBA order and N rows, with N being the number of colors. The array
+will always be 2D even if a single color is passed.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong><strong>, </strong><strong>AttributeError</strong><strong>, </strong><strong>KeyError</strong> – invalid inputs</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
 <div class="section" id="module-napari.utils.colormaps">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-napari.utils.colormaps" title="Permalink to this headline">¶</a></h2>
 </div>

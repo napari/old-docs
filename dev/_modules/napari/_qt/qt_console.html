@@ -144,14 +144,49 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari._qt.qt_console</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">qtconsole.rich_jupyter_widget</span> <span class="kn">import</span> <span class="n">RichJupyterWidget</span>
-<span class="kn">from</span> <span class="nn">qtconsole.inprocess</span> <span class="kn">import</span> <span class="n">QtInProcessKernelManager</span>
-<span class="kn">from</span> <span class="nn">qtconsole.client</span> <span class="kn">import</span> <span class="n">QtKernelClient</span>
-<span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">get_ipython</span>
-<span class="kn">from</span> <span class="nn">IPython.terminal.interactiveshell</span> <span class="kn">import</span> <span class="n">TerminalInteractiveShell</span>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">ipykernel.connect</span> <span class="kn">import</span> <span class="n">get_connection_file</span>
 <span class="kn">from</span> <span class="nn">ipykernel.inprocess.ipkernel</span> <span class="kn">import</span> <span class="n">InProcessInteractiveShell</span>
 <span class="kn">from</span> <span class="nn">ipykernel.zmqshell</span> <span class="kn">import</span> <span class="n">ZMQInteractiveShell</span>
-<span class="kn">from</span> <span class="nn">ipykernel.connect</span> <span class="kn">import</span> <span class="n">get_connection_file</span>
+<span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">get_ipython</span>
+<span class="kn">from</span> <span class="nn">IPython.terminal.interactiveshell</span> <span class="kn">import</span> <span class="n">TerminalInteractiveShell</span>
+<span class="kn">from</span> <span class="nn">qtconsole.client</span> <span class="kn">import</span> <span class="n">QtKernelClient</span>
+<span class="kn">from</span> <span class="nn">qtconsole.inprocess</span> <span class="kn">import</span> <span class="n">QtInProcessKernelManager</span>
+<span class="kn">from</span> <span class="nn">qtconsole.rich_jupyter_widget</span> <span class="kn">import</span> <span class="n">RichJupyterWidget</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">set default asyncio policy to be compatible with tornado</span>
+
+<span class="sd">Tornado 6 (at least) is not compatible with the default</span>
+<span class="sd">asyncio implementation on Windows</span>
+
+<span class="sd">Pick the older SelectorEventLoopPolicy on Windows</span>
+<span class="sd">if the known-incompatible default policy is in use.</span>
+
+<span class="sd">FIXME: if/when tornado supports the defaults in asyncio,</span>
+<span class="sd">remove and bump tornado requirement for py38</span>
+<span class="sd">borrowed from ipykernel:  https://github.com/ipython/ipykernel/pull/456</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;win&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">asyncio</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">asyncio</span> <span class="kn">import</span> <span class="p">(</span>
+            <span class="n">WindowsProactorEventLoopPolicy</span><span class="p">,</span>
+            <span class="n">WindowsSelectorEventLoopPolicy</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">pass</span>
+        <span class="c1"># not affected</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop_policy</span><span class="p">())</span>
+            <span class="ow">is</span> <span class="n">WindowsProactorEventLoopPolicy</span>
+        <span class="p">):</span>
+            <span class="c1"># WindowsProactorEventLoopPolicy is not compatible with tornado 6</span>
+            <span class="c1"># fallback to the pre-3.8 default of Selector</span>
+            <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop_policy</span><span class="p">(</span><span class="n">WindowsSelectorEventLoopPolicy</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="QtConsole"><a class="viewcode-back" href="../../../napari._qt.html#napari._qt.qt_console.QtConsole">[docs]</a><span class="k">class</span> <span class="nc">QtConsole</span><span class="p">(</span><span class="n">RichJupyterWidget</span><span class="p">):</span>

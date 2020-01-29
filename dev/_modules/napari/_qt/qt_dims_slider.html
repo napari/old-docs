@@ -200,20 +200,10 @@
         <span class="c1"># editingFinished event (the user is expected to change the value)...</span>
         <span class="c1"># which is confusing to the user, so instead we use an IntValidator</span>
         <span class="c1"># that makes sure the user can only enter integers, but we do our own</span>
-        <span class="c1"># value validation in change_slice</span>
+        <span class="c1"># value validation in self.change_slice</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">setValidator</span><span class="p">(</span><span class="n">QIntValidator</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999999</span><span class="p">))</span>
 
-        <span class="k">def</span> <span class="nf">change_slice</span><span class="p">():</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
-            <span class="n">max_allowed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">max_indices</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">val</span> <span class="o">&gt;</span> <span class="n">max_allowed</span><span class="p">:</span>
-                <span class="n">val</span> <span class="o">=</span> <span class="n">max_allowed</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">clearFocus</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">qt_dims</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">change_slice</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">editingFinished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_set_slice_from_label</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">totslice_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">totslice_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Total slices for axis </span><span class="si">{axis}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s1">&#39;slice_label&#39;</span><span class="p">)</span>
@@ -242,6 +232,17 @@
         <span class="n">layout</span><span class="o">.</span><span class="n">setSpacing</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis_labels</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pull_label</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_slice_from_label</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the dims point based on the curslice_label.&quot;&quot;&quot;</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">max_allowed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">max_indices</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">val</span> <span class="o">&gt;</span> <span class="n">max_allowed</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">max_allowed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curslice_label</span><span class="o">.</span><span class="n">clearFocus</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_dims</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_create_axis_label_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create the axis label widget which accompanies its slider.&quot;&quot;&quot;</span>
@@ -332,7 +333,7 @@
             <span class="k">if</span> <span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">displayed_sliders</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">qt_dims</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="p">(</span>
                     <span class="ow">not</span> <span class="n">displayed_sliders</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>
@@ -340,7 +341,7 @@
                 <span class="p">):</span>
                     <span class="n">displayed_sliders</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="n">_range</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
@@ -351,7 +352,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_slice_labels</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">displayed_sliders</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>

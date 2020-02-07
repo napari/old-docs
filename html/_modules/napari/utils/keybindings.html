@@ -1,0 +1,568 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.utils.keybindings &mdash; napari 0+untagged.551.g3950dba documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0+untagged.551.g3950dba
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.utils.keybindings</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.utils.keybindings</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Key combinations are represented in the form ``[modifier-]key``,</span>
+<span class="sd">e.g. ``a``, ``Control-c``, or ``Control-Alt-Delete``.</span>
+<span class="sd">Valid modifiers are Control, Alt, Shift, and Meta.</span>
+
+<span class="sd">Letters will always be read as upper-case.</span>
+<span class="sd">Due to the native implementation of the key system, Shift pressed in</span>
+<span class="sd">certain key combinations may yield inconsistent or unexpected results.</span>
+<span class="sd">Therefore, it is not recommended to use Shift with non-letter keys. On OSX,</span>
+<span class="sd">Control is swapped with Meta such that pressing Command reads as Control.</span>
+
+<span class="sd">Special keys include Shift, Control, Alt, Meta, Up, Down, Left, Right,</span>
+<span class="sd">PageUp, PageDown, Insert, Delete, Home, End, Escape, Backspace, F1,</span>
+<span class="sd">F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, Space, Enter, and Tab</span>
+
+<span class="sd">Functions take in only one argument: the parent that the function</span>
+<span class="sd">was bound to. This is the viewer or layer.</span>
+
+<span class="sd">By default, all functions are assumed to work on key presses only,</span>
+<span class="sd">but can be denoted to work on release too by separating the function</span>
+<span class="sd">into two statements with the yield keyword::</span>
+
+<span class="sd">    @viewer.bind_key(&#39;h&#39;)</span>
+<span class="sd">    def hello_world(viewer):</span>
+<span class="sd">        # on key press</span>
+<span class="sd">        viewer.status = &#39;hello world!&#39;</span>
+
+<span class="sd">        yield</span>
+
+<span class="sd">        # on key release</span>
+<span class="sd">        viewer.status = &#39;goodbye world :(&#39;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">UserDict</span>
+
+<span class="kn">from</span> <span class="nn">vispy.util</span> <span class="kn">import</span> <span class="n">keys</span>
+
+
+<span class="n">SPECIAL_KEYS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">SHIFT</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">CONTROL</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">ALT</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">META</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">UP</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">DOWN</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">PAGEUP</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">PAGEDOWN</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">INSERT</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">DELETE</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">HOME</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">END</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">ESCAPE</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">BACKSPACE</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F1</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F2</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F3</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F4</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F5</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F6</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F7</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F8</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F9</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F10</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F11</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">F12</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">SPACE</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">ENTER</span><span class="p">,</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">TAB</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">MODIFIER_KEYS</span> <span class="o">=</span> <span class="p">[</span><span class="n">keys</span><span class="o">.</span><span class="n">CONTROL</span><span class="p">,</span> <span class="n">keys</span><span class="o">.</span><span class="n">ALT</span><span class="p">,</span> <span class="n">keys</span><span class="o">.</span><span class="n">SHIFT</span><span class="p">,</span> <span class="n">keys</span><span class="o">.</span><span class="n">META</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="parse_key_combo"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.parse_key_combo">[docs]</a><span class="k">def</span> <span class="nf">parse_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse a key combination into its components in a comparable format.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key_combo : str</span>
+<span class="sd">        Key combination.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    key : str</span>
+<span class="sd">        Base key of the combination.</span>
+<span class="sd">    modifiers : set of str</span>
+<span class="sd">        Modifier keys of the combination.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-(?=.+)&#39;</span><span class="p">,</span> <span class="n">key_combo</span><span class="p">)</span>
+    <span class="o">*</span><span class="n">modifiers</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">parsed</span>
+
+    <span class="k">return</span> <span class="n">key</span><span class="p">,</span> <span class="nb">set</span><span class="p">(</span><span class="n">modifiers</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="components_to_key_combo"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.components_to_key_combo">[docs]</a><span class="k">def</span> <span class="nf">components_to_key_combo</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">modifiers</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Combine components to become a key combination.</span>
+
+<span class="sd">    Modifier keys will always be combined in the same order:</span>
+<span class="sd">    Control, Alt, Shift, Meta</span>
+
+<span class="sd">    Letters will always be read as upper-case.</span>
+<span class="sd">    Due to the native implementation of the key system, Shift pressed in</span>
+<span class="sd">    certain key combinations may yield inconsistent or unexpected results.</span>
+<span class="sd">    Therefore, it is not recommended to use Shift with non-letter keys. On OSX,</span>
+<span class="sd">    Control is swapped with Meta such that pressing Command reads as Control.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key : str or vispy.app.Key</span>
+<span class="sd">        Base key.</span>
+<span class="sd">    modifiers : combination of str or vispy.app.Key</span>
+<span class="sd">        Modifier keys.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    key_combo : str</span>
+<span class="sd">        Generated key combination.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">key</span><span class="o">.</span><span class="n">isalpha</span><span class="p">():</span>  <span class="c1"># it&#39;s a letter</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">cond</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="kc">True</span>  <span class="c1"># noqa: E731</span>
+    <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">SPECIAL_KEYS</span><span class="p">:</span>
+        <span class="c1"># remove redundant information i.e. an output of &#39;Shift-Shift&#39;</span>
+        <span class="n">cond</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">m</span> <span class="o">!=</span> <span class="n">key</span>  <span class="c1"># noqa: E731</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Shift is consumed to transform key</span>
+
+        <span class="c1"># bug found on OSX: Command will cause Shift to not</span>
+        <span class="c1"># transform the key so do not consume it</span>
+        <span class="c1"># note: &#39;Control&#39; is OSX Command key</span>
+        <span class="n">cond</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">m</span> <span class="o">!=</span> <span class="s1">&#39;Shift&#39;</span> <span class="ow">or</span> <span class="s1">&#39;Control&#39;</span> <span class="ow">in</span> <span class="n">modifiers</span>  <span class="c1"># noqa: E731</span>
+
+    <span class="n">modifiers</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">key</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">key</span><span class="p">:</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">modifiers</span> <span class="ow">and</span> <span class="n">cond</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">MODIFIER_KEYS</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="s1">&#39;-&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">modifiers</span> <span class="o">+</span> <span class="p">(</span><span class="n">key</span><span class="p">,))</span></div>
+
+
+<div class="viewcode-block" id="normalize_key_combo"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.normalize_key_combo">[docs]</a><span class="k">def</span> <span class="nf">normalize_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Normalize key combination to make it easily comparable.</span>
+
+<span class="sd">    All aliases are converted and modifier orders are fixed to:</span>
+<span class="sd">    Control, Alt, Shift, Meta</span>
+
+<span class="sd">    Letters will always be read as upper-case.</span>
+<span class="sd">    Due to the native implementation of the key system, Shift pressed in</span>
+<span class="sd">    certain key combinations may yield inconsistent or unexpected results.</span>
+<span class="sd">    Therefore, it is not recommended to use Shift with non-letter keys. On OSX,</span>
+<span class="sd">    Control is swapped with Meta such that pressing Command reads as Control.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key_combo : str</span>
+<span class="sd">        Key combination.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    normalized_key_combo : str</span>
+<span class="sd">        Normalized key combination.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">key</span><span class="p">,</span> <span class="n">modifiers</span> <span class="o">=</span> <span class="n">parse_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SPECIAL_KEYS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;invalid key </span><span class="si">{key}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">modifier</span> <span class="ow">in</span> <span class="n">modifiers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">modifier</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">MODIFIER_KEYS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;invalid modifier key </span><span class="si">{modifier}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">components_to_key_combo</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">modifiers</span><span class="p">)</span></div>
+
+
+<span class="n">UNDEFINED</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="bind_key"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.bind_key">[docs]</a><span class="k">def</span> <span class="nf">bind_key</span><span class="p">(</span><span class="n">keymap</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">UNDEFINED</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bind a key combination to a keymap.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    keymap : dict of str: callable</span>
+<span class="sd">        Keymap to modify.</span>
+<span class="sd">    key : str</span>
+<span class="sd">        Key combination.</span>
+<span class="sd">    func : callable or None</span>
+<span class="sd">        Callable to bind to the key combination.</span>
+<span class="sd">        If ``None`` is passed, unbind instead.</span>
+<span class="sd">    overwrite : bool, keyword-only, optional</span>
+<span class="sd">        Whether to overwrite the key combination if it already exists.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    unbound : callable or None</span>
+<span class="sd">        Callable unbound by this operation, if any.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Key combinations are represented in the form ``[modifier-]key``,</span>
+<span class="sd">    e.g. ``a``, ``Control-c``, or ``Control-Alt-Delete``.</span>
+<span class="sd">    Valid modifiers are Control, Alt, Shift, and Meta.</span>
+
+<span class="sd">    Letters will always be read as upper-case.</span>
+<span class="sd">    Due to the native implementation of the key system, Shift pressed in</span>
+<span class="sd">    certain key combinations may yield inconsistent or unexpected results.</span>
+<span class="sd">    Therefore, it is not recommended to use Shift with non-letter keys. On OSX,</span>
+<span class="sd">    Control is swapped with Meta such that pressing Command reads as Control.</span>
+
+<span class="sd">    Special keys include Shift, Control, Alt, Meta, Up, Down, Left, Right,</span>
+<span class="sd">    PageUp, PageDown, Insert, Delete, Home, End, Escape, Backspace, F1,</span>
+<span class="sd">    F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, Space, Enter, and Tab</span>
+
+<span class="sd">    Functions take in only one argument: the parent that the function</span>
+<span class="sd">    was bound to. This is the viewer or layer.</span>
+
+<span class="sd">    By default, all functions are assumed to work on key presses only,</span>
+<span class="sd">    but can be denoted to work on release too by separating the function</span>
+<span class="sd">    into two statements with the yield keyword::</span>
+
+<span class="sd">        @viewer.bind_key(&#39;h&#39;)</span>
+<span class="sd">        def hello_world(viewer):</span>
+<span class="sd">            # on key press</span>
+<span class="sd">            viewer.status = &#39;hello world!&#39;</span>
+
+<span class="sd">            yield</span>
+
+<span class="sd">            # on key release</span>
+<span class="sd">            viewer.status = &#39;goodbye world :(&#39;</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="n">UNDEFINED</span><span class="p">:</span>
+
+        <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="n">bind_key</span><span class="p">(</span><span class="n">keymap</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">func</span>
+
+        <span class="k">return</span> <span class="n">inner</span>
+
+    <span class="n">key</span> <span class="o">=</span> <span class="n">normalize_key_combo</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keymap</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;key combination </span><span class="si">{key}</span><span class="s1"> already used! &#39;</span>
+            <span class="s2">&quot;specify &#39;overwrite=True&#39; to bypass this check&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">unbound</span> <span class="o">=</span> <span class="n">keymap</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;&#39;func&#39; must be a callable&quot;</span><span class="p">)</span>
+        <span class="n">keymap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span>
+
+    <span class="k">return</span> <span class="n">unbound</span></div>
+
+
+<div class="viewcode-block" id="KeybindingDescriptor"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeybindingDescriptor">[docs]</a><span class="k">class</span> <span class="nc">KeybindingDescriptor</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Descriptor which transforms ``func`` into a method with the first</span>
+<span class="sd">    argument bound to ``class_keymap`` or ``_keymap`` depending on if it was</span>
+<span class="sd">    called from the class or the instance, respectively.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    func : callable</span>
+<span class="sd">        Function to bind.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span> <span class="o">=</span> <span class="n">func</span>
+
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">klass</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># used on class</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">keymap</span> <span class="o">=</span> <span class="n">klass</span><span class="o">.</span><span class="n">class_keymap</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">keymap</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">_keymap</span>
+
+        <span class="k">return</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span><span class="p">,</span> <span class="n">keymap</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InheritedKeymap"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap">[docs]</a><span class="k">class</span> <span class="nc">InheritedKeymap</span><span class="p">(</span><span class="n">UserDict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dictionary which inherits from another.</span>
+
+<span class="sd">    Values of ``None`` are treated as though the key doesn&#39;t exist.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    parent : callable() -&gt; dict</span>
+<span class="sd">        Parent keymap.</span>
+<span class="sd">    contents : dict, optional</span>
+<span class="sd">        Contents with which to initialize.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">contents</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">()[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">val</span>
+
+    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="fm">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="InheritedKeymap.copy"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">InheritedKeymap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="InheritedKeymap.pop"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap.pop">[docs]</a>    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">UNDEFINED</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">default</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">UNDEFINED</span><span class="p">:</span>
+                <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">default</span></div></div>
+
+
+<div class="viewcode-block" id="KeymapMixin"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapMixin">[docs]</a><span class="k">class</span> <span class="nc">KeymapMixin</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Mix-in to add keymap functionality. Must still define ``class_keymap``</span>
+<span class="sd">    in every subclass.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keymap</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">__init_subclass__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init_subclass__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;class_keymap&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+            <span class="c1"># if in __dict__, was defined in class and not inherited</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">class_keymap</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">keymap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;InheritedKeymap : Keymap used for shortcuts.</span>
+<span class="sd">        Inherits from ``class_keymap``.</span>
+
+<span class="sd">        Do not directly set key bindings; use ``bind_key`` instead.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_keymap</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="nd">@keymap</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">keymap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keymap</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_keymap</span> <span class="o">=</span> <span class="n">InheritedKeymap</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">keymap</span><span class="p">)</span>
+
+    <span class="n">bind_key</span> <span class="o">=</span> <span class="n">KeybindingDescriptor</span><span class="p">(</span><span class="n">bind_key</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

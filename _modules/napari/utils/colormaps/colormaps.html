@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.colormaps.colormaps &mdash; napari 0.2.11+27.gbd53848 documentation</title>
+  <title>napari.utils.colormaps.colormaps &mdash; napari 0.2.11+28.gb2bd734 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.11+27.gbd53848
+                0.2.11+28.gb2bd734
               </div>
             
           
@@ -232,7 +232,7 @@
     <span class="k">return</span> <span class="n">filtered_colors</span>
 
 
-<span class="k">def</span> <span class="nf">_low_discrepancy_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_low_discrepancy_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">256</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Generate a 1d low discrepancy sequence of coordinates.</span>
 
 <span class="sd">    Parameters</span>
@@ -241,6 +241,10 @@
 <span class="sd">        A set of labels or label image.</span>
 <span class="sd">    seed : float</span>
 <span class="sd">        The seed from which to start the quasirandom sequence.</span>
+<span class="sd">    margin : float</span>
+<span class="sd">        Values too close to 0 or 1 will get mapped to the edge of the colormap,</span>
+<span class="sd">        so we need to offset to a margin slightly inside those values. Since</span>
+<span class="sd">        the bin size is 1/256 by default, we offset by that amount.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -248,12 +252,13 @@
 <span class="sd">        The set of ``labels`` remapped to [0, 1] quasirandomly.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">phi</span> <span class="o">=</span> <span class="mf">1.6180339887498948482</span>
-    <span class="n">image_out</span> <span class="o">=</span> <span class="p">(</span><span class="n">seed</span> <span class="o">+</span> <span class="n">image</span> <span class="o">/</span> <span class="n">phi</span><span class="p">)</span> <span class="o">%</span> <span class="mi">1</span>
-    <span class="c1"># Clipping slightly above 0 and below 1 is necessary to ensure that the</span>
-    <span class="c1"># labels do not get mapped to 0 which is represented by the background</span>
-    <span class="c1"># and is transparent</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">image_out</span><span class="p">,</span> <span class="mf">0.00001</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="mf">0.00001</span><span class="p">)</span>
+    <span class="n">phi_mod</span> <span class="o">=</span> <span class="mf">0.6180339887498948482</span>
+    <span class="n">image_float</span> <span class="o">=</span> <span class="n">seed</span> <span class="o">+</span> <span class="n">image</span> <span class="o">*</span> <span class="n">phi_mod</span>
+    <span class="c1"># We now map the floats to the range [0 + margin, 1 - margin]</span>
+    <span class="n">image_out</span> <span class="o">=</span> <span class="n">margin</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">margin</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">image_float</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">image_float</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">image_out</span>
 
 
 <span class="k">def</span> <span class="nf">_low_discrepancy</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>

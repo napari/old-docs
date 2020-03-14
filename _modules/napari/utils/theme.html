@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.theme &mdash; napari 0.2.12+14.gdec5b99 documentation</title>
+  <title>napari.utils.theme &mdash; napari 0.2.12+15.g0e8deac documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+14.gdec5b99
+                0.2.12+15.g0e8deac
               </div>
             
           
@@ -157,6 +157,15 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">ast</span> <span class="kn">import</span> <span class="n">literal_eval</span>
 
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">qtpy</span> <span class="kn">import</span> <span class="n">QT_VERSION</span>
+
+    <span class="n">major</span><span class="p">,</span> <span class="n">minor</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="n">QT_VERSION</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+    <span class="n">use_gradients</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">major</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">minor</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">12</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="n">use_gradients</span> <span class="o">=</span> <span class="kc">False</span>
+
+
 <span class="n">palettes</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;dark&#39;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s1">&#39;folder&#39;</span><span class="p">:</span> <span class="s1">&#39;dark&#39;</span><span class="p">,</span>
@@ -190,7 +199,7 @@
     <span class="p">},</span>
 <span class="p">}</span>
 
-
+<span class="n">gradient_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([vh])gradient\((.+)\)&#39;</span><span class="p">)</span>
 <span class="n">darken_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;{{\s?darken\((\w+),?\s?([-\d]+)?\)\s?}}&#39;</span><span class="p">)</span>
 <span class="n">lighten_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;{{\s?lighten\((\w+),?\s?([-\d]+)?\)\s?}}&#39;</span><span class="p">)</span>
 
@@ -217,6 +226,21 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;rgb(</span><span class="si">{</span><span class="n">red</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">green</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">blue</span><span class="si">}</span><span class="s1">)&#39;</span></div>
 
 
+<div class="viewcode-block" id="gradient"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.theme.gradient">[docs]</a><span class="k">def</span> <span class="nf">gradient</span><span class="p">(</span><span class="n">stops</span><span class="p">,</span> <span class="n">horizontal</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_gradients</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stops</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">horizontal</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="s1">&#39;qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, &#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="s1">&#39;qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, &#39;</span>
+
+    <span class="n">_stops</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;stop: </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">stop</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">stops</span><span class="p">)]</span>
+    <span class="n">grad</span> <span class="o">+=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_stops</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+
+    <span class="k">return</span> <span class="n">grad</span></div>
+
+
 <div class="viewcode-block" id="template"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.theme.template">[docs]</a><span class="k">def</span> <span class="nf">template</span><span class="p">(</span><span class="n">css</span><span class="p">,</span> <span class="o">**</span><span class="n">palette</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">darken_match</span><span class="p">(</span><span class="n">matchobj</span><span class="p">):</span>
         <span class="n">color</span><span class="p">,</span> <span class="n">percentage</span> <span class="o">=</span> <span class="n">matchobj</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
@@ -226,7 +250,13 @@
         <span class="n">color</span><span class="p">,</span> <span class="n">percentage</span> <span class="o">=</span> <span class="n">matchobj</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">lighten</span><span class="p">(</span><span class="n">palette</span><span class="p">[</span><span class="n">color</span><span class="p">],</span> <span class="n">percentage</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">gradient_match</span><span class="p">(</span><span class="n">matchobj</span><span class="p">):</span>
+        <span class="n">horizontal</span> <span class="o">=</span> <span class="n">matchobj</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span>
+        <span class="n">stops</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matchobj</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">gradient</span><span class="p">(</span><span class="n">stops</span><span class="p">,</span> <span class="n">horizontal</span><span class="p">)</span>
+
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">palette</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">css</span> <span class="o">=</span> <span class="n">gradient_pattern</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">gradient_match</span><span class="p">,</span> <span class="n">css</span><span class="p">)</span>
         <span class="n">css</span> <span class="o">=</span> <span class="n">darken_pattern</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">darken_match</span><span class="p">,</span> <span class="n">css</span><span class="p">)</span>
         <span class="n">css</span> <span class="o">=</span> <span class="n">lighten_pattern</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">lighten_match</span><span class="p">,</span> <span class="n">css</span><span class="p">)</span>
         <span class="n">css</span> <span class="o">=</span> <span class="n">css</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;{{ </span><span class="si">%s</span><span class="s1"> }}&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>

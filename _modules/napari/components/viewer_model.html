@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.viewer_model &mdash; napari 0.2.12+18.ge07158c documentation</title>
+  <title>napari.components.viewer_model &mdash; napari 0.2.12+19.gf5f7863 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+18.ge07158c
+                0.2.12+19.gf5f7863
               </div>
             
           
@@ -164,11 +164,11 @@
 <span class="kn">from</span> <span class="nn">.dims</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">.layerlist</span> <span class="kn">import</span> <span class="n">LayerList</span>
 <span class="kn">from</span> <span class="nn">..utils.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
-<span class="kn">from</span> <span class="nn">..utils.keybindings</span> <span class="kn">import</span> <span class="n">KeymapMixin</span>
+<span class="kn">from</span> <span class="nn">..utils.keybindings</span> <span class="kn">import</span> <span class="n">KeymapHandler</span><span class="p">,</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">palettes</span>
 
 
-<div class="viewcode-block" id="ViewerModel"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.viewer_model.ViewerModel">[docs]</a><span class="k">class</span> <span class="nc">ViewerModel</span><span class="p">(</span><span class="n">AddLayersMixin</span><span class="p">,</span> <span class="n">KeymapMixin</span><span class="p">):</span>
+<div class="viewcode-block" id="ViewerModel"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.viewer_model.ViewerModel">[docs]</a><span class="k">class</span> <span class="nc">ViewerModel</span><span class="p">(</span><span class="n">AddLayersMixin</span><span class="p">,</span> <span class="n">KeymapHandler</span><span class="p">,</span> <span class="n">KeymapProvider</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Viewer containing the rendered scene, layers, and controlling elements</span>
 <span class="sd">    including dimension sliders, and control bars for color limits.</span>
 
@@ -245,6 +245,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_active_layer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_grid</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">keymap_providers</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">]</span>
 
         <span class="c1"># Hold callbacks for when mouse moves with nothing pressed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mouse_move_callbacks</span> <span class="o">=</span> <span class="p">[]</span>
@@ -391,7 +393,15 @@
     <span class="k">def</span> <span class="nf">active_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_layer</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">active_layer</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_layer</span><span class="p">:</span>
             <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keymap_providers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="o">=</span> <span class="n">active_layer</span>
+
+        <span class="k">if</span> <span class="n">active_layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keymap_providers</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">active_layer</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="p">(</span><span class="n">item</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_scene_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

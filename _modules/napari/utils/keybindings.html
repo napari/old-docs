@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.keybindings &mdash; napari 0.2.12+18.ge07158c documentation</title>
+  <title>napari.utils.keybindings &mdash; napari 0.2.12+19.gf5f7863 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+18.ge07158c
+                0.2.12+19.gf5f7863
               </div>
             
           
@@ -169,7 +169,7 @@
 <span class="sd">F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, Space, Enter, and Tab</span>
 
 <span class="sd">Functions take in only one argument: the parent that the function</span>
-<span class="sd">was bound to. This is the viewer or layer.</span>
+<span class="sd">was bound to.</span>
 
 <span class="sd">By default, all functions are assumed to work on key presses only,</span>
 <span class="sd">but can be denoted to work on release too by separating the function</span>
@@ -185,11 +185,13 @@
 <span class="sd">        # on key release</span>
 <span class="sd">        viewer.status = &#39;goodbye world :(&#39;</span>
 
+<span class="sd">To create a keymap that will block others, ``bind_key(..., ...)```.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">types</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">UserDict</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">ChainMap</span>
 
 <span class="kn">from</span> <span class="nn">vispy.util</span> <span class="kn">import</span> <span class="n">keys</span>
 
@@ -344,11 +346,16 @@
 <span class="sd">    ----------</span>
 <span class="sd">    keymap : dict of str: callable</span>
 <span class="sd">        Keymap to modify.</span>
-<span class="sd">    key : str</span>
+<span class="sd">    key : str or ...</span>
 <span class="sd">        Key combination.</span>
-<span class="sd">    func : callable or None</span>
+<span class="sd">        ``...`` acts as a wildcard if no key combinations can be matched</span>
+<span class="sd">        in the keymap (this will overwrite all key combinations</span>
+<span class="sd">        further down the lookup chain).</span>
+<span class="sd">    func : callable, None, or ...</span>
 <span class="sd">        Callable to bind to the key combination.</span>
 <span class="sd">        If ``None`` is passed, unbind instead.</span>
+<span class="sd">        ``...`` acts as a blocker, effectively unbinding the key</span>
+<span class="sd">        combination for all keymaps further down the lookup chain.</span>
 <span class="sd">    overwrite : bool, keyword-only, optional</span>
 <span class="sd">        Whether to overwrite the key combination if it already exists.</span>
 
@@ -374,7 +381,7 @@
 <span class="sd">    F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, Space, Enter, and Tab</span>
 
 <span class="sd">    Functions take in only one argument: the parent that the function</span>
-<span class="sd">    was bound to. This is the viewer or layer.</span>
+<span class="sd">    was bound to.</span>
 
 <span class="sd">    By default, all functions are assumed to work on key presses only,</span>
 <span class="sd">    but can be denoted to work on release too by separating the function</span>
@@ -390,6 +397,7 @@
 <span class="sd">            # on key release</span>
 <span class="sd">            viewer.status = &#39;goodbye world :(&#39;</span>
 
+<span class="sd">    To create a keymap that will block others, ``bind_key(..., ...)```.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="n">UNDEFINED</span><span class="p">:</span>
 
@@ -399,7 +407,8 @@
 
         <span class="k">return</span> <span class="n">inner</span>
 
-    <span class="n">key</span> <span class="o">=</span> <span class="n">normalize_key_combo</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">Ellipsis</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">normalize_key_combo</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keymap</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -410,7 +419,7 @@
     <span class="n">unbound</span> <span class="o">=</span> <span class="n">keymap</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">Ellipsis</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;&#39;func&#39; must be a callable&quot;</span><span class="p">)</span>
         <span class="n">keymap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span>
 
@@ -419,7 +428,7 @@
 
 <div class="viewcode-block" id="KeybindingDescriptor"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeybindingDescriptor">[docs]</a><span class="k">class</span> <span class="nc">KeybindingDescriptor</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Descriptor which transforms ``func`` into a method with the first</span>
-<span class="sd">    argument bound to ``class_keymap`` or ``_keymap`` depending on if it was</span>
+<span class="sd">    argument bound to ``class_keymap`` or ``keymap`` depending on if it was</span>
 <span class="sd">    called from the class or the instance, respectively.</span>
 
 <span class="sd">    Parameters</span>
@@ -431,78 +440,28 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span> <span class="o">=</span> <span class="n">func</span>
 
-    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">klass</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># used on class</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">keymap</span> <span class="o">=</span> <span class="n">klass</span><span class="o">.</span><span class="n">class_keymap</span>
-            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span>
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">instance</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">keymap</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">keymap</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">keymap</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">_keymap</span>
+            <span class="n">keymap</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">class_keymap</span>
 
         <span class="k">return</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__func__</span><span class="p">,</span> <span class="n">keymap</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="InheritedKeymap"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap">[docs]</a><span class="k">class</span> <span class="nc">InheritedKeymap</span><span class="p">(</span><span class="n">UserDict</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Dictionary which inherits from another.</span>
+<div class="viewcode-block" id="KeymapProvider"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapProvider">[docs]</a><span class="k">class</span> <span class="nc">KeymapProvider</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Mix-in to add keymap functionality.</span>
 
-<span class="sd">    Values of ``None`` are treated as though the key doesn&#39;t exist.</span>
-
-<span class="sd">    Parameters</span>
+<span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    parent : callable() -&gt; dict</span>
-<span class="sd">        Parent keymap.</span>
-<span class="sd">    contents : dict, optional</span>
-<span class="sd">        Contents with which to initialize.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">contents</span><span class="o">=</span><span class="p">{}):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="n">parent</span>
-
-    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">()[</span><span class="n">key</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">val</span>
-
-    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">True</span>
-
-    <span class="k">def</span> <span class="fm">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
-        <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-
-<div class="viewcode-block" id="InheritedKeymap.copy"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">InheritedKeymap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
-
-<div class="viewcode-block" id="InheritedKeymap.pop"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.InheritedKeymap.pop">[docs]</a>    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">UNDEFINED</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">default</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">UNDEFINED</span><span class="p">:</span>
-                <span class="k">raise</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="n">default</span></div></div>
-
-
-<div class="viewcode-block" id="KeymapMixin"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapMixin">[docs]</a><span class="k">class</span> <span class="nc">KeymapMixin</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Mix-in to add keymap functionality. Must still define ``class_keymap``</span>
-<span class="sd">    in every subclass.</span>
+<span class="sd">    class_keymap : dict</span>
+<span class="sd">        Class keymap.</span>
+<span class="sd">    keymap : dict</span>
+<span class="sd">        Instance keymap.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">keymap</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="k">def</span> <span class="nf">__init_subclass__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -512,20 +471,122 @@
             <span class="c1"># if in __dict__, was defined in class and not inherited</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">class_keymap</span> <span class="o">=</span> <span class="p">{}</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">keymap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;InheritedKeymap : Keymap used for shortcuts.</span>
-<span class="sd">        Inherits from ``class_keymap``.</span>
-
-<span class="sd">        Do not directly set key bindings; use ``bind_key`` instead.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_keymap</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-
-    <span class="nd">@keymap</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">keymap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keymap</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_keymap</span> <span class="o">=</span> <span class="n">InheritedKeymap</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">keymap</span><span class="p">)</span>
-
     <span class="n">bind_key</span> <span class="o">=</span> <span class="n">KeybindingDescriptor</span><span class="p">(</span><span class="n">bind_key</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_bind_keymap</span><span class="p">(</span><span class="n">keymap</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bind all functions in a keymap to an instance.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    keymap : dict</span>
+<span class="sd">        Keymap to bind.</span>
+<span class="sd">    instance : object</span>
+<span class="sd">        Instance to bind to.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bound_keymap : dict</span>
+<span class="sd">        Keymap with functions bound to the instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bound_keymap</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span> <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">Ellipsis</span> <span class="k">else</span> <span class="n">func</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">keymap</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">bound_keymap</span>
+
+
+<div class="viewcode-block" id="KeymapHandler"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapHandler">[docs]</a><span class="k">class</span> <span class="nc">KeymapHandler</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Mix-in to add key handling functionality.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    keymap_providers : list of KeymapProvider</span>
+<span class="sd">        Classes that provide the keymaps for this class to handle.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_key_release_generators</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keymap_providers</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">keymap_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;collections.ChainMap: Chain of keymaps from keymap providers.&quot;&quot;&quot;</span>
+        <span class="n">maps</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keymap_providers</span><span class="p">:</span>
+            <span class="n">maps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_bind_keymap</span><span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">keymap</span><span class="p">,</span> <span class="n">parent</span><span class="p">))</span>
+            <span class="n">maps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_bind_keymap</span><span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">class_keymap</span><span class="p">,</span> <span class="n">parent</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">ChainMap</span><span class="p">(</span><span class="o">*</span><span class="n">maps</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">active_keymap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;dict: Active keymap, created by resolving the keymap chain.&quot;&quot;&quot;</span>
+        <span class="n">active_keymap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">keymap_chain</span>
+        <span class="n">keymaps</span> <span class="o">=</span> <span class="n">active_keymap</span><span class="o">.</span><span class="n">maps</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">keymap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">keymaps</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">Ellipsis</span> <span class="ow">in</span> <span class="n">keymap</span><span class="p">:</span>  <span class="c1"># catch-all key</span>
+                <span class="c1"># trim all keymaps after catch-all</span>
+                <span class="n">active_keymap</span> <span class="o">=</span> <span class="n">ChainMap</span><span class="p">(</span><span class="o">*</span><span class="n">keymaps</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="k">break</span>
+
+        <span class="n">active_keymap_final</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="n">func</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">active_keymap</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">Ellipsis</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">active_keymap_final</span>
+
+<div class="viewcode-block" id="KeymapHandler.press_key"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapHandler.press_key">[docs]</a>    <span class="k">def</span> <span class="nf">press_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key_combo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Simulate a key press to activate a keybinding.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key_combo : str</span>
+<span class="sd">            Key combination.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">key_combo</span> <span class="o">=</span> <span class="n">normalize_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">)</span>
+        <span class="n">keymap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_keymap</span>
+        <span class="k">if</span> <span class="n">key_combo</span> <span class="ow">in</span> <span class="n">keymap</span><span class="p">:</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="n">keymap</span><span class="p">[</span><span class="n">key_combo</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">Ellipsis</span> <span class="ow">in</span> <span class="n">keymap</span><span class="p">:</span>  <span class="c1"># catch-all</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="n">keymap</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>  <span class="c1"># no keybinding found</span>
+
+        <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>  <span class="c1"># blocker</span>
+            <span class="k">return</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;expected </span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2"> to be callable&quot;</span><span class="p">)</span>
+
+        <span class="n">gen</span> <span class="o">=</span> <span class="n">func</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgeneratorfunction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">next</span><span class="p">(</span><span class="n">gen</span><span class="p">)</span>  <span class="c1"># call function</span>
+            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>  <span class="c1"># only one statement</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_key_release_generators</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">gen</span></div>
+
+<div class="viewcode-block" id="KeymapHandler.release_key"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.keybindings.KeymapHandler.release_key">[docs]</a>    <span class="k">def</span> <span class="nf">release_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key_combo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Simulate a key release for a keybinding.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key_combo : str</span>
+<span class="sd">            Key combination.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_key_combo</span><span class="p">(</span><span class="n">key_combo</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key_release_generators</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>  <span class="c1"># call function</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">StopIteration</span><span class="p">):</span>
+            <span class="k">pass</span></div></div>
 </pre></div>
 
            </div>

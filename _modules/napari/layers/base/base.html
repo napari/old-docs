@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.2.12+24.g2c28094 documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.2.12+25.g51cedac documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+24.g2c28094
+                0.2.12+25.g51cedac
               </div>
             
           
@@ -170,7 +170,7 @@
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">status_format</span><span class="p">,</span> <span class="n">format_float</span>
-<span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span>
+<span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span><span class="p">,</span> <span class="n">TransformChain</span>
 
 
 <div class="viewcode-block" id="Layer"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer">[docs]</a><span class="k">class</span> <span class="nc">Layer</span><span class="p">(</span><span class="n">KeymapProvider</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
@@ -301,21 +301,29 @@
         <span class="k">if</span> <span class="n">translate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">translate</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndim</span>
 
-        <span class="c1"># Create main transform mapping data to a world-like coordinate</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span> <span class="o">=</span> <span class="n">ScaleTranslate</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">translate</span><span class="p">)</span>
-        <span class="c1"># Create additional transform mapping viewed data to data coordinate</span>
-        <span class="c1"># This is useful for cases where the displayed data is not the base</span>
-        <span class="c1"># data given by the user. In such cases, we need to transform the</span>
-        <span class="c1"># coordinates from the displayed data space to the original input data</span>
-        <span class="c1"># space. One example of such a situation is viewing a lower resolution</span>
-        <span class="c1"># level of an input pyramid, where _transform contains the transform</span>
-        <span class="c1"># only from the base level to world coordinates, another is when an</span>
-        <span class="c1"># image is larger than the maximum allowed texture size and has been</span>
-        <span class="c1"># downsampled</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span> <span class="o">=</span> <span class="n">ScaleTranslate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
-        <span class="c1"># Create additional transform mapping world-coordinates into a grid</span>
-        <span class="c1"># for looking at layers side-by-side</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span> <span class="o">=</span> <span class="n">ScaleTranslate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">))</span>
+        <span class="c1"># Create a transform chain consisting of three transforms:</span>
+        <span class="c1"># 1. `tile2data`: An initial transform only needed displaying tiles</span>
+        <span class="c1">#   of an image. It maps pixels of the tile into the coordinate space</span>
+        <span class="c1">#   of the full resolution data and can usually be represented by a</span>
+        <span class="c1">#   scale factor and a translation. A common use case is viewing part</span>
+        <span class="c1">#   of lower resolution level of an image pyramid, another is using a</span>
+        <span class="c1">#   downsampled version of an image when the full image size is larger</span>
+        <span class="c1">#   than the maximum allowed texture size of your graphics card.</span>
+        <span class="c1"># 2. `data2world`: The main transform mapping data to a world-like</span>
+        <span class="c1">#   coordinate.</span>
+        <span class="c1"># 3. `world2grid`: An additional transform mapping world-coordinates</span>
+        <span class="c1">#   into a grid for looking at layers side-by-side.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="n">TransformChain</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">ScaleTranslate</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;tile2data&#39;</span>
+                <span class="p">),</span>
+                <span class="n">ScaleTranslate</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">translate</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;data2world&#39;</span><span class="p">),</span>
+                <span class="n">ScaleTranslate</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ndim</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;world2grid&#39;</span>
+                <span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
@@ -460,36 +468,36 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list: Anisotropy factors to scale the layer by.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">scale</span>
+        <span class="sd">&quot;&quot;&quot;list: Anisotropy factors to scale data into world coordinates.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span>
 
     <span class="nd">@scale</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list: Factors to shift the layer by.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">translate</span>
+        <span class="sd">&quot;&quot;&quot;list: Factors to shift the layer by in units of world coordinates.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span>
 
     <span class="nd">@translate</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;list: Factors to shift the layer by.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span><span class="o">.</span><span class="n">translate</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;world2grid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span>
 
     <span class="nd">@translate_grid</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate_grid</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate_grid</span> <span class="o">==</span> <span class="n">translate_grid</span><span class="p">):</span>
             <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate_grid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;world2grid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate_grid</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -522,14 +530,10 @@
         <span class="n">old_ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
         <span class="k">if</span> <span class="n">old_ndim</span> <span class="o">&gt;</span> <span class="n">ndim</span><span class="p">:</span>
             <span class="n">keep_axes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">old_ndim</span> <span class="o">-</span> <span class="n">ndim</span><span class="p">,</span> <span class="n">old_ndim</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">set_slice</span><span class="p">(</span><span class="n">keep_axes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span><span class="o">.</span><span class="n">set_slice</span><span class="p">(</span><span class="n">keep_axes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span><span class="o">.</span><span class="n">set_slice</span><span class="p">(</span><span class="n">keep_axes</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">set_slice</span><span class="p">(</span><span class="n">keep_axes</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">old_ndim</span> <span class="o">&lt;</span> <span class="n">ndim</span><span class="p">:</span>
             <span class="n">new_axes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="o">.</span><span class="n">set_pad</span><span class="p">(</span><span class="n">new_axes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span><span class="o">.</span><span class="n">set_pad</span><span class="p">(</span><span class="n">new_axes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_grid</span><span class="o">.</span><span class="n">set_pad</span><span class="p">(</span><span class="n">new_axes</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">new_axes</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
 
@@ -779,9 +783,7 @@
 <span class="sd">        msg : string</span>
 <span class="sd">            String containing a message that can be used as a status update.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">coordinates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_view</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="p">)(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span>
-        <span class="p">)</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">simplified</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span>
         <span class="n">full_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
         <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">full_coord</span><span class="si">}</span><span class="s1">&#39;</span>

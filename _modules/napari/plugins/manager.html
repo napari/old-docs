@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.manager &mdash; napari 0.2.12+34.gfff920d documentation</title>
+  <title>napari.plugins.manager &mdash; napari 0.2.12+35.g5924b45 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+34.gfff920d
+                0.2.12+35.g5924b45
               </div>
             
           
@@ -159,10 +159,8 @@
 <span class="kn">import</span> <span class="nn">pkgutil</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">traceback</span> <span class="kn">import</span> <span class="n">format_exception</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">DefaultDict</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
 
 <span class="kn">import</span> <span class="nn">pluggy</span>
 <span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
@@ -376,11 +374,6 @@
 <span class="sd">            will simply search the current sys.path.  by default True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">project_name</span><span class="p">)</span>
-        <span class="c1"># this dict is a mapping of plugin_name: List[raised_exception_objects]</span>
-        <span class="c1"># this will be used to retrieve traceback info on demand</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_exceptions</span><span class="p">:</span> <span class="n">DefaultDict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">PluginError</span><span class="p">]]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span>
-            <span class="nb">list</span>
-        <span class="p">)</span>
 
         <span class="c1"># project_name might not be napari if running tests</span>
         <span class="k">if</span> <span class="n">project_name</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
@@ -441,8 +434,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_register_module</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span>
                 <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">except</span> <span class="n">PluginError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_exceptions</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-                <span class="n">log_plugin_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">format_with_contact_info</span><span class="p">())</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
@@ -488,56 +480,7 @@
                 <span class="k">return</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">PluginRegistrationError</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span>
-
-<div class="viewcode-block" id="PluginManager.format_exceptions"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.PluginManager.format_exceptions">[docs]</a>    <span class="k">def</span> <span class="nf">format_exceptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return formatted tracebacks for all exceptions raised by plugin.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        plugin_name : str</span>
-<span class="sd">            The name of a plugin for which to retrieve tracebacks</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        str</span>
-<span class="sd">            A formatted string with traceback information for every exception</span>
-<span class="sd">            raised by ``plugin_name`` during this session.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">napari</span> <span class="kn">import</span> <span class="n">__version__</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exceptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">):</span>
-            <span class="k">return</span> <span class="s1">&#39;&#39;</span>
-
-        <span class="n">_linewidth</span> <span class="o">=</span> <span class="mi">80</span>
-        <span class="n">_pad</span> <span class="o">=</span> <span class="p">(</span><span class="n">_linewidth</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">)</span> <span class="o">-</span> <span class="mi">18</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="n">_pad</span><span class="si">}</span><span class="s1"> Errors for plugin &quot;</span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s1">&quot; </span><span class="si">{</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="n">_pad</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;&#39;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;napari version&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-        <span class="p">]</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">err0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exceptions</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">package_meta</span> <span class="o">=</span> <span class="n">fetch_module_metadata</span><span class="p">(</span><span class="n">err0</span><span class="o">.</span><span class="n">plugin_module</span><span class="p">)</span>
-            <span class="n">msg</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;plugin name&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">package_meta</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;version&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">package_meta</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;module&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">err0</span><span class="o">.</span><span class="n">plugin_module</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                <span class="p">]</span>
-            <span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">]</span>
-
-        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">err</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_exceptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="p">[])):</span>
-            <span class="n">_pad</span> <span class="o">=</span> <span class="n">_linewidth</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span> <span class="o">-</span> <span class="mi">10</span>
-            <span class="n">msg</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;ERROR #</span><span class="si">{</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="si">}</span><span class="s1">:  </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="n">_pad</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
-            <span class="n">msg</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">format_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">err</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">))</span>
-
-        <span class="n">msg</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;=&#39;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div></div>
+            <span class="k">raise</span> <span class="n">PluginRegistrationError</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span></div>
 
 
 <div class="viewcode-block" id="entry_points_for"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.entry_points_for">[docs]</a><span class="k">def</span> <span class="nf">entry_points_for</span><span class="p">(</span>
@@ -656,9 +599,11 @@
     <span class="n">seen_modules</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">group</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_ENTRYPOINT_PLUGINS&quot;</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">entry_points_for</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
-            <span class="n">module</span> <span class="o">=</span> <span class="n">entry_point_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;module&#39;</span><span class="p">)</span>
-            <span class="n">seen_modules</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="k">yield</span> <span class="n">ep</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">module</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">entry_point_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                <span class="n">module</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;module&#39;</span><span class="p">)</span>
+                <span class="n">seen_modules</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">yield</span> <span class="n">ep</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">module</span>
     <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_NAMEPREFIX_PLUGINS&quot;</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules_starting_with</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">module</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_modules</span><span class="p">:</span>
@@ -667,57 +612,6 @@
                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                     <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="k">yield</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">module</span><span class="p">,</span> <span class="n">module</span></div>
-
-
-<div class="viewcode-block" id="fetch_module_metadata"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.fetch_module_metadata">[docs]</a><span class="k">def</span> <span class="nf">fetch_module_metadata</span><span class="p">(</span><span class="n">distname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;Attempt to retrieve name, version, contact email &amp; url for a package.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    distname : str</span>
-<span class="sd">        Name of a distribution.  Note: this must match the *name* of the</span>
-<span class="sd">        package in the METADATA file... not the name of the module.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    package_info : dict or None</span>
-<span class="sd">        A dict with keys &#39;name&#39;, &#39;version&#39;, &#39;email&#39;, and &#39;url&#39;.</span>
-<span class="sd">        Returns None of the distname cannot be found.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">meta</span> <span class="o">=</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">metadata</span><span class="p">(</span><span class="n">distname</span><span class="p">)</span>
-    <span class="k">except</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Version&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Author-Email&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Maintainer-Email&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;url&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Home-page&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Download-Url&#39;</span><span class="p">),</span>
-    <span class="p">}</span></div>
-
-
-<div class="viewcode-block" id="log_plugin_error"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.log_plugin_error">[docs]</a><span class="k">def</span> <span class="nf">log_plugin_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="n">PluginError</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Log PluginError to logger, with helpful contact info if possible.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    exc : PluginError</span>
-<span class="sd">        An instance of a PluginError</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">from</span> <span class="nn">napari</span> <span class="kn">import</span> <span class="n">__version__</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">PluginError: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
-    <span class="k">if</span> <span class="n">exc</span><span class="o">.</span><span class="n">__cause__</span><span class="p">:</span>
-        <span class="n">cause</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">__cause__</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">13</span><span class="p">)</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  Cause was: </span><span class="si">{</span><span class="n">cause</span><span class="si">}</span><span class="s1">&#39;</span>
-    <span class="n">contact</span> <span class="o">=</span> <span class="n">fetch_module_metadata</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">plugin_module</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">contact</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Please notify the plugin developer:</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">k</span><span class="si">:</span><span class="s1"> &gt;11</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">contact</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-        <span class="n">extra</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;napari&quot;</span><span class="si">:</span><span class="s1"> &gt;11</span><span class="si">}</span><span class="s1">: v</span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span>
-    <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

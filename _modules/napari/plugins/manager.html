@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.manager &mdash; napari 0.2.12+38.gdbf88f2 documentation</title>
+  <title>napari.plugins.manager &mdash; napari 0.2.12+39.g1ae61bb documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+38.gdbf88f2
+                0.2.12+39.g1ae61bb
               </div>
             
           
@@ -158,16 +158,20 @@
 <span></span><span class="kn">import</span> <span class="nn">importlib</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">pkgutil</span>
-<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
 
 <span class="kn">import</span> <span class="nn">pluggy</span>
 <span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_builtins</span><span class="p">,</span> <span class="n">hook_specifications</span>
-<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">PluginError</span><span class="p">,</span> <span class="n">PluginImportError</span><span class="p">,</span> <span class="n">PluginRegistrationError</span>
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PluginError</span><span class="p">,</span>
+    <span class="n">PluginImportError</span><span class="p">,</span>
+    <span class="n">PluginRegistrationError</span><span class="p">,</span>
+    <span class="n">fetch_module_metadata</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -375,6 +379,10 @@
 <span class="sd">            will simply search the current sys.path.  by default True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">project_name</span><span class="p">)</span>
+        <span class="c1"># a dict to store package metadata for each plugin, will be populated</span>
+        <span class="c1"># during self._register_module</span>
+        <span class="c1"># possible keys for this dict will be set by fetch_module_metadata()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plugin_meta</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
         <span class="c1"># project_name might not be napari if running tests</span>
         <span class="k">if</span> <span class="n">project_name</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
@@ -426,13 +434,13 @@
             <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
         <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span> <span class="ow">in</span> <span class="n">iter_plugin_modules</span><span class="p">(</span>
+        <span class="k">for</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">,</span> <span class="n">meta</span> <span class="ow">in</span> <span class="n">iter_plugin_modules</span><span class="p">(</span>
             <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PLUGIN_PREFIX</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PLUGIN_ENTRYPOINT</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_plugin</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blocked</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">):</span>
                 <span class="k">continue</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_register_module</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_register_module</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
                 <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">except</span> <span class="n">PluginError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">format_with_contact_info</span><span class="p">())</span>
@@ -453,7 +461,9 @@
 
         <span class="k">return</span> <span class="n">count</span></div>
 
-    <span class="k">def</span> <span class="nf">_register_module</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_register_module</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Try to register `module_name` as a plugin named `plugin_name`.</span>
 
 <span class="sd">        Parameters</span>
@@ -462,6 +472,8 @@
 <span class="sd">            The name given to the plugin in the plugin manager.</span>
 <span class="sd">        module_name : str</span>
 <span class="sd">            The importable module name</span>
+<span class="sd">        meta : dict, optional</span>
+<span class="sd">            Metadata to be associated with ``plugin_name``.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -471,6 +483,9 @@
 <span class="sd">            If an error is raised when trying to register the plugin (such as</span>
 <span class="sd">            a PluginValidationError.)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
+            <span class="n">meta</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;plugin&#39;</span><span class="p">:</span> <span class="n">plugin_name</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plugin_meta</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">meta</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">mod</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
@@ -486,13 +501,17 @@
 
 <div class="viewcode-block" id="entry_points_for"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.entry_points_for">[docs]</a><span class="k">def</span> <span class="nf">entry_points_for</span><span class="p">(</span>
     <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">importlib_metadata</span><span class="o">.</span><span class="n">EntryPoint</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span>
+    <span class="n">Tuple</span><span class="p">[</span><span class="n">importlib_metadata</span><span class="o">.</span><span class="n">Distribution</span><span class="p">,</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">EntryPoint</span><span class="p">],</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">,</span>
+<span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Yield all entry_points matching &quot;group&quot;, from any distribution.</span>
 
 <span class="sd">    Distribution here refers more specifically to the information in the</span>
 <span class="sd">    dist-info folder that usually accompanies an installed package.  If a</span>
 <span class="sd">    package in the environment does *not* have a ``dist-info/entry_points.txt``</span>
-<span class="sd">    file, then in will not be discovered by this function.</span>
+<span class="sd">    file, then it will not be discovered by this function.</span>
 
 <span class="sd">    Note: a single package may provide multiple entrypoints for a given group.</span>
 
@@ -503,20 +522,22 @@
 
 <span class="sd">    Yields</span>
 <span class="sd">    -------</span>
-<span class="sd">    Generator[importlib_metadata.EntryPoint, None, None]</span>
-<span class="sd">        [description]</span>
+<span class="sd">    tuples</span>
+<span class="sd">        (Distribution, EntryPoint) objects for each matching EntryPoint</span>
+<span class="sd">        that matches the provided ``group`` string.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; list(entry_points_for(&#39;napari.plugin&#39;))</span>
-<span class="sd">    [EntryPoint(name=&#39;napari-reg&#39;, value=&#39;napari_reg&#39;, group=&#39;napari.plugin&#39;),</span>
-<span class="sd">     EntryPoint(name=&#39;myplug&#39;, value=&#39;another.module&#39;, group=&#39;napari.plugin&#39;)]</span>
-
+<span class="sd">    [(&lt;importlib.metadata.PathDistribution at 0x124f0fe80&gt;,</span>
+<span class="sd">      EntryPoint(name=&#39;napari-reg&#39;,value=&#39;napari_reg&#39;,group=&#39;napari.plugin&#39;)),</span>
+<span class="sd">     (&lt;importlib.metadata.PathDistribution at 0x1041485b0&gt;,</span>
+<span class="sd">      EntryPoint(name=&#39;myplug&#39;,value=&#39;another.module&#39;,group=&#39;napari.plugin&#39;))]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">dist</span> <span class="ow">in</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">distributions</span><span class="p">():</span>
         <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">dist</span><span class="o">.</span><span class="n">entry_points</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">ep</span><span class="o">.</span><span class="n">group</span> <span class="o">==</span> <span class="n">group</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">ep</span></div>
+                <span class="k">yield</span> <span class="n">dist</span><span class="p">,</span> <span class="n">ep</span></div>
 
 
 <div class="viewcode-block" id="modules_starting_with"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.modules_starting_with">[docs]</a><span class="k">def</span> <span class="nf">modules_starting_with</span><span class="p">(</span><span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
@@ -538,18 +559,9 @@
             <span class="k">yield</span> <span class="n">name</span></div>
 
 
-<span class="c1"># regex to parse importlib_metadata.EntryPoint.value strings</span>
-<span class="c1"># entry point format:  &quot;name = module.with.periods:attr [extras]&quot;</span>
-<span class="n">entry_point_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-    <span class="sa">r</span><span class="s1">&#39;(?P&lt;module&gt;[\w.]+)\s*&#39;</span>
-    <span class="sa">r</span><span class="s1">&#39;(:\s*(?P&lt;attr&gt;[\w.]+))?\s*&#39;</span>
-    <span class="sa">r</span><span class="s1">&#39;(?P&lt;extras&gt;\[.*\])?\s*$&#39;</span>
-<span class="p">)</span>
-
-
 <div class="viewcode-block" id="iter_plugin_modules"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.iter_plugin_modules">[docs]</a><span class="k">def</span> <span class="nf">iter_plugin_modules</span><span class="p">(</span>
     <span class="n">prefix</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Discover plugins using naming convention and/or entry points.</span>
 
 <span class="sd">    This function makes sure that packages that *both* follow the naming</span>
@@ -595,16 +607,16 @@
 <span class="sd">    Yields</span>
 <span class="sd">    -------</span>
 <span class="sd">    plugin_info : tuple</span>
-<span class="sd">        (plugin_name, module_name)</span>
+<span class="sd">        (plugin_name, module_name, metadata)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">seen_modules</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">group</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_ENTRYPOINT_PLUGINS&quot;</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">entry_points_for</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
-            <span class="n">match</span> <span class="o">=</span> <span class="n">entry_point_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">dist</span><span class="p">,</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">entry_points_for</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">ep</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
                 <span class="n">module</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;module&#39;</span><span class="p">)</span>
                 <span class="n">seen_modules</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="k">yield</span> <span class="n">ep</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">module</span>
+                <span class="k">yield</span> <span class="n">ep</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">fetch_module_metadata</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_NAMEPREFIX_PLUGINS&quot;</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules_starting_with</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">module</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_modules</span><span class="p">:</span>
@@ -612,7 +624,7 @@
                     <span class="n">name</span> <span class="o">=</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">metadata</span><span class="p">(</span><span class="n">module</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                     <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="k">yield</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">module</span><span class="p">,</span> <span class="n">module</span></div>
+                <span class="k">yield</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">module</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">fetch_module_metadata</span><span class="p">(</span><span class="n">module</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

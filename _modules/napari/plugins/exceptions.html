@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.exceptions &mdash; napari 0.2.12+38.gdbf88f2 documentation</title>
+  <title>napari.plugins.exceptions &mdash; napari 0.2.12+39.g1ae61bb documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+38.gdbf88f2
+                0.2.12+39.g1ae61bb
               </div>
             
           
@@ -168,6 +168,7 @@
     <span class="n">Optional</span><span class="p">,</span>
     <span class="n">Tuple</span><span class="p">,</span>
     <span class="n">Type</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1"># This is a mapping of plugin_name -&gt; PluginError instances</span>
@@ -181,6 +182,7 @@
     <span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">metadata</span> <span class="k">as</span> <span class="n">importlib_metadata</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">importlib_metadata</span>
+<span class="n">Distribution</span> <span class="o">=</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">Distribution</span>
 
 
 <div class="viewcode-block" id="PluginError"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.exceptions.PluginError">[docs]</a><span class="k">class</span> <span class="nc">PluginError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -282,7 +284,7 @@
     <span class="k">if</span> <span class="n">package_meta</span><span class="p">:</span>
         <span class="n">msg</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
             <span class="p">[</span>
-                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;plugin name&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">package_meta</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;plugin package&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">package_meta</span><span class="p">[</span><span class="s2">&quot;package&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;version&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">package_meta</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;module&quot;</span><span class="si">:</span><span class="s1"> &gt;16</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">err0</span><span class="o">.</span><span class="n">plugin_module</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
             <span class="p">]</span>
@@ -399,30 +401,37 @@
     <span class="k">return</span> <span class="n">format_exc_info</span></div>
 
 
-<div class="viewcode-block" id="fetch_module_metadata"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.exceptions.fetch_module_metadata">[docs]</a><span class="k">def</span> <span class="nf">fetch_module_metadata</span><span class="p">(</span><span class="n">distname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<div class="viewcode-block" id="fetch_module_metadata"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.exceptions.fetch_module_metadata">[docs]</a><span class="k">def</span> <span class="nf">fetch_module_metadata</span><span class="p">(</span><span class="n">dist</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Distribution</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Attempt to retrieve name, version, contact email &amp; url for a package.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    distname : str</span>
-<span class="sd">        Name of a distribution.  Note: this must match the *name* of the</span>
-<span class="sd">        package in the METADATA file... not the name of the module.</span>
+<span class="sd">    distname : str or Distribution</span>
+<span class="sd">        Distribution object or name of a distribution.  If a string, it must</span>
+<span class="sd">        match the *name* of the package in the METADATA file... not the name of</span>
+<span class="sd">        the module.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    package_info : dict or None</span>
-<span class="sd">        A dict with keys &#39;name&#39;, &#39;version&#39;, &#39;email&#39;, and &#39;url&#39;.</span>
+<span class="sd">    package_info : dict</span>
+<span class="sd">        A dict with metadata about the package</span>
 <span class="sd">        Returns None of the distname cannot be found.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">meta</span> <span class="o">=</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">metadata</span><span class="p">(</span><span class="n">distname</span><span class="p">)</span>
-    <span class="k">except</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">Distribution</span><span class="p">):</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">metadata</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">metadata</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">importlib_metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Version&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Author-Email&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Maintainer-Email&#39;</span><span class="p">),</span>
-        <span class="s1">&#39;url&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Home-page&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Download-Url&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;package&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Version&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;summary&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Summary&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;url&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Home-page&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Download-Url&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Author&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Author-Email&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Maintainer-Email&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;license&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;License&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
     <span class="p">}</span></div>
 
 

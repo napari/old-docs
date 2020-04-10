@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.utils.layer_utils &mdash; napari 0.2.12+45.g434d54e documentation</title>
+  <title>napari.layers.utils.layer_utils &mdash; napari 0.2.12+46.gae9b5a6 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+45.g434d54e
+                0.2.12+46.gae9b5a6
               </div>
             
           
@@ -262,6 +262,52 @@
     <span class="n">unit_norm</span> <span class="o">=</span> <span class="n">normal</span> <span class="o">/</span> <span class="n">norm</span>
 
     <span class="k">return</span> <span class="n">unit_norm</span></div>
+
+
+<div class="viewcode-block" id="convert_to_uint8"><a class="viewcode-back" href="../../../../api/napari.layers.utils.html#napari.layers.utils.layer_utils.convert_to_uint8">[docs]</a><span class="k">def</span> <span class="nf">convert_to_uint8</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert array content to uint8.</span>
+
+<span class="sd">    If all negative values are changed on 0.</span>
+
+<span class="sd">    If values are integer and bellow 256 it is simple casting otherwise maximum value for this data type is picked</span>
+<span class="sd">    and values are scaled by 255/maximum type value.</span>
+
+<span class="sd">    Binary images ar converted to [0,255] images.</span>
+
+<span class="sd">    float images are multiply by 255 and then casted to uint8.</span>
+
+<span class="sd">    Based on skimage.util.dtype.convert but limited to output type uint8</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">out_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
+    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">out_dtype</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">data</span>
+    <span class="n">in_kind</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span>
+    <span class="k">if</span> <span class="n">in_kind</span> <span class="o">==</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span> <span class="o">*</span> <span class="mi">255</span>
+    <span class="k">if</span> <span class="n">in_kind</span> <span class="o">==</span> <span class="s2">&quot;f&quot;</span><span class="p">:</span>
+        <span class="n">image_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">out_max</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">image_out</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">image_out</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">image_out</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">out_max</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">image_out</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">image_out</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">in_kind</span> <span class="ow">in</span> <span class="s2">&quot;ui&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">in_kind</span> <span class="o">==</span> <span class="s2">&quot;u&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">out_max</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">right_shift</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+                <span class="n">out_dtype</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">data</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">out_max</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">right_shift</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">out_dtype</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

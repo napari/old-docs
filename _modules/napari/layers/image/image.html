@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.image &mdash; napari 0.2.12+47.g391cfd5 documentation</title>
+  <title>napari.layers.image.image &mdash; napari 0.2.12+50.gff22470 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+47.g391cfd5
+                0.2.12+50.gff22470
               </div>
             
           
@@ -169,7 +169,7 @@
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">calc_data_range</span>
 <span class="kn">from</span> <span class="nn">..intensity_mixin</span> <span class="kn">import</span> <span class="n">IntensityVisualizationMixin</span>
-<span class="kn">from</span> <span class="nn">._image_constants</span> <span class="kn">import</span> <span class="n">Interpolation</span><span class="p">,</span> <span class="n">Rendering</span>
+<span class="kn">from</span> <span class="nn">._image_constants</span> <span class="kn">import</span> <span class="n">Interpolation</span><span class="p">,</span> <span class="n">Interpolation3D</span><span class="p">,</span> <span class="n">Rendering</span>
 <span class="kn">from</span> <span class="nn">._image_utils</span> <span class="kn">import</span> <span class="n">get_pyramid_and_rgb</span>
 
 
@@ -370,6 +370,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="n">colormap</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contrast_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="mi">2</span><span class="p">:</span> <span class="n">Interpolation</span><span class="o">.</span><span class="n">NEAREST</span><span class="p">,</span>
+            <span class="mi">3</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">Interpolation3D</span><span class="o">.</span><span class="n">NEAREST</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;Labels&#39;</span>
+                <span class="k">else</span> <span class="n">Interpolation3D</span><span class="o">.</span><span class="n">LINEAR</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span> <span class="o">=</span> <span class="n">interpolation</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rendering</span> <span class="o">=</span> <span class="n">rendering</span>
 
@@ -499,12 +507,19 @@
 <span class="sd">        str</span>
 <span class="sd">            The current interpolation mode</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">])</span>
 
     <span class="nd">@interpolation</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">interpolation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interpolation</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set current interpolation mode.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span> <span class="o">=</span> <span class="n">Interpolation</span><span class="p">(</span><span class="n">interpolation</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">]</span> <span class="o">=</span> <span class="n">Interpolation3D</span><span class="p">(</span>
+                <span class="n">interpolation</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">]</span> <span class="o">=</span> <span class="n">Interpolation</span><span class="p">(</span>
+                <span class="n">interpolation</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">interpolation</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -638,7 +653,7 @@
                     <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;tile2data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;tile2data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;tile2data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
 
             <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_data_pyramid</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>

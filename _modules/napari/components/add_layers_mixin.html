@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.add_layers_mixin &mdash; napari 0.2.12+55.g0a401f0 documentation</title>
+  <title>napari.components.add_layers_mixin &mdash; napari 0.2.12+56.gf9d3c9d documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+55.g0a401f0
+                0.2.12+56.gf9d3c9d
               </div>
             
           
@@ -155,10 +155,12 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.components.add_layers_mixin</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">fspath</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">layers</span>
@@ -883,10 +885,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">layer</span></div>
 
-<div class="viewcode-block" id="AddLayersMixin.add_path"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.AddLayersMixin.add_path">[docs]</a>    <span class="k">def</span> <span class="nf">add_path</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">stack</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<div class="viewcode-block" id="AddLayersMixin.open_path"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.AddLayersMixin.open_path">[docs]</a>    <span class="k">def</span> <span class="nf">open_path</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">stack</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Add a path or list of paths to the viewer.</span>
+        <span class="sd">&quot;&quot;&quot;Open a path or list of paths with plugins, and add layers to viewer.</span>
 
 <span class="sd">        A list of paths will be handed one-by-one to the napari_get_reader hook</span>
 <span class="sd">        if stack is False, otherwise the full list is passed to each plugin</span>
@@ -902,6 +904,9 @@
 <span class="sd">            plugins to know how to handle a list of paths.  If ``stack`` is</span>
 <span class="sd">            ``False``, then the ``path`` list is broken up and passed to plugin</span>
 <span class="sd">            readers one by one.  by default False.</span>
+<span class="sd">        **kwargs</span>
+<span class="sd">            All other keyword arguments will be passed on to the respective</span>
+<span class="sd">            ``add_layer`` method.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -916,20 +921,22 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">stack</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layers_with_plugins</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layers_with_plugins</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
 
         <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
         <span class="k">for</span> <span class="n">_path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
-            <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_layers_with_plugins</span><span class="p">(</span><span class="n">_path</span><span class="p">))</span>
+            <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_layers_with_plugins</span><span class="p">(</span><span class="n">_path</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="n">added</span></div>
 
     <span class="k">def</span> <span class="nf">_add_layers_with_plugins</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path_or_paths</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">kwargs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Load a path or a list of paths into the viewer using plugins.</span>
 
-<span class="sd">        This function is mostly called from self.add_path, where the ``stack``</span>
+<span class="sd">        This function is mostly called from self.open_path, where the ``stack``</span>
 <span class="sd">        argument determines whether a list of strings is handed to plugins one</span>
 <span class="sd">        at a time, or en-masse.</span>
 
@@ -938,6 +945,9 @@
 <span class="sd">        path_or_paths : str or list of str</span>
 <span class="sd">            A filepath, directory, or URL (or a list of any) to open. If a</span>
 <span class="sd">            list, the assumption is that the list is to be treated as a stack.</span>
+<span class="sd">        kwargs : dict, optional</span>
+<span class="sd">            keyword arguments that will be used to overwrite any of those that</span>
+<span class="sd">            are returned in the meta dict from plugins.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -961,6 +971,16 @@
         <span class="c1"># add each layer to the viewer</span>
         <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
         <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">layer_data</span><span class="p">:</span>
+            <span class="c1"># if user provided kwargs, use to override any meta dict values</span>
+            <span class="c1"># that were returned by the plugin</span>
+            <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">layer_type</span> <span class="o">=</span> <span class="s1">&#39;image&#39;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">valid_kwargs</span> <span class="o">=</span> <span class="n">prune_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">valid_kwargs</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">valid_kwargs</span><span class="p">)</span>
+            <span class="c1"># actually add the layer</span>
             <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">)</span>
             <span class="c1"># some add_* methods return a List[Layer] others just a Layer</span>
             <span class="c1"># we want to always return a list</span>
@@ -1053,6 +1073,52 @@
                 <span class="k">raise</span> <span class="n">exc</span>
 
         <span class="k">return</span> <span class="n">layer</span></div>
+
+
+<div class="viewcode-block" id="prune_kwargs"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.prune_kwargs">[docs]</a><span class="k">def</span> <span class="nf">prune_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">layer_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return copy of ``kwargs`` with only keys valid for ``add_&lt;layer_type&gt;``</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kwargs : dict</span>
+<span class="sd">        A key: value mapping where some or all of the keys are parameter names</span>
+<span class="sd">        for the corresponding ``Viewer.add_&lt;layer_type&gt;`` method.</span>
+<span class="sd">    layer_type : str</span>
+<span class="sd">        The type of layer that is going to be added with these ``kwargs``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pruned_kwargs : dict</span>
+<span class="sd">        A key: value mapping where all of the keys are valid parameter names</span>
+<span class="sd">        for the corresponding ``Viewer.add_&lt;layer_type&gt;`` method.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``AddLayersMixin`` does not provide an ``add_&lt;layer_type&gt;`` method</span>
+<span class="sd">        for the provided ``layer_type``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; test_kwargs = {</span>
+<span class="sd">            &#39;scale&#39;: (0.75, 1),</span>
+<span class="sd">            &#39;blending&#39;: &#39;additive&#39;,</span>
+<span class="sd">            &#39;num_colors&#39;: 10,</span>
+<span class="sd">        }</span>
+<span class="sd">    &gt;&gt;&gt; prune_kwargs(test_kwargs, &#39;image&#39;)</span>
+<span class="sd">    {&#39;scale&#39;: (0.75, 1), &#39;blending&#39;: &#39;additive&#39;}</span>
+
+<span class="sd">    &gt;&gt;&gt; # only labels has the ``num_colors`` argument</span>
+<span class="sd">    &gt;&gt;&gt; prune_kwargs(test_kwargs, &#39;labels&#39;)</span>
+<span class="sd">    {&#39;scale&#39;: (0.75, 1), &#39;blending&#39;: &#39;additive&#39;, &#39;num_colors&#39;: 10}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">add_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">AddLayersMixin</span><span class="p">,</span> <span class="s1">&#39;add_&#39;</span> <span class="o">+</span> <span class="n">layer_type</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">add_method</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid layer_type: </span><span class="si">{</span><span class="n">layer_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># get valid params for the corresponding add_&lt;layer_type&gt; method</span>
+    <span class="n">valid_layer_kwargs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">add_method</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">valid_layer_kwargs</span><span class="p">}</span></div>
 </pre></div>
 
            </div>

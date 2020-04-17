@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.2.12+56.gf9d3c9d documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.2.12+57.gf9ca768 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+56.gf9d3c9d
+                0.2.12+57.gf9ca768
               </div>
             
           
@@ -167,7 +167,7 @@
 <span class="kn">from</span> <span class="nn">...components</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">convert_to_uint8</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">convert_to_uint8</span><span class="p">,</span> <span class="n">compute_pyramid_level</span>
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">status_format</span><span class="p">,</span> <span class="n">format_float</span>
@@ -226,8 +226,12 @@
 <span class="sd">    z_index : int</span>
 <span class="sd">        Depth of the layer visual relative to other visuals in the scenecanvas.</span>
 <span class="sd">    coordinates : tuple of float</span>
-<span class="sd">        Coordinates of the cursor in the image space of each layer. The length</span>
+<span class="sd">        Coordinates of the cursor in the data space of each layer. The length</span>
 <span class="sd">        of the tuple is equal to the number of dimensions of the layer.</span>
+<span class="sd">    corner_pixels : array</span>
+<span class="sd">        Coordinates of the top-left and bottom-right canvas pixels in the data</span>
+<span class="sd">        space of each layer. The length of the tuple is equal to the number of</span>
+<span class="sd">        dimensions of the layer.</span>
 <span class="sd">    position : 2-tuple of int</span>
 <span class="sd">        Cursor position in the image space of only the displayed dimensions.</span>
 <span class="sd">    shape : tuple of int</span>
@@ -251,6 +255,7 @@
 <span class="sd">    scale_factor : float</span>
 <span class="sd">        Conversion factor from canvas coordinates to image coordinates, which</span>
 <span class="sd">        depends on the current zoom level.</span>
+
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -328,6 +333,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">ndim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -775,6 +781,49 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_message</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_pyramid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Refresh layer pyramid if new resolution level or tile is required.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        corner_pixels : array</span>
+<span class="sd">            Coordinates of the top-left and bottom-right canvas pixels in the</span>
+<span class="sd">            data space of each layer. The length of the tuple is equal to the</span>
+<span class="sd">            number of dimensions of the layer. If different from the current</span>
+<span class="sd">            layer corner_pixels the layer needs refreshing.</span>
+<span class="sd">        requested_shape : tuple</span>
+<span class="sd">            Requested shape of field of view in data coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Clip corner pixels inside data shape</span>
+        <span class="n">new_corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Scale to full resolution of the data</span>
+        <span class="n">requested_shape</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">]</span>
+
+        <span class="n">downsample_factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+
+        <span class="n">data_level</span> <span class="o">=</span> <span class="n">compute_pyramid_level</span><span class="p">(</span>
+            <span class="n">requested_shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">],</span>
+            <span class="n">shape_threshold</span><span class="p">,</span>
+            <span class="n">downsample_factors</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data_level</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">:</span>
+            <span class="c1"># Set the data level, which will trigger a layer refresh and</span>
+            <span class="c1"># further updates including recalculation of the corner_pixels</span>
+            <span class="c1"># for the new level</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="n">data_level</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">==</span> <span class="n">corner_pixels</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">displayed_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

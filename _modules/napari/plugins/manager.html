@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.manager &mdash; napari 0.2.12+64.g88abdde documentation</title>
+  <title>napari.plugins.manager &mdash; napari 0.2.12+66.g2177e79 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+64.g88abdde
+                0.2.12+66.g2177e79
               </div>
             
           
@@ -160,12 +160,13 @@
 <span class="kn">import</span> <span class="nn">pkgutil</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">ModuleType</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">pluggy</span>
-<span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_builtins</span><span class="p">,</span> <span class="n">hook_specifications</span>
+<span class="kn">from</span> <span class="nn">._hook_callers</span> <span class="kn">import</span> <span class="n">_HookCaller</span>
 <span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">PluginError</span><span class="p">,</span>
     <span class="n">PluginImportError</span><span class="p">,</span>
@@ -181,177 +182,36 @@
     <span class="kn">import</span> <span class="nn">importlib_metadata</span>
 
 
-<span class="k">class</span> <span class="nc">_HookCaller</span><span class="p">(</span><span class="n">pluggy</span><span class="o">.</span><span class="n">hooks</span><span class="o">.</span><span class="n">_HookCaller</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Adding convenience methods to PluginManager.hook</span>
+<span class="n">pluggy</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_HookCaller</span> <span class="o">=</span> <span class="n">_HookCaller</span>
 
-<span class="sd">    In a pluggy plugin manager, the hook implementations registered for each</span>
-<span class="sd">    plugin are stored in ``_HookCaller`` objects that share the same name as</span>
-<span class="sd">    the corresponding hook specification; and each ``_HookCaller`` instance is</span>
-<span class="sd">    stored under the ``plugin_manager.hook`` namespace. For instance:</span>
-<span class="sd">    ``plugin_manager.hook.name_of_hook_specification``.</span>
+
+<span class="k">class</span> <span class="nc">_HookRelay</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Hook holder object for storing _HookCaller instances.</span>
+
+<span class="sd">    This object triggers (lazy) discovery of plugins as follows:  When a plugin</span>
+<span class="sd">    hook is accessed (e.g. plugin_manager.hook.napari_get_reader), if</span>
+<span class="sd">    ``self._needs_discovery`` is True, then it will trigger autodiscovery on</span>
+<span class="sd">    the parent plugin_manager. Note that ``PluginManager.__init__`` sets</span>
+<span class="sd">    ``self.hook._needs_discovery = True`` *after* hook_specifications and</span>
+<span class="sd">    builtins have been discovered, but before external plugins are loaded.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="c1"># just for type annotation.  These are the lists that store HookImpls</span>
-    <span class="n">_wrappers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]</span>
-    <span class="n">_nonwrappers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="s1">&#39;PluginManager&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_discovery</span> <span class="o">=</span> <span class="kc">False</span>
 
-    <span class="k">def</span> <span class="nf">get_hookimpl_for_plugin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return hook implementation instance for ``plugin_name`` if found.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">next</span><span class="p">(</span>
-                <span class="n">imp</span>
-                <span class="k">for</span> <span class="n">imp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_hookimpls</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">imp</span><span class="o">.</span><span class="n">plugin_name</span> <span class="o">==</span> <span class="n">plugin_name</span>
-            <span class="p">)</span>
-        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No implementation of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> found &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;for plugin </span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s2">.&quot;</span>
-            <span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Trigger manager plugin discovery when accessing hook first time.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;_needs_discovery&#39;</span><span class="p">,</span> <span class="s1">&#39;_manager&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_discovery</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">discover</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">HookImpl</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return index of plugin_name or a HookImpl in self._nonwrappers&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">HookImpl</span><span class="p">):</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nonwrappers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">plugin_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">imp</span><span class="o">.</span><span class="n">plugin_name</span> <span class="k">for</span> <span class="n">imp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nonwrappers</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">plugin_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">&quot;argument provided to index must either be the &quot;</span>
-                <span class="s2">&quot;(string) name of a plugin, or a HookImpl instance&quot;</span>
-            <span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">bring_to_front</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_order</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]]):</span>
-        <span class="sd">&quot;&quot;&quot;Move items in ``new_order`` to the front of the call order.</span>
-
-<span class="sd">        By default, hook implementations are called in last-in-first-out order</span>
-<span class="sd">        of registration, and pluggy does not provide a built-in way to</span>
-<span class="sd">        rearrange the call order of hook implementations.</span>
-
-<span class="sd">        This function accepts a `_HookCaller` instance and the desired</span>
-<span class="sd">        ``new_order`` of the hook implementations (in the form of list of</span>
-<span class="sd">        plugin names, or a list of actual ``HookImpl`` instances) and reorders</span>
-<span class="sd">        the implementations in the hook caller accordingly.</span>
-
-<span class="sd">        NOTE: hook implementations are actually stored in *two* separate list</span>
-<span class="sd">        attributes in the hook caller: ``_HookCaller._wrappers`` and</span>
-<span class="sd">        ``_HookCaller._nonwrappers``, according to whether the corresponding</span>
-<span class="sd">        ``HookImpl`` instance was marked as a wrapper or not.  This method</span>
-<span class="sd">        *only* sorts _nonwrappers.</span>
-<span class="sd">        For more, see: https://pluggy.readthedocs.io/en/latest/#wrappers</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        new_order :  list of str or list of ``HookImpl`` instances</span>
-<span class="sd">            The desired CALL ORDER of the hook implementations.  The list</span>
-<span class="sd">            does *not* need to include every hook implementation in</span>
-<span class="sd">            ``self.get_hookimpls()``, but those that are not included</span>
-<span class="sd">            will be left at the end of the call order.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        TypeError</span>
-<span class="sd">            If any item in ``new_order`` is neither a string (plugin_name) or a</span>
-<span class="sd">            ``HookImpl`` instance.</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If any item in ``new_order`` is neither the name of a plugin or a</span>
-<span class="sd">            ``HookImpl`` instance that is present in self._nonwrappers.</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If ``new_order`` argument has multiple entries for the same</span>
-<span class="sd">            implementation.</span>
-
-<span class="sd">        Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        Imagine you had a hook specification named ``print_plugin_name``, that</span>
-<span class="sd">        expected plugins to simply print their own name. An implementation</span>
-<span class="sd">        might look like:</span>
-
-<span class="sd">        &gt;&gt;&gt; # hook implementation for ``plugin_1``</span>
-<span class="sd">        &gt;&gt;&gt; @hook_implementation</span>
-<span class="sd">        ... def print_plugin_name():</span>
-<span class="sd">        ...     print(&quot;plugin_1&quot;)</span>
-
-<span class="sd">        If three different plugins provided hook implementations. An example</span>
-<span class="sd">        call for that hook might look like:</span>
-
-<span class="sd">        &gt;&gt;&gt; plugin_manager.hook.print_plugin_name()</span>
-<span class="sd">        plugin_1</span>
-<span class="sd">        plugin_2</span>
-<span class="sd">        plugin_3</span>
-
-<span class="sd">        If you wanted to rearrange their call order, you could do this:</span>
-
-<span class="sd">        &gt;&gt;&gt; new_order = [&quot;plugin_2&quot;, &quot;plugin_3&quot;, &quot;plugin_1&quot;]</span>
-<span class="sd">        &gt;&gt;&gt; plugin_manager.hook.print_plugin_name.bring_to_front(new_order)</span>
-<span class="sd">        &gt;&gt;&gt; plugin_manager.hook.print_plugin_name()</span>
-<span class="sd">        plugin_2</span>
-<span class="sd">        plugin_3</span>
-<span class="sd">        plugin_1</span>
-
-<span class="sd">        You can also just specify one or more item to move them to the front</span>
-<span class="sd">        of the call order:</span>
-<span class="sd">        &gt;&gt;&gt; plugin_manager.hook.print_plugin_name.bring_to_front([&quot;plugin_3&quot;])</span>
-<span class="sd">        &gt;&gt;&gt; plugin_manager.hook.print_plugin_name()</span>
-<span class="sd">        plugin_3</span>
-<span class="sd">        plugin_2</span>
-<span class="sd">        plugin_1</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># make sure items in order are unique</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_order</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">new_order</span><span class="p">)):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;repeated item in order&quot;</span><span class="p">)</span>
-
-        <span class="c1"># make new lists for the rearranged _nonwrappers</span>
-        <span class="c1"># for details on the difference between wrappers and nonwrappers, see:</span>
-        <span class="c1"># https://pluggy.readthedocs.io/en/latest/#wrappers</span>
-        <span class="n">_old_nonwrappers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nonwrappers</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">_new_nonwrappers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">new_order</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
-            <span class="n">_new_nonwrappers</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_old_nonwrappers</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-
-        <span class="c1"># remove items that have been pulled, leaving only items that</span>
-        <span class="c1"># were not specified in ``new_order`` argument</span>
-        <span class="c1"># do this rather than using .pop() above to avoid changing indices</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-            <span class="k">del</span> <span class="n">_old_nonwrappers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
-        <span class="c1"># if there are any hook_implementations left over, add them to the</span>
-        <span class="c1"># beginning of their respective lists</span>
-        <span class="k">if</span> <span class="n">_old_nonwrappers</span><span class="p">:</span>
-            <span class="n">_new_nonwrappers</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">_old_nonwrappers</span><span class="p">]</span> <span class="o">+</span> <span class="n">_new_nonwrappers</span>
-
-        <span class="c1"># update the _nonwrappers list with the reordered list</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_nonwrappers</span> <span class="o">=</span> <span class="n">_new_nonwrappers</span>
-
-    <span class="k">def</span> <span class="nf">_set_plugin_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Enable or disable the hook implementation for a specific plugin.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        plugin_name : str</span>
-<span class="sd">            The name of a plugin implementing ``hook_spec``.</span>
-<span class="sd">        enabled : bool</span>
-<span class="sd">            Whether or not the implementation should be enabled.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        KeyError</span>
-<span class="sd">            If ``plugin_name`` has not provided a hook implementation for this</span>
-<span class="sd">            hook specification.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">get_hookimpl_for_plugin</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">)</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">enabled</span>
-
-    <span class="k">def</span> <span class="nf">enable_plugin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;enable implementation for ``plugin_name``.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_plugin_enabled</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">disable_plugin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;disable implementation for ``plugin_name``.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_plugin_enabled</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-
-
-<span class="n">pluggy</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_HookCaller</span> <span class="o">=</span> <span class="n">_HookCaller</span>
+    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Iterate through hookcallers, removing private attributes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
 
 
 <div class="viewcode-block" id="PluginManager"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.PluginManager">[docs]</a><span class="k">class</span> <span class="nc">PluginManager</span><span class="p">(</span><span class="n">pluggy</span><span class="o">.</span><span class="n">PluginManager</span><span class="p">):</span>
@@ -361,7 +221,7 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">project_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;napari&quot;</span><span class="p">,</span>
-        <span class="n">autodiscover</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">autodiscover</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;pluggy.PluginManager subclass with napari-specific functionality</span>
 
@@ -379,6 +239,7 @@
 <span class="sd">            will simply search the current sys.path.  by default True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">project_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hook</span> <span class="o">=</span> <span class="n">_HookRelay</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="c1"># a dict to store package metadata for each plugin, will be populated</span>
         <span class="c1"># during self._register_module</span>
         <span class="c1"># possible keys for this dict will be set by fetch_module_metadata()</span>
@@ -388,17 +249,16 @@
         <span class="k">if</span> <span class="n">project_name</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
             <span class="c1"># define hook specifications and validators</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_hookspecs</span><span class="p">(</span><span class="n">hook_specifications</span><span class="p">)</span>
-
-            <span class="c1"># register our own built plugins</span>
+            <span class="c1"># register our own builtin plugins</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">_builtins</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;builtins&#39;</span><span class="p">)</span>
 
-            <span class="c1"># discover external plugins</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_PLUGIN_AUTOLOAD&quot;</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">autodiscover</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">autodiscover</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span><span class="n">autodiscover</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">discover</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">_needs_discovery</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># discover external plugins</span>
+        <span class="k">if</span> <span class="n">autodiscover</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">autodiscover</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span><span class="n">autodiscover</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">discover</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -430,6 +290,19 @@
 <span class="sd">        count : int</span>
 <span class="sd">            The number of plugin modules successfully loaded.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">_needs_discovery</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># allow debugging escape hatch</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NAPARI_DISABLE_PLUGINS&quot;</span><span class="p">):</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Plugin discovery disabled due to &#39;</span>
+                <span class="s1">&#39;environmental variable &quot;NAPARI_DISABLE_PLUGINS&quot;&#39;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
         <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
@@ -496,7 +369,68 @@
                 <span class="k">return</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">PluginRegistrationError</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span></div>
+            <span class="k">raise</span> <span class="n">PluginRegistrationError</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span>
+
+<div class="viewcode-block" id="PluginManager.register"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.PluginManager.register">[docs]</a>    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin</span><span class="p">:</span> <span class="n">ModuleType</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register a plugin and return its canonical name or ``None``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        plugin : ModuleType</span>
+<span class="sd">            The module to register</span>
+<span class="sd">        name : str, optional</span>
+<span class="sd">            Optional name for plugin, by default ``get_canonical_name(plugin)``</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str or None</span>
+<span class="sd">            canonical plugin name, or ``None`` if the name is blocked from</span>
+<span class="sd">            registering.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            if the plugin is already registered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_canonical_name</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">plugin_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name2plugin</span>
+            <span class="ow">or</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plugin2hookcallers</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name2plugin</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># blocked plugin, return None to indicate no registration</span>
+                <span class="k">return</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Plugin already registered: </span><span class="si">%s</span><span class="s2">=</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">plugin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name2plugin</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="c1"># XXX if an error happens we should make sure no state has been</span>
+        <span class="c1"># changed at point of return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name2plugin</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plugin</span>
+
+        <span class="c1"># register matching hook implementations of the plugin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plugin2hookcallers</span><span class="p">[</span><span class="n">plugin</span><span class="p">]</span> <span class="o">=</span> <span class="n">hookcallers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">plugin</span><span class="p">):</span>
+            <span class="n">hookimpl_opts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_hookimpl_opts</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">hookimpl_opts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pluggy</span><span class="o">.</span><span class="n">hooks</span><span class="o">.</span><span class="n">normalize_hookimpl_opts</span><span class="p">(</span><span class="n">hookimpl_opts</span><span class="p">)</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">pluggy</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">HookImpl</span><span class="p">(</span>
+                    <span class="n">plugin</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">hookimpl_opts</span>
+                <span class="p">)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">hookimpl_opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;specname&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span>
+                <span class="n">hook</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">hook</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">hook</span> <span class="o">=</span> <span class="n">_HookCaller</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hookexec</span><span class="p">)</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">hook</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">hook</span><span class="o">.</span><span class="n">has_spec</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_verify_hook</span><span class="p">(</span><span class="n">hook</span><span class="p">,</span> <span class="n">hookimpl</span><span class="p">)</span>
+                    <span class="n">hook</span><span class="o">.</span><span class="n">_maybe_apply_history</span><span class="p">(</span><span class="n">hookimpl</span><span class="p">)</span>
+                <span class="n">hook</span><span class="o">.</span><span class="n">_add_hookimpl</span><span class="p">(</span><span class="n">hookimpl</span><span class="p">)</span>
+                <span class="n">hookcallers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hook</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plugin_name</span></div></div>
 
 
 <div class="viewcode-block" id="entry_points_for"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.manager.entry_points_for">[docs]</a><span class="k">def</span> <span class="nf">entry_points_for</span><span class="p">(</span>

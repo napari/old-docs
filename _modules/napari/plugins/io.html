@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.2.12+64.g88abdde documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.2.12+66.g2177e79 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+64.g88abdde
+                0.2.12+66.g2177e79
               </div>
             
           
@@ -155,17 +155,20 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.plugins.io</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">PluginError</span><span class="p">,</span> <span class="n">plugin_manager</span> <span class="k">as</span> <span class="n">napari_plugin_manager</span>
-<span class="kn">from</span> <span class="nn">._hook_callers</span> <span class="kn">import</span> <span class="n">execute_hook</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Sequence</span>
+<span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
+
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">LayerData</span>
-<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">PluginError</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">plugin_manager</span> <span class="k">as</span> <span class="n">napari_plugin_manager</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="read_data_with_plugins"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.io.read_data_with_plugins">[docs]</a><span class="k">def</span> <span class="nf">read_data_with_plugins</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">plugin_manager</span><span class="o">=</span><span class="kc">None</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">plugin_manager</span><span class="o">=</span><span class="n">napari_plugin_manager</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Iterate reader hooks and return first non-None LayerData or None.</span>
 
@@ -175,14 +178,14 @@
 <span class="sd">    returned, or no readers are found.</span>
 
 <span class="sd">    Exceptions will be caught and stored as PluginErrors</span>
-<span class="sd">    (in plugins.PLUGIN_ERRORS)</span>
+<span class="sd">    (in plugins.exceptions.PLUGIN_ERRORS)</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    path : str</span>
 <span class="sd">        The path (file, directory, url) to open</span>
-<span class="sd">    plugin_manager : pluggy.PluginManager, optional</span>
-<span class="sd">        Instance of a pluggy PluginManager.  by default the main napari</span>
+<span class="sd">    plugin_manager : plugins.PluginManager, optional</span>
+<span class="sd">        Instance of a napari PluginManager.  by default the main napari</span>
 <span class="sd">        plugin_manager will be used.</span>
 
 <span class="sd">    Returns</span>
@@ -195,38 +198,37 @@
 
 <span class="sd">        If no reader plugins are (or they all error), returns ``None``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">plugin_manager</span> <span class="o">=</span> <span class="n">plugin_manager</span> <span class="ow">or</span> <span class="n">napari_plugin_manager</span>
-    <span class="n">skip_impls</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">hook_caller</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_reader</span>
+    <span class="n">skip_impls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">implementation</span><span class="p">)</span> <span class="o">=</span> <span class="n">execute_hook</span><span class="p">(</span>
-            <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_reader</span><span class="p">,</span>
-            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
-            <span class="n">return_impl</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">skip_impls</span><span class="o">=</span><span class="n">skip_impls</span><span class="p">,</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">call_with_result_obj</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">_skip_impls</span><span class="o">=</span><span class="n">skip_impls</span>
         <span class="p">)</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">result</span>  <span class="c1"># will raise exceptions if any occured</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">reader</span><span class="p">:</span>
             <span class="c1"># we&#39;re all out of reader plugins</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># try to read the data.</span>
+            <span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># try to read data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="c1"># If execute_hook did return a reader, but the reader then failed</span>
+            <span class="c1"># If the hook did return a reader, but the reader then failed</span>
             <span class="c1"># while trying to read the path, we store the traceback for later</span>
             <span class="c1"># retrieval, warn the user, and continue looking for readers</span>
             <span class="c1"># (skipping this one)</span>
+            <span class="n">hook_implementation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">implementation</span>
+            <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">hook_implementation</span><span class="o">.</span><span class="n">plugin_name</span>
+            <span class="n">plugin_module</span> <span class="o">=</span> <span class="n">hook_implementation</span><span class="o">.</span><span class="n">plugin</span><span class="o">.</span><span class="vm">__name__</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Error in plugin &#39;</span><span class="si">{</span><span class="n">implementation</span><span class="o">.</span><span class="n">plugin_name</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
-                <span class="s2">&quot;hook &#39;napari_get_reader&#39;&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Error in plugin &#39;</span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;hook &#39;napari_get_reader&#39;: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
             <span class="c1"># instantiating this PluginError stores it in</span>
             <span class="c1"># plugins.exceptions.PLUGIN_ERRORS, where it can be retrieved later</span>
-            <span class="n">err</span> <span class="o">=</span> <span class="n">PluginError</span><span class="p">(</span>
-                <span class="n">msg</span><span class="p">,</span> <span class="n">implementation</span><span class="o">.</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">implementation</span><span class="o">.</span><span class="n">plugin</span><span class="o">.</span><span class="vm">__name__</span>
-            <span class="p">)</span>
-            <span class="n">err</span><span class="o">.</span><span class="n">__cause__</span> <span class="o">=</span> <span class="n">exc</span>  <span class="c1"># like `raise PluginError() from exc`</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">PluginError</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">plugin_module</span><span class="p">)</span>
+            <span class="n">err</span><span class="o">.</span><span class="n">__cause__</span> <span class="o">=</span> <span class="n">exc</span>  <span class="c1"># like ``raise PluginError() from exc``</span>
 
-            <span class="n">skip_impls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">implementation</span><span class="p">)</span>  <span class="c1"># don&#39;t try this impl again</span>
-            <span class="k">if</span> <span class="n">implementation</span><span class="o">.</span><span class="n">plugin_name</span> <span class="o">!=</span> <span class="s1">&#39;builtins&#39;</span><span class="p">:</span>
+            <span class="n">skip_impls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hook_implementation</span><span class="p">)</span>  <span class="c1"># don&#39;t try this impl again</span>
+            <span class="k">if</span> <span class="n">plugin_name</span> <span class="o">!=</span> <span class="s1">&#39;builtins&#39;</span><span class="p">:</span>
                 <span class="c1"># If builtins doesn&#39;t work, they will get a &quot;no reader&quot; found</span>
                 <span class="c1"># error anyway, so it looks a bit weird to show them that the</span>
                 <span class="c1"># &quot;builtin plugin&quot; didn&#39;t work.</span>

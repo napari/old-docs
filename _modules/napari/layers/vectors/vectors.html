@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.vectors.vectors &mdash; napari 0.2.12+70.gcfd4eaf documentation</title>
+  <title>napari.layers.vectors.vectors &mdash; napari 0.2.12+71.gb2a95d6 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+70.gcfd4eaf
+                0.2.12+71.gb2a95d6
               </div>
             
           
@@ -155,8 +155,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.vectors.vectors</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span>
 <span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
@@ -202,8 +201,8 @@
 <span class="sd">         Multiplicative factor on projections for length of all vectors.</span>
 <span class="sd">    edge_color : str</span>
 <span class="sd">        Color of all of the vectors.</span>
-<span class="sd">    edge_color_cycle : np.ndarray, list, cycle</span>
-<span class="sd">        Cycle of colors (provided as RGBA) to map to edge_color if a</span>
+<span class="sd">    edge_color_cycle : np.ndarray, list</span>
+<span class="sd">        Cycle of colors (provided as string name, RGB, or RGBA) to map to edge_color if a</span>
 <span class="sd">        categorical attribute is used color the vectors.</span>
 <span class="sd">    edge_colormap : str, vispy.color.colormap.Colormap</span>
 <span class="sd">        Colormap to set vector color if a continuous attribute is used to set edge_color.</span>
@@ -243,8 +242,8 @@
 <span class="sd">         Multiplicative factor on projections for length of all vectors.</span>
 <span class="sd">    edge_color : str</span>
 <span class="sd">        Color of all of the vectors.</span>
-<span class="sd">    edge_color_cycle : np.ndarray, list, cycle</span>
-<span class="sd">        Cycle of colors (provided as RGBA) to map to edge_color if a</span>
+<span class="sd">    edge_color_cycle : np.ndarray, list</span>
+<span class="sd">        Cycle of colors (provided as string name, RGB, or RGBA) to map to edge_color if a</span>
 <span class="sd">        categorical attribute is used color the vectors.</span>
 <span class="sd">    edge_colormap : str, vispy.color.colormap.Colormap</span>
 <span class="sd">        Colormap to set vector color if a continuous attribute is used to set edge_color.</span>
@@ -403,7 +402,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;dict {str: array (N,)}, DataFrame: Annotations for each point&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
 
@@ -418,7 +417,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_property</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;property used for edge_color dropped&#39;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Validates the type and size of the properties&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
@@ -451,11 +452,11 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">state</span>
 
-    <span class="k">def</span> <span class="nf">_get_ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_get_ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Determine number of dimensions of the layer.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_get_extent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_get_extent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
         <span class="sd">&quot;&quot;&quot;Determine ranges for slicing given by (min, max, step).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">maxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
@@ -514,7 +515,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;(1 x 4) np.ndarray: Array of RGBA edge colors (applied to all vectors)&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color</span>
 
@@ -580,7 +581,7 @@
                         <span class="n">k</span><span class="p">:</span> <span class="n">c</span>
                         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
                             <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">edge_color_properties</span><span class="p">),</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge_color_cycle</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle</span><span class="p">,</span>
                         <span class="p">)</span>
                     <span class="p">}</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -596,7 +597,7 @@
                         <span class="p">)</span>
                         <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">props_to_add</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">edge_color_cycle_map</span><span class="p">[</span><span class="n">prop</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge_color_cycle</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle</span>
                             <span class="p">)</span>
                 <span class="n">edge_colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
                     <span class="p">[</span>
@@ -634,7 +635,7 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">_is_color_mapped</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_is_color_mapped</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot; determines if the new color argument is for directly setting or cycle/colormap&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">color</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">:</span>
@@ -649,7 +650,7 @@
             <span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">edge_color_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">edge_color_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ColorMode</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;str: Edge color setting mode</span>
 
 <span class="sd">        DIRECT (default mode) allows each vector to be set arbitrarily</span>
@@ -694,27 +695,26 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color_mode</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">edge_color_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list, np.ndarray, cycle :  Color cycle for edge_color.</span>
-<span class="sd">        Can be a list of colors or a cycle of colors</span>
-
+    <span class="k">def</span> <span class="nf">edge_color_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;list, np.ndarray :  Color cycle for edge_color.</span>
+<span class="sd">        Can be a list of colors defined by name, RGB or RGBA</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle_values</span>
 
     <span class="nd">@edge_color_cycle</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">edge_color_cycle</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">edge_color_cycle</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">cycle</span><span class="p">]</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle</span> <span class="o">=</span> <span class="n">transform_color_cycle</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">edge_color_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_color_cycle</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
+        <span class="n">transformed_color_cycle</span><span class="p">,</span> <span class="n">transformed_colors</span> <span class="o">=</span> <span class="n">transform_color_cycle</span><span class="p">(</span>
             <span class="n">color_cycle</span><span class="o">=</span><span class="n">edge_color_cycle</span><span class="p">,</span>
-            <span class="n">elem_name</span><span class="o">=</span><span class="s2">&quot;edge_color_cycle&quot;</span><span class="p">,</span>
+            <span class="n">elem_name</span><span class="o">=</span><span class="s1">&#39;edge_color_cycle&#39;</span><span class="p">,</span>
             <span class="n">default</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle_values</span> <span class="o">=</span> <span class="n">transformed_colors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_cycle</span> <span class="o">=</span> <span class="n">transformed_color_cycle</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_color_mode</span> <span class="o">==</span> <span class="n">ColorMode</span><span class="o">.</span><span class="n">CYCLE</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">refresh_colors</span><span class="p">(</span><span class="n">update_color_mapping</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">edge_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">edge_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Return the colormap to be applied to a property to get the edge color.</span>
 
 <span class="sd">        Returns</span>
@@ -735,7 +735,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap_name</span> <span class="o">=</span> <span class="s1">&#39;unknown_colormap&#39;</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">edge_contrast_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">edge_contrast_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot; None, (float, float): contrast limits for mapping</span>
 <span class="sd">        the edge_color colormap property to 0 and 1</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -888,7 +888,7 @@
 
         <span class="k">return</span> <span class="n">xml_list</span></div>
 
-    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Returns coordinates, values, and a string for a given mouse position</span>
 <span class="sd">        and set of indices.</span>
 

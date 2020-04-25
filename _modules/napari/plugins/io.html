@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.2.12+71.gb2a95d6 documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.2.12+72.ge4d3d71 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+71.gb2a95d6
+                0.2.12+72.ge4d3d71
               </div>
             
           
@@ -156,12 +156,14 @@
             
   <h1>Source code for napari.plugins.io</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
 
+<span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">LayerData</span>
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">PluginError</span>
+<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">abspath_or_url</span>
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">PluginCallError</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">plugin_manager</span> <span class="k">as</span> <span class="n">napari_plugin_manager</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -175,7 +177,7 @@
 <span class="sd">    This function returns as soon as the path has been read successfully,</span>
 <span class="sd">    while catching any plugin exceptions, storing them for later retrievial,</span>
 <span class="sd">    providing useful error messages, and relooping until either layer data is</span>
-<span class="sd">    returned, or no readers are found.</span>
+<span class="sd">    returned, or no valid readers are found.</span>
 
 <span class="sd">    Exceptions will be caught and stored as PluginErrors</span>
 <span class="sd">    (in plugins.exceptions.PLUGIN_ERRORS)</span>
@@ -211,28 +213,206 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># try to read data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="c1"># If the hook did return a reader, but the reader then failed</span>
-            <span class="c1"># while trying to read the path, we store the traceback for later</span>
-            <span class="c1"># retrieval, warn the user, and continue looking for readers</span>
-            <span class="c1"># (skipping this one)</span>
-            <span class="n">hook_implementation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">implementation</span>
-            <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">hook_implementation</span><span class="o">.</span><span class="n">plugin_name</span>
-            <span class="n">plugin_module</span> <span class="o">=</span> <span class="n">hook_implementation</span><span class="o">.</span><span class="n">plugin</span><span class="o">.</span><span class="vm">__name__</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Error in plugin &#39;</span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;hook &#39;napari_get_reader&#39;: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-            <span class="c1"># instantiating this PluginError stores it in</span>
-            <span class="c1"># plugins.exceptions.PLUGIN_ERRORS, where it can be retrieved later</span>
-            <span class="n">err</span> <span class="o">=</span> <span class="n">PluginError</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">plugin_module</span><span class="p">)</span>
-            <span class="n">err</span><span class="o">.</span><span class="n">__cause__</span> <span class="o">=</span> <span class="n">exc</span>  <span class="c1"># like ``raise PluginError() from exc``</span>
-
-            <span class="n">skip_impls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hook_implementation</span><span class="p">)</span>  <span class="c1"># don&#39;t try this impl again</span>
-            <span class="k">if</span> <span class="n">plugin_name</span> <span class="o">!=</span> <span class="s1">&#39;builtins&#39;</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">PluginCallError</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">)</span>
+            <span class="c1"># don&#39;t try this impl again</span>
+            <span class="n">skip_impls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">implementation</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">implementation</span> <span class="o">!=</span> <span class="s1">&#39;builtins&#39;</span><span class="p">:</span>
                 <span class="c1"># If builtins doesn&#39;t work, they will get a &quot;no reader&quot; found</span>
                 <span class="c1"># error anyway, so it looks a bit weird to show them that the</span>
                 <span class="c1"># &quot;builtin plugin&quot; didn&#39;t work.</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">format_with_contact_info</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="save_layers"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.io.save_layers">[docs]</a><span class="k">def</span> <span class="nf">save_layers</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write list of layers or individual layer to a path using writer plugins.</span>
+
+<span class="sd">    If ``plugin`` is not provided and only one layer is passed, then we</span>
+<span class="sd">    directly call ``plugin_manager.hook.napari_write_&lt;layer&gt;()`` which</span>
+<span class="sd">    will loop through implementations and stop when the first one returns a</span>
+<span class="sd">    non-None result. The order in which implementations are called can be</span>
+<span class="sd">    changed with the hook ``bring_to_front`` method, for instance:</span>
+<span class="sd">    ``plugin_manager.hook.napari_write_points.bring_to_front``</span>
+
+<span class="sd">    If ``plugin`` is not provided and multiple layers are passed, then</span>
+<span class="sd">    we call ``plugin_manager.hook.napari_get_writer()`` which loops through</span>
+<span class="sd">    plugins to find the first one that knows how to handle the combination of</span>
+<span class="sd">    layers and is able to write the file. If no plugins offer</span>
+<span class="sd">    ``napari_get_writer`` for that combination of layers then the builtin</span>
+<span class="sd">    ``napari_get_writer`` implementation will create a folder and call</span>
+<span class="sd">    ``napari_write_&lt;layer&gt;`` for each layer using the ``layer.name`` variable</span>
+<span class="sd">    to modify the path such that the layers are written to unique files in the</span>
+<span class="sd">    folder.</span>
+
+<span class="sd">    If ``plugin`` is provided and a single layer is passed, then</span>
+<span class="sd">    we call the ``napari_write_&lt;layer_type&gt;`` for that plugin, and if it</span>
+<span class="sd">    fails we error.</span>
+
+<span class="sd">    If a ``plugin`` is provided and multiple layers are passed, then</span>
+<span class="sd">    we call we call ``napari_get_writer`` for that plugin, and if it</span>
+<span class="sd">    doesn’t return a WriterFunction we error, otherwise we call it and if</span>
+<span class="sd">    that fails if it we error.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        A filepath, directory, or URL to open.</span>
+<span class="sd">    layers : List[layers.Layer]</span>
+<span class="sd">        List of layers to be saved. If only a single layer is passed then</span>
+<span class="sd">        we use the hook specification corresponding to its layer type,</span>
+<span class="sd">        ``napari_write_&lt;layer_type&gt;``. If multiple layers are passed then we</span>
+<span class="sd">        use the ``napari_get_writer`` hook specification.</span>
+<span class="sd">    plugin : str, optional</span>
+<span class="sd">        Name of the plugin to use for saving. If None then all plugins</span>
+<span class="sd">        corresponding to appropriate hook specification will be looped</span>
+<span class="sd">        through to find the first one that can save the data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of str</span>
+<span class="sd">        File paths of any files that were written.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_write_multiple_layers_with_plugins</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">_write_single_layer_with_plugins</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">written</span><span class="p">]</span> <span class="k">if</span> <span class="n">written</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[]</span></div>
+
+
+<span class="k">def</span> <span class="nf">_write_multiple_layers_with_plugins</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">plugin_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plugin_manager</span><span class="o">=</span><span class="n">napari_plugin_manager</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write data from multiple layers data with a plugin.</span>
+
+<span class="sd">    If a ``plugin_name`` is not provided we loop through plugins to find the</span>
+<span class="sd">    first one that knows how to handle the combination of layers and is able to</span>
+<span class="sd">    write the file. If no plugins offer ``napari_get_writer`` for that</span>
+<span class="sd">    combination of layers then the default ``napari_get_writer`` will create a</span>
+<span class="sd">    folder and call ``napari_write_&lt;layer&gt;`` for each layer using the</span>
+<span class="sd">    ``layer.name`` variable to modify the path such that the layers are written</span>
+<span class="sd">    to unique files in the folder.</span>
+
+<span class="sd">    If a ``plugin_name`` is provided, then call ``napari_get_writer`` for that</span>
+<span class="sd">    plugin. If it doesn’t return a ``WriterFunction`` we error, otherwise we</span>
+<span class="sd">    call it and if that fails if it we error.</span>
+
+<span class="sd">    Exceptions will be caught and stored as PluginErrors</span>
+<span class="sd">    (in plugins.exceptions.PLUGIN_ERRORS)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        The path (file, directory, url) to write.</span>
+<span class="sd">    layers : List of napari.layers.Layer</span>
+<span class="sd">        List of napari layers to write.</span>
+<span class="sd">    plugin_name: str, optional</span>
+<span class="sd">        If provided, force the plugin manager to use the ``napari_get_writer``</span>
+<span class="sd">        from the requested ``plugin_name``.  If none is available, or if it is</span>
+<span class="sd">        incapable of handling the layers, this function will fail.</span>
+<span class="sd">    plugin_manager : plugins.PluginManager, optional</span>
+<span class="sd">        Instance of a PluginManager.  by default the main napari</span>
+<span class="sd">        plugin_manager will be used.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of str</span>
+<span class="sd">        A list of filenames, if any, that were written.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">layer_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">as_layer_data_tuple</span><span class="p">()</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">]</span>
+    <span class="n">layer_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">ld</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">ld</span> <span class="ow">in</span> <span class="n">layer_data</span><span class="p">]</span>
+
+    <span class="n">hook_caller</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_writer</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plugin_name</span><span class="p">:</span>
+        <span class="c1"># if plugin has been specified we just directly call napari_get_writer</span>
+        <span class="c1"># with that plugin_name.</span>
+        <span class="n">implementation</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">get_plugin_implementation</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">)</span>
+        <span class="n">writer_function</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="p">(</span>
+            <span class="n">_plugin</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">layer_types</span><span class="o">=</span><span class="n">layer_types</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">call_with_result_obj</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">layer_types</span><span class="o">=</span><span class="n">layer_types</span><span class="p">,</span> <span class="n">_return_impl</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">writer_function</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">result</span>
+        <span class="n">implementation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">implementation</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">writer_function</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plugin_name</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Requested plugin &quot;</span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s1">&quot; is not capable&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Unable to find plugin capable&#39;</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; of writing this combination of layer types: </span><span class="si">{</span><span class="n">layer_types</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">writer_function</span><span class="p">(</span><span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">layer_data</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PluginCallError</span><span class="p">(</span><span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_write_single_layer_with_plugins</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">plugin_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plugin_manager</span><span class="o">=</span><span class="n">napari_plugin_manager</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write single layer data with a plugin.</span>
+
+<span class="sd">    If ``plugin_name`` is not provided then we just directly call</span>
+<span class="sd">    ``plugin_manager.hook.napari_write_&lt;layer&gt;()`` which will loop through</span>
+<span class="sd">    implementations and stop when the first one returns a non-None result. The</span>
+<span class="sd">    order in which implementations are called can be changed with the</span>
+<span class="sd">    implementation sorter/disabler.</span>
+
+<span class="sd">    If ``plugin_name`` is provided, then we call the</span>
+<span class="sd">    ``napari_write_&lt;layer_type&gt;`` for that plugin, and if it fails we error.</span>
+
+<span class="sd">    Exceptions will be caught and stored as PluginErrors</span>
+<span class="sd">    (in plugins.exceptions.PLUGIN_ERRORS)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        The path (file, directory, url) to write.</span>
+<span class="sd">    layer : napari.layers.Layer</span>
+<span class="sd">        Layer to be written out.</span>
+<span class="sd">    plugin_name : str, optional</span>
+<span class="sd">        Name of the plugin to write data with. If None then all plugins</span>
+<span class="sd">        corresponding to appropriate hook specification will be looped</span>
+<span class="sd">        through to find the first one that can write the data.</span>
+<span class="sd">    plugin_manager : plugins.PluginManager, optional</span>
+<span class="sd">        Instance of a napari PluginManager.  by default the main napari</span>
+<span class="sd">        plugin_manager will be used.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">hook_specification</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+        <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;napari_write_</span><span class="si">{</span><span class="n">layer</span><span class="o">.</span><span class="n">_type_string</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Call the hook_specification</span>
+    <span class="k">return</span> <span class="n">hook_specification</span><span class="p">(</span>
+        <span class="n">_plugin</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">meta</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">_get_state</span><span class="p">(),</span>
+    <span class="p">)</span>
 </pre></div>
 
            </div>

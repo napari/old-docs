@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.layerlist &mdash; napari 0.2.12+71.gb2a95d6 documentation</title>
+  <title>napari.components.layerlist &mdash; napari 0.2.12+72.ge4d3d71 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+71.gb2a95d6
+                0.2.12+72.ge4d3d71
               </div>
             
           
@@ -155,7 +155,8 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.components.layerlist</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..utils.naming</span> <span class="kn">import</span> <span class="n">inc_name_count</span>
 <span class="kn">from</span> <span class="nn">..utils.list</span> <span class="kn">import</span> <span class="n">ListModel</span>
 
@@ -225,6 +226,11 @@
         <span class="sd">&quot;&quot;&quot;Coerce name of the layer in `event.layer`.&quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">source</span>
         <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coerce_name</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List of selected layers.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">layer</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span> <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">selected</span><span class="p">]</span>
 
 <div class="viewcode-block" id="LayerList.move_selected"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.layerlist.LayerList.move_selected">[docs]</a>    <span class="k">def</span> <span class="nf">move_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">insert</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Reorder list by moving the item at index and inserting it</span>
@@ -335,7 +341,78 @@
         <span class="sd">&quot;&quot;&quot;Toggle visibility of selected layers&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">selected</span><span class="p">:</span>
-                <span class="n">layer</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">visible</span></div></div>
+                <span class="n">layer</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">visible</span></div>
+
+<div class="viewcode-block" id="LayerList.save"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.layerlist.LayerList.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">selected</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Save all or only selected layers to a path using writer plugins.</span>
+
+<span class="sd">        If ``plugin`` is not provided and only one layer is targeted, then we</span>
+<span class="sd">        directly call the corresponding``napari_write_&lt;layer_type&gt;`` hook (see</span>
+<span class="sd">        :ref:`single layer writer hookspecs &lt;write-single-layer-hookspecs&gt;`)</span>
+<span class="sd">        which will loop through implementations and stop when the first one</span>
+<span class="sd">        returns a non-``None`` result. The order in which implementations are</span>
+<span class="sd">        called can be changed with the Plugin sorter in the GUI or with the</span>
+<span class="sd">        corresponding hook&#39;s</span>
+<span class="sd">        :meth:`~napari.plugins._hook_callers._HookCaller.bring_to_front`</span>
+<span class="sd">        method.</span>
+
+<span class="sd">        If ``plugin`` is not provided and multiple layers are targeted,</span>
+<span class="sd">        then we call</span>
+<span class="sd">        :meth:`~napari.plugins.hook_specifications.napari_get_writer` which</span>
+<span class="sd">        loops through plugins to find the first one that knows how to handle</span>
+<span class="sd">        the combination of layers and is able to write the file. If no plugins</span>
+<span class="sd">        offer :meth:`~napari.plugins.hook_specifications.napari_get_writer` for</span>
+<span class="sd">        that combination of layers then the default</span>
+<span class="sd">        :meth:`~napari.plugins.hook_specifications.napari_get_writer` will</span>
+<span class="sd">        create a folder and call ``napari_write_&lt;layer_type&gt;`` for each layer</span>
+<span class="sd">        using the ``Layer.name`` variable to modify the path such that the</span>
+<span class="sd">        layers are written to unique files in the folder.</span>
+
+<span class="sd">        If ``plugin`` is provided and a single layer is targeted, then we</span>
+<span class="sd">        call the ``napari_write_&lt;layer_type&gt;`` for that plugin, and if it fails</span>
+<span class="sd">        we error.</span>
+
+<span class="sd">        If ``plugin`` is provided and multiple layers are targeted, then</span>
+<span class="sd">        we call we call</span>
+<span class="sd">        :meth:`~napari.plugins.hook_specifications.napari_get_writer` for</span>
+<span class="sd">        that plugin, and if it doesn’t return a ``WriterFunction`` we error,</span>
+<span class="sd">        otherwise we call it and if that fails if it we error.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            A filepath, directory, or URL to open.  Extensions may be used to</span>
+<span class="sd">            specify output format (provided a plugin is avaiable for the</span>
+<span class="sd">            requested format).</span>
+<span class="sd">        selected : bool</span>
+<span class="sd">            Optional flag to only save selected layers. False by default.</span>
+<span class="sd">        plugin : str, optional</span>
+<span class="sd">            Name of the plugin to use for saving. If None then all plugins</span>
+<span class="sd">            corresponding to appropriate hook specification will be looped</span>
+<span class="sd">            through to find the first one that can save the data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of str</span>
+<span class="sd">            File paths of any files that were written.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">..plugins.io</span> <span class="kn">import</span> <span class="n">save_layers</span>
+
+        <span class="n">layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected</span> <span class="k">if</span> <span class="n">selected</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">layers</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No layers </span><span class="si">{</span><span class="s1">&#39;selected&#39;</span> <span class="k">if</span> <span class="n">selected</span> <span class="k">else</span> <span class="s1">&#39;to save&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">return</span> <span class="n">save_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

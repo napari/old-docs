@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.2.12+71.gb2a95d6 documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.2.12+72.ge4d3d71 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+71.gb2a95d6
+                0.2.12+72.ge4d3d71
               </div>
             
           
@@ -157,21 +157,22 @@
   <h1>Source code for napari.layers.base.base</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
-
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
 <span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span><span class="p">,</span> <span class="n">tostring</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">._base_constants</span> <span class="kn">import</span> <span class="n">Blending</span>
 
 <span class="kn">from</span> <span class="nn">...components</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">convert_to_uint8</span><span class="p">,</span> <span class="n">compute_pyramid_level</span>
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
-<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">status_format</span><span class="p">,</span> <span class="n">format_float</span>
+<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span><span class="p">,</span> <span class="n">status_format</span>
 <span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span><span class="p">,</span> <span class="n">TransformChain</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">compute_pyramid_level</span><span class="p">,</span> <span class="n">convert_to_uint8</span>
+<span class="kn">from</span> <span class="nn">._base_constants</span> <span class="kn">import</span> <span class="n">Blending</span>
 
 
 <div class="viewcode-block" id="Layer"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer">[docs]</a><span class="k">class</span> <span class="nc">Layer</span><span class="p">(</span><span class="n">KeymapProvider</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
@@ -604,6 +605,15 @@
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_type_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Layer.as_layer_data_tuple"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.as_layer_data_tuple">[docs]</a>    <span class="k">def</span> <span class="nf">as_layer_data_tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_state</span><span class="p">()</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_string</span></div>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;array: Integer array of thumbnail for the layer&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail</span>
@@ -854,6 +864,29 @@
                 <span class="c1"># it&#39;s either a grayscale or rgb image (scalar or list)</span>
                 <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;: </span><span class="si">{</span><span class="n">status_format</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="Layer.save"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Save this layer to ``path`` with default (or specified) plugin.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            A filepath, directory, or URL to open.  Extensions may be used to</span>
+<span class="sd">            specify output format (provided a plugin is avaiable for the</span>
+<span class="sd">            requested format).</span>
+<span class="sd">        plugin : str, optional</span>
+<span class="sd">            Name of the plugin to use for saving. If ``None`` then all plugins</span>
+<span class="sd">            corresponding to appropriate hook specification will be looped</span>
+<span class="sd">            through to find the first one that can save the data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of str</span>
+<span class="sd">            File paths of any files that were written.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">...plugins.io</span> <span class="kn">import</span> <span class="n">save_layers</span>
+
+        <span class="k">return</span> <span class="n">save_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Layer.to_xml_list"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.to_xml_list">[docs]</a>    <span class="k">def</span> <span class="nf">to_xml_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Generates a list of xml elements for the layer.</span>

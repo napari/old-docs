@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.image &mdash; napari 0.2.12+74.g5ee20e5 documentation</title>
+  <title>napari.layers.image.image &mdash; napari 0.2.12+76.g1adff3e documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+74.g5ee20e5
+                0.2.12+76.g1adff3e
               </div>
             
           
@@ -170,7 +170,7 @@
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">calc_data_range</span>
 <span class="kn">from</span> <span class="nn">..intensity_mixin</span> <span class="kn">import</span> <span class="n">IntensityVisualizationMixin</span>
 <span class="kn">from</span> <span class="nn">._image_constants</span> <span class="kn">import</span> <span class="n">Interpolation</span><span class="p">,</span> <span class="n">Interpolation3D</span><span class="p">,</span> <span class="n">Rendering</span>
-<span class="kn">from</span> <span class="nn">._image_utils</span> <span class="kn">import</span> <span class="n">guess_rgb</span><span class="p">,</span> <span class="n">guess_pyramid</span>
+<span class="kn">from</span> <span class="nn">._image_utils</span> <span class="kn">import</span> <span class="n">guess_rgb</span><span class="p">,</span> <span class="n">guess_multiscale</span>
 
 
 <span class="c1"># Mixin must come before Layer</span>
@@ -183,17 +183,11 @@
 <span class="sd">        Image data. Can be N dimensional. If the last dimension has length</span>
 <span class="sd">        3 or 4 can be interpreted as RGB or RGBA if rgb is `True`. If a</span>
 <span class="sd">        list and arrays are decreasing in shape then the data is treated as</span>
-<span class="sd">        an image pyramid.</span>
+<span class="sd">        a multiscale image.</span>
 <span class="sd">    rgb : bool</span>
 <span class="sd">        Whether the image is rgb RGB or RGBA. If not specified by user and</span>
 <span class="sd">        the last dimension of the data has length 3 or 4 it will be set as</span>
 <span class="sd">        `True`. If `False` the image is interpreted as a luminance image.</span>
-<span class="sd">    is_pyramid : bool</span>
-<span class="sd">        Whether the data is an image pyramid or not. Pyramid data is</span>
-<span class="sd">        represented by a list of array like image data. If not specified by</span>
-<span class="sd">        the user and if the data is a list of arrays that decrease in shape</span>
-<span class="sd">        then it will be taken to be a pyramid. The first image in the list</span>
-<span class="sd">        should be the largest.</span>
 <span class="sd">    colormap : str, vispy.Color.Colormap, tuple, dict</span>
 <span class="sd">        Colormap to use for luminance images. If a string must be the name</span>
 <span class="sd">        of a supported colormap from vispy or matplotlib. If a tuple the</span>
@@ -233,15 +227,20 @@
 <span class="sd">        {&#39;opaque&#39;, &#39;translucent&#39;, and &#39;additive&#39;}.</span>
 <span class="sd">    visible : bool</span>
 <span class="sd">        Whether the layer visual is currently being displayed.</span>
-
+<span class="sd">    multiscale : bool</span>
+<span class="sd">        Whether the data is a multiscale image or not. Multiscale data is</span>
+<span class="sd">        represented by a list of array like image data. If not specified by</span>
+<span class="sd">        the user and if the data is a list of arrays that decrease in shape</span>
+<span class="sd">        then it will be taken to be multiscale. The first image in the list</span>
+<span class="sd">        should be the largest.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : array or list of array</span>
 <span class="sd">        Image data. Can be N dimensional. If the last dimension has length</span>
 <span class="sd">        3 or 4 can be interpreted as RGB or RGBA if rgb is `True`. If a list</span>
-<span class="sd">        and arrays are decreaing in shape then the data is treated as an</span>
-<span class="sd">        image pyramid.</span>
+<span class="sd">        and arrays are decreaing in shape then the data is treated as a</span>
+<span class="sd">        multiscale image.</span>
 <span class="sd">    metadata : dict</span>
 <span class="sd">        Image metadata.</span>
 <span class="sd">    rgb : bool</span>
@@ -249,8 +248,8 @@
 <span class="sd">        specified by user and the last dimension of the data has length 3 or 4</span>
 <span class="sd">        it will be set as `True`. If `False` the image is interpreted as a</span>
 <span class="sd">        luminance image.</span>
-<span class="sd">    is_pyramid : bool</span>
-<span class="sd">        Whether the data is an image pyramid or not. Pyramid data is</span>
+<span class="sd">    multiscale : bool</span>
+<span class="sd">        Whether the data is a multiscale image or not. Multiscale data is</span>
 <span class="sd">        represented by a list of array like image data. The first image in the</span>
 <span class="sd">        list should be the largest.</span>
 <span class="sd">    colormap : 2-tuple of str, vispy.color.Colormap</span>
@@ -295,7 +294,6 @@
         <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">rgb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">is_pyramid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span>
         <span class="n">contrast_limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">gamma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -310,16 +308,17 @@
         <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">GeneratorType</span><span class="p">):</span>
             <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-        <span class="c1"># Determine if data is a pyramid</span>
-        <span class="k">if</span> <span class="n">is_pyramid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">is_pyramid</span> <span class="o">=</span> <span class="n">guess_pyramid</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># Determine if data is a multiscale</span>
+        <span class="k">if</span> <span class="n">multiscale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">multiscale</span> <span class="o">=</span> <span class="n">guess_multiscale</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
         <span class="c1"># Determine initial shape</span>
-        <span class="k">if</span> <span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">multiscale</span><span class="p">:</span>
             <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">init_shape</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
@@ -344,6 +343,7 @@
             <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
+            <span class="n">multiscale</span><span class="o">=</span><span class="n">multiscale</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
@@ -354,12 +354,11 @@
         <span class="p">)</span>
 
         <span class="c1"># Set data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="o">=</span> <span class="n">is_pyramid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="o">=</span> <span class="n">rgb</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="c1"># Determine which level of the pyramid to use for the thumbnail.</span>
+            <span class="c1"># Determine which level of the multiscale to use for the thumbnail.</span>
             <span class="c1"># Pick the smallest level with at least one axis &gt;= 64. This is</span>
             <span class="c1"># done to prevent the thumbnail from being from one of the very</span>
             <span class="c1"># low resolution layers and therefore being very blurred.</span>
@@ -411,7 +410,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">input_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
@@ -419,7 +418,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -441,7 +440,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;int: Current level of pyramid, or 0 if image.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;int: Current level of multiscale, or 0 if image.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span>
 
     <span class="nd">@data_level</span><span class="o">.</span><span class="n">setter</span>
@@ -453,8 +452,8 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">level_shapes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;array: Shapes of each level of the pyramid or just of image.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;array: Shapes of each level of the multiscale or just of image.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
                 <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
@@ -468,7 +467,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">downsample_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list: Downsample factors for each level of the pyramid.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;list: Downsample factors for each level of the multiscale.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">)</span>
 
     <span class="nd">@property</span>
@@ -575,7 +574,7 @@
         <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
             <span class="p">{</span>
                 <span class="s1">&#39;rgb&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">,</span>
-                <span class="s1">&#39;is_pyramid&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">,</span>
+                <span class="s1">&#39;multiscale&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">,</span>
                 <span class="s1">&#39;colormap&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="s1">&#39;contrast_limits&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">,</span>
                 <span class="s1">&#39;interpolation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span><span class="p">,</span>
@@ -620,8 +619,8 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed_order</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
-            <span class="c1"># If 3d redering just show lowest level of pyramid</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
+            <span class="c1"># If 3d redering just show lowest level of multiscale</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
@@ -699,7 +698,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_raw</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_thumbnail</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">(</span><span class="n">thumbnail_source</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
@@ -784,7 +783,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pyramid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="n">value</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">value</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.2.12+74.g5ee20e5 documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.2.12+76.g1adff3e documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+74.g5ee20e5
+                0.2.12+76.g1adff3e
               </div>
             
           
@@ -158,12 +158,11 @@
 <span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span> <span class="nn">pluggy.hooks</span> <span class="kn">import</span> <span class="n">HookImpl</span>
+<span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">HookImplementation</span><span class="p">,</span> <span class="n">PluginCallError</span>
 
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">LayerData</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">abspath_or_url</span>
-<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">PluginCallError</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">plugin_manager</span> <span class="k">as</span> <span class="n">napari_plugin_manager</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -201,7 +200,7 @@
 <span class="sd">        If no reader plugins are (or they all error), returns ``None``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">hook_caller</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_reader</span>
-    <span class="n">skip_impls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImpl</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">skip_impls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImplementation</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">call_with_result_obj</span><span class="p">(</span>
             <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">_skip_impls</span><span class="o">=</span><span class="n">skip_impls</span>
@@ -220,7 +219,7 @@
                 <span class="c1"># If builtins doesn&#39;t work, they will get a &quot;no reader&quot; found</span>
                 <span class="c1"># error anyway, so it looks a bit weird to show them that the</span>
                 <span class="c1"># &quot;builtin plugin&quot; didn&#39;t work.</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">format_with_contact_info</span><span class="p">())</span></div>
+                <span class="n">err</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="save_layers"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.io.save_layers">[docs]</a><span class="k">def</span> <span class="nf">save_layers</span><span class="p">(</span>
@@ -358,7 +357,9 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">writer_function</span><span class="p">(</span><span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">layer_data</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">PluginCallError</span><span class="p">(</span><span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">PluginCallError</span><span class="p">(</span>
+            <span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="n">plugin_manager</span>
+        <span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_write_single_layer_with_plugins</span><span class="p">(</span>

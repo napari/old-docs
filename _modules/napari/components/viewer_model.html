@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.viewer_model &mdash; napari 0.2.12+76.g1adff3e documentation</title>
+  <title>napari.components.viewer_model &mdash; napari 0.2.12+78.g6933f5b documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+76.g1adff3e
+                0.2.12+78.g6933f5b
               </div>
             
           
@@ -157,8 +157,6 @@
   <h1>Source code for napari.components.viewer_model</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">inf</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span><span class="p">,</span> <span class="n">tostring</span>
-
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">.add_layers_mixin</span> <span class="kn">import</span> <span class="n">AddLayersMixin</span>
@@ -455,74 +453,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="p">(</span>
                 <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">quaternion</span><span class="o">=</span><span class="n">quaternion</span>
             <span class="p">)</span></div>
-
-<div class="viewcode-block" id="ViewerModel.to_svg"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.viewer_model.ViewerModel.to_svg">[docs]</a>    <span class="k">def</span> <span class="nf">to_svg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">view_box</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Convert the viewer state to an SVG. Non visible layers will be</span>
-<span class="sd">        ignored.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        file : path-like object, optional</span>
-<span class="sd">            An object representing a file system path. A path-like object is</span>
-<span class="sd">            either a str or bytes object representing a path, or an object</span>
-<span class="sd">            implementing the `os.PathLike` protocol. If passed the svg will be</span>
-<span class="sd">            written to this file</span>
-<span class="sd">        view_box : 4-tuple, optional</span>
-<span class="sd">            View box of SVG canvas to be generated specified as `min-x`,</span>
-<span class="sd">            `min-y`, `width` and `height`. If not specified, calculated</span>
-<span class="sd">            from the last two dimensions of the view.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        ----------</span>
-<span class="sd">        svg : string</span>
-<span class="sd">            SVG representation of the currently viewed layers.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="k">if</span> <span class="n">view_box</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">min_shape</span><span class="p">,</span> <span class="n">max_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_bbox</span><span class="p">()</span>
-            <span class="n">min_shape</span> <span class="o">=</span> <span class="n">min_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
-            <span class="n">max_shape</span> <span class="o">=</span> <span class="n">max_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">max_shape</span><span class="p">,</span> <span class="n">min_shape</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="n">view_box</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
-            <span class="n">min_shape</span> <span class="o">=</span> <span class="n">view_box</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-
-        <span class="n">props</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;xmlns&#39;</span><span class="p">:</span> <span class="s1">&#39;http://www.w3.org/2000/svg&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;xmlns:xlink&#39;</span><span class="p">:</span> <span class="s1">&#39;http://www.w3.org/1999/xlink&#39;</span><span class="p">,</span>
-        <span class="p">}</span>
-
-        <span class="n">xml</span> <span class="o">=</span> <span class="n">Element</span><span class="p">(</span>
-            <span class="s1">&#39;svg&#39;</span><span class="p">,</span>
-            <span class="n">height</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-            <span class="n">width</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-            <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.1&#39;</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">props</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="n">transform</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;translate(</span><span class="si">{</span><span class="o">-</span><span class="n">min_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="o">-</span><span class="n">min_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span>
-        <span class="n">xml_transform</span> <span class="o">=</span> <span class="n">Element</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
-
-        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
-                <span class="n">xml_list</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">to_xml_list</span><span class="p">()</span>
-                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">xml_list</span><span class="p">:</span>
-                    <span class="n">xml_transform</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">xml</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xml_transform</span><span class="p">)</span>
-
-        <span class="n">svg</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="s1">&#39;&lt;?xml version=</span><span class="se">\&quot;</span><span class="s1">1.0</span><span class="se">\&quot;</span><span class="s1"> standalone=</span><span class="se">\&quot;</span><span class="s1">no</span><span class="se">\&quot;</span><span class="s1">?&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="o">+</span> <span class="s1">&#39;&lt;!DOCTYPE svg PUBLIC </span><span class="se">\&quot;</span><span class="s1">-//W3C//DTD SVG 1.1//EN</span><span class="se">\&quot;\n</span><span class="s1">&#39;</span>
-            <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\&quot;</span><span class="s1">http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd</span><span class="se">\&quot;</span><span class="s1">&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="o">+</span> <span class="n">tostring</span><span class="p">(</span><span class="n">xml</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;unicode&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;xml&#39;</span><span class="p">)</span>
-        <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">file</span><span class="p">:</span>
-            <span class="c1"># Save svg to file</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">svg</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">svg</span></div>
 
     <span class="k">def</span> <span class="nf">_new_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>

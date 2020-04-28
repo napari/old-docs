@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.2.12+76.g1adff3e documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.2.12+78.g6933f5b documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+76.g1adff3e
+                0.2.12+78.g6933f5b
               </div>
             
           
@@ -169,7 +169,9 @@
 
 
 <div class="viewcode-block" id="read_data_with_plugins"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.io.read_data_with_plugins">[docs]</a><span class="k">def</span> <span class="nf">read_data_with_plugins</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">plugin_manager</span><span class="o">=</span><span class="n">napari_plugin_manager</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plugin_manager</span><span class="o">=</span><span class="n">napari_plugin_manager</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Iterate reader hooks and return first non-None LayerData or None.</span>
 
@@ -185,6 +187,10 @@
 <span class="sd">    ----------</span>
 <span class="sd">    path : str</span>
 <span class="sd">        The path (file, directory, url) to open</span>
+<span class="sd">    plugin : str, optional</span>
+<span class="sd">        Name of a plugin to use.  If provided, will force ``path`` to be read</span>
+<span class="sd">        with the specified ``plugin``.  If the requested plugin cannot read</span>
+<span class="sd">        ``path``, a PluginCallError will be raised.</span>
 <span class="sd">    plugin_manager : plugins.PluginManager, optional</span>
 <span class="sd">        Instance of a napari PluginManager.  by default the main napari</span>
 <span class="sd">        plugin_manager will be used.</span>
@@ -198,8 +204,18 @@
 <span class="sd">        ``(data,)``, ``(data, meta)``, or ``(data, meta, layer_type)`` .</span>
 
 <span class="sd">        If no reader plugins are (or they all error), returns ``None``</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    PluginCallError</span>
+<span class="sd">        If ``plugin`` is specified but raises an Exception while reading.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">hook_caller</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_reader</span>
+
+    <span class="k">if</span> <span class="n">plugin</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">_call_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
     <span class="n">skip_impls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HookImplementation</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">call_with_result_obj</span><span class="p">(</span>

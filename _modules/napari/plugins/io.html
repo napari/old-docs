@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.2.12+82.g7675622 documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.2.12+85.g48a80dd documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+82.g7675622
+                0.2.12+85.g48a80dd
               </div>
             
           
@@ -155,7 +155,8 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.plugins.io</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">HookImplementation</span><span class="p">,</span> <span class="n">PluginCallError</span>
@@ -289,15 +290,27 @@
 <span class="sd">        File paths of any files that were written.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_write_multiple_layers_with_plugins</span><span class="p">(</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">_write_multiple_layers_with_plugins</span><span class="p">(</span>
             <span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">written</span> <span class="o">=</span> <span class="n">_write_single_layer_with_plugins</span><span class="p">(</span>
             <span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">written</span><span class="p">]</span> <span class="k">if</span> <span class="n">written</span> <span class="k">else</span> <span class="p">[]</span>
-    <span class="k">return</span> <span class="p">[]</span></div>
+        <span class="n">written</span> <span class="o">=</span> <span class="p">[</span><span class="n">written</span><span class="p">]</span> <span class="k">if</span> <span class="n">written</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">written</span><span class="p">:</span>
+        <span class="c1"># if written is empty, it means no plugin could write the</span>
+        <span class="c1"># path/layers combination</span>
+        <span class="c1"># we just want to provide some useful feedback</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s1">&#39;No data written! There may be no plugins &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;capable of writing these </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span><span class="si">}</span><span class="s1"> layers to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1">.&#39;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">written</span></div>
 
 
 <span class="k">def</span> <span class="nf">_write_multiple_layers_with_plugins</span><span class="p">(</span>
@@ -373,9 +386,7 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">writer_function</span><span class="p">(</span><span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">layer_data</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">PluginCallError</span><span class="p">(</span>
-            <span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="n">plugin_manager</span>
-        <span class="p">)</span>
+        <span class="k">raise</span> <span class="n">PluginCallError</span><span class="p">(</span><span class="n">implementation</span><span class="p">,</span> <span class="n">cause</span><span class="o">=</span><span class="n">exc</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_write_single_layer_with_plugins</span><span class="p">(</span>

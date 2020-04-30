@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.colormaps.colormaps &mdash; napari 0.2.12+82.g7675622 documentation</title>
+  <title>napari.utils.colormaps.colormaps &mdash; napari 0.2.12+85.g48a80dd documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+82.g7675622
+                0.2.12+85.g48a80dd
               </div>
             
           
@@ -156,9 +156,13 @@
             
   <h1>Source code for napari.utils.colormaps.colormaps</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">.vendored</span> <span class="kn">import</span> <span class="n">colorconv</span><span class="p">,</span> <span class="n">cm</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">get_colormap</span><span class="p">,</span> <span class="n">get_colormaps</span><span class="p">,</span> <span class="n">BaseColormap</span><span class="p">,</span> <span class="n">Colormap</span>
+<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">BaseColormap</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">,</span> <span class="n">get_colormap</span><span class="p">,</span> <span class="n">get_colormaps</span>
+
+<span class="kn">from</span> <span class="nn">...types</span> <span class="kn">import</span> <span class="n">ValidColormapArg</span>
+<span class="kn">from</span> <span class="nn">.vendored</span> <span class="kn">import</span> <span class="n">cm</span><span class="p">,</span> <span class="n">colorconv</span>
 
 <span class="n">_matplotlib_list_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
     <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;matplotlib_cmaps.txt&#39;</span>
@@ -458,6 +462,111 @@
 <span class="n">MAGENTA_GREEN</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;magenta&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">]</span>
 <span class="n">RGB</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">]</span>
 <span class="n">CYMRGB</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cyan&#39;</span><span class="p">,</span> <span class="s1">&#39;yellow&#39;</span><span class="p">,</span> <span class="s1">&#39;magenta&#39;</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="increment_unnamed_colormap"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.colormaps.increment_unnamed_colormap">[docs]</a><span class="k">def</span> <span class="nf">increment_unnamed_colormap</span><span class="p">(</span>
+    <span class="n">existing</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;[unnamed colormap]&#39;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Increment name for unnamed colormap.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    existing : list of str</span>
+<span class="sd">        Names of existing colormaps.</span>
+<span class="sd">    name : str, optional</span>
+<span class="sd">        Name of colormap to be incremented. by default &#39;[unnamed colormap]&#39;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of colormap after incrementing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;[unnamed colormap]&#39;</span><span class="p">:</span>
+        <span class="n">past_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">existing</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;[unnamed colormap&#39;</span><span class="p">)]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;[unnamed colormap </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">past_names</span><span class="p">)</span><span class="si">}</span><span class="s1">]&#39;</span>
+    <span class="k">return</span> <span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="ensure_colormap_tuple"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.colormaps.ensure_colormap_tuple">[docs]</a><span class="k">def</span> <span class="nf">ensure_colormap_tuple</span><span class="p">(</span><span class="n">colormap</span><span class="p">:</span> <span class="n">ValidColormapArg</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Accept any valid colormap arg, and return (name, Colormap), or raise.</span>
+
+<span class="sd">    Adds any new colormaps to AVAILABLE_COLORMAPS in the process.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colormap : ValidColormapArg</span>
+<span class="sd">        colormap as str, Colormap, {name: Colormap} ``dict``, or</span>
+<span class="sd">        (name, Colormap) ``tuple``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tuple[str, Colormap]</span>
+<span class="sd">        Normalized name and Colormap.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        If a string is provided that is not in AVAILABLE_COLORMAPS</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        If a tuple is provided and the first element is not a string or the</span>
+<span class="sd">        second element is not a Colormap.</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        If a dict is provided and any of the values are not Colormap instances.</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        If ``colormap`` is not a ``str``, ``dict``, ``tuple``, or ``Colormap``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="p">:</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="n">vispy_or_mpl_colormap</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>  <span class="c1"># raises KeyError if not found</span>
+            <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">BaseColormap</span><span class="p">):</span>
+        <span class="c1"># if a colormap instance is provided, make sure we don&#39;t already know</span>
+        <span class="c1"># about it before adding a new unnamed colormap</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">colormap</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span><span class="n">AVAILABLE_COLORMAPS</span><span class="p">)</span>
+        <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">BaseColormap</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;When providing a tuple as a colormap argument, the first &quot;</span>
+                <span class="s2">&quot;element must be a string and the second a Colormap instance&quot;</span>
+            <span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
+        <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">BaseColormap</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">colormap</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;When providing a dict as a colormap, &quot;</span>
+                <span class="s2">&quot;all values must be BaseColormap instances&quot;</span>
+            <span class="p">)</span>
+        <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;only the first item in a colormap dict is used as an argument&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Received an empty dict as a colormap argument.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;invalid type for colormap: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span><span class="si">}</span><span class="s1">. &#39;</span>
+            <span class="s1">&#39;Must be a {str, tuple, dict, vispy.colormap.Colormap}&#39;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span></div>
 </pre></div>
 
            </div>

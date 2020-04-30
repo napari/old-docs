@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.intensity_mixin &mdash; napari 0.2.12+82.g7675622 documentation</title>
+  <title>napari.layers.intensity_mixin &mdash; napari 0.2.12+85.g48a80dd documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+82.g7675622
+                0.2.12+85.g48a80dd
               </div>
             
           
@@ -155,17 +155,12 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.intensity_mixin</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">Colormap</span>
-
-<span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">make_colorbar</span>
+<span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span><span class="p">,</span> <span class="n">make_colorbar</span>
 <span class="kn">from</span> <span class="nn">..utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
 <span class="kn">from</span> <span class="nn">..utils.validators</span> <span class="kn">import</span> <span class="n">validate_n_seq</span>
-<span class="kn">from</span> <span class="nn">.utils.layer_utils</span> <span class="kn">import</span> <span class="n">increment_unnamed_colormap</span>
-
 
 <span class="n">validate_2_tuple</span> <span class="o">=</span> <span class="n">validate_n_seq</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
@@ -213,25 +208,9 @@
 
     <span class="nd">@colormap</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colormap</span><span class="p">):</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;[unnamed colormap]&#39;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-            <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">):</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span>
-                <span class="n">name</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;invalid value for colormap: </span><span class="si">{</span><span class="n">colormap</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">ensure_colormap_tuple</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_colormap_name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colormaps</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span> <span class="o">=</span> <span class="n">cmap</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_colorbar</span> <span class="o">=</span> <span class="n">make_colorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmap</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colormap</span><span class="p">()</span>

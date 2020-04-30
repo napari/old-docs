@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.vectors.vectors &mdash; napari 0.2.12+82.g7675622 documentation</title>
+  <title>napari.layers.vectors.vectors &mdash; napari 0.2.12+85.g48a80dd documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+82.g7675622
+                0.2.12+85.g48a80dd
               </div>
             
           
@@ -155,28 +155,30 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.vectors.vectors</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">vispy.color.colormap</span> <span class="kn">import</span> <span class="n">Colormap</span>
+
+<span class="kn">from</span> <span class="nn">...types</span> <span class="kn">import</span> <span class="n">ValidColormapArg</span>
+<span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span>
+<span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">._vectors_constants</span> <span class="kn">import</span> <span class="n">ColorMode</span><span class="p">,</span> <span class="n">DEFAULT_COLOR_CYCLE</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">transform_color_with_defaults</span><span class="p">,</span>
-    <span class="n">transform_color_cycle</span><span class="p">,</span>
     <span class="n">normalize_and_broadcast_colors</span><span class="p">,</span>
+    <span class="n">transform_color_cycle</span><span class="p">,</span>
+    <span class="n">transform_color_with_defaults</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">dataframe_to_properties</span><span class="p">,</span>
     <span class="n">guess_continuous</span><span class="p">,</span>
     <span class="n">map_property</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
-<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
-<span class="kn">from</span> <span class="nn">._vector_utils</span> <span class="kn">import</span> <span class="n">vectors_to_coordinates</span><span class="p">,</span> <span class="n">generate_vector_meshes</span>
-<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">get_colormap</span>
-<span class="kn">from</span> <span class="nn">vispy.color.colormap</span> <span class="kn">import</span> <span class="n">Colormap</span>
+<span class="kn">from</span> <span class="nn">._vector_utils</span> <span class="kn">import</span> <span class="n">generate_vector_meshes</span><span class="p">,</span> <span class="n">vectors_to_coordinates</span>
+<span class="kn">from</span> <span class="nn">._vectors_constants</span> <span class="kn">import</span> <span class="n">DEFAULT_COLOR_CYCLE</span><span class="p">,</span> <span class="n">ColorMode</span>
 
 
 <div class="viewcode-block" id="Vectors"><a class="viewcode-back" href="../../../../api/napari.layers.vectors.html#napari.layers.vectors.vectors.Vectors">[docs]</a><span class="k">class</span> <span class="nc">Vectors</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
@@ -726,12 +728,10 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap</span>
 
     <span class="nd">@edge_colormap</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">edge_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colormap</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">]):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap</span> <span class="o">=</span> <span class="n">get_colormap</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap_name</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap_name</span> <span class="o">=</span> <span class="s1">&#39;unknown_colormap&#39;</span>
+    <span class="k">def</span> <span class="nf">edge_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colormap</span><span class="p">:</span> <span class="n">ValidColormapArg</span><span class="p">):</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">ensure_colormap_tuple</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_colormap</span> <span class="o">=</span> <span class="n">cmap</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edge_contrast_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.2.12+80.g6be482a documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.2.12+81.g3a5df19 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+80.g6be482a
+                0.2.12+81.g3a5df19
               </div>
             
           
@@ -808,29 +808,34 @@
 <span class="sd">            data space of each layer. The length of the tuple is equal to the</span>
 <span class="sd">            number of dimensions of the layer. If different from the current</span>
 <span class="sd">            layer corner_pixels the layer needs refreshing.</span>
-<span class="sd">        requested_shape : tuple</span>
+<span class="sd">        shape_threshold : tuple</span>
 <span class="sd">            Requested shape of field of view in data coordinates</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># Clip corner pixels inside data shape</span>
-        <span class="n">new_corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span><span class="p">,</span>
-            <span class="mi">0</span><span class="p">,</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">data_level</span> <span class="o">=</span> <span class="n">corner_pixels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Clip corner pixels inside data shape</span>
+            <span class="n">new_corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="p">)</span>
 
-        <span class="c1"># Scale to full resolution of the data</span>
-        <span class="n">requested_shape</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">]</span>
+            <span class="c1"># Scale to full resolution of the data</span>
+            <span class="n">requested_shape</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">]</span>
 
-        <span class="n">downsample_factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+            <span class="n">downsample_factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span>
+                <span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span>
+            <span class="p">]</span>
 
-        <span class="n">data_level</span> <span class="o">=</span> <span class="n">compute_multiscale_level</span><span class="p">(</span>
-            <span class="n">requested_shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">],</span>
-            <span class="n">shape_threshold</span><span class="p">,</span>
-            <span class="n">downsample_factors</span><span class="p">,</span>
-        <span class="p">)</span>
+            <span class="n">data_level</span> <span class="o">=</span> <span class="n">compute_multiscale_level</span><span class="p">(</span>
+                <span class="n">requested_shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">],</span>
+                <span class="n">shape_threshold</span><span class="p">,</span>
+                <span class="n">downsample_factors</span><span class="p">,</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">data_level</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">:</span>
             <span class="c1"># Set the data level, which will trigger a layer refresh and</span>

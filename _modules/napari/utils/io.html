@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.io &mdash; napari 0.2.12+95.g77ec9cc documentation</title>
+  <title>napari.utils.io &mdash; napari 0.2.12+96.gc33e2ad documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.2.12+95.g77ec9cc
+                0.2.12+96.gc33e2ad
               </div>
             
           
@@ -161,6 +161,7 @@
 <span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">FullLayerData</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">dask</span> <span class="kn">import</span> <span class="n">array</span> <span class="k">as</span> <span class="n">da</span>
@@ -448,30 +449,213 @@
             <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="read_csv"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.read_csv">[docs]</a><span class="k">def</span> <span class="nf">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-    <span class="sd">&quot;&quot;&quot;Read a csv file.</span>
+<div class="viewcode-block" id="guess_layer_type_from_column_names"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.guess_layer_type_from_column_names">[docs]</a><span class="k">def</span> <span class="nf">guess_layer_type_from_column_names</span><span class="p">(</span>
+    <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Guess layer type based on column names from a csv file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        List of the column names from the csv.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        Layer type if recognized, otherwise None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span>
+        <span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="s1">&#39;shape-type&#39;</span><span class="p">,</span> <span class="s1">&#39;vertex-index&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-0&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-1&#39;</span><span class="p">]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">column_names</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;shapes&#39;</span>
+    <span class="k">elif</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;axis-0&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-1&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">column_names</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;points&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="read_csv"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.read_csv">[docs]</a><span class="k">def</span> <span class="nf">read_csv</span><span class="p">(</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">require_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;Return CSV data only if column names match format for ``require_type``.</span>
+
+<span class="sd">    Reads only the first line of the CSV at first, then optionally raises an</span>
+<span class="sd">    exception if the column names are not consistent with a known format, as</span>
+<span class="sd">    determined by the ``require_type`` argument and</span>
+<span class="sd">    :func:`guess_layer_type_from_column_names`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    filename : str</span>
-<span class="sd">        Filename for saving csv.</span>
+<span class="sd">        Path of file to open</span>
+<span class="sd">    require_type : str, optional</span>
+<span class="sd">        The desired layer type. If provided, should be one of the keys in</span>
+<span class="sd">        ``csv_reader_functions`` or the string &quot;any&quot;.  If ``None``, data, will</span>
+<span class="sd">        not impose any format requirements on the csv, and data will always be</span>
+<span class="sd">        returned.  If ``any``, csv must be recognized as one of the valid layer</span>
+<span class="sd">        data formats, otherwise a ``ValueError`` will be raised.  If a specific</span>
+<span class="sd">        layer type string, then a ``ValueError`` will be raised if the column</span>
+<span class="sd">        names are not of the predicted format.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    data : array</span>
-<span class="sd">        Table values, contained in an array.</span>
-<span class="sd">    column_names : list</span>
-<span class="sd">        List of column names for table data.</span>
+<span class="sd">    (data, column_names, layer_type) : Tuple[np.array, List[str], str]</span>
+<span class="sd">        The table data and column names from the CSV file, along with the</span>
+<span class="sd">        detected layer type (string).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the column names do not match the format requested by</span>
+<span class="sd">        ``require_type``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
         <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
-        <span class="n">output_data</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">row_index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reader</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">row_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">column_names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">row</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">output_data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">row</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output_data</span><span class="p">),</span> <span class="n">column_names</span></div>
+        <span class="n">column_names</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+
+        <span class="n">layer_type</span> <span class="o">=</span> <span class="n">guess_layer_type_from_column_names</span><span class="p">(</span><span class="n">column_names</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">require_type</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">layer_type</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;File &quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s1">&quot; not recognized as valid Layer data&#39;</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">layer_type</span> <span class="o">!=</span> <span class="n">require_type</span> <span class="ow">and</span> <span class="n">require_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;any&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;File &quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s1">&quot; not recognized as </span><span class="si">{</span><span class="n">require_type</span><span class="si">}</span><span class="s1"> data&#39;</span>
+                <span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">reader</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">column_names</span><span class="p">,</span> <span class="n">layer_type</span></div>
+
+
+<div class="viewcode-block" id="csv_to_layer_data"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.csv_to_layer_data">[docs]</a><span class="k">def</span> <span class="nf">csv_to_layer_data</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">require_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">FullLayerData</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return layer data from a CSV file if detected as a valid type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path of file to open</span>
+<span class="sd">    require_type : str, optional</span>
+<span class="sd">        The desired layer type. If provided, should be one of the keys in</span>
+<span class="sd">        ``csv_reader_functions`` or the string &quot;any&quot;.  If ``None``,</span>
+<span class="sd">        unrecognized CSV files will simply return ``None``.  If ``any``,</span>
+<span class="sd">        unrecognized CSV files will raise a ``ValueError``.  If a specific</span>
+<span class="sd">        layer type string, then a ``ValueError`` will be raised if the column</span>
+<span class="sd">        names are not of the predicted format.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple, or None</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, layer_type) if</span>
+<span class="sd">        CSV is recognized as a valid type.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``require_type`` is not ``None``, but the CSV is not detected as a</span>
+<span class="sd">        valid data format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># pass at least require &quot;any&quot; here so that we don&#39;t bother reading the</span>
+        <span class="c1"># full dataset if it&#39;s not going to yield valid layer_data.</span>
+        <span class="n">_require</span> <span class="o">=</span> <span class="n">require_type</span> <span class="ow">or</span> <span class="s1">&#39;any&#39;</span>
+        <span class="n">table</span><span class="p">,</span> <span class="n">column_names</span><span class="p">,</span> <span class="n">_type</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">require_type</span><span class="o">=</span><span class="n">_require</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">require_type</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">raise</span>
+    <span class="k">if</span> <span class="n">_type</span> <span class="ow">in</span> <span class="n">csv_reader_functions</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">csv_reader_functions</span><span class="p">[</span><span class="n">_type</span><span class="p">](</span><span class="n">table</span><span class="p">,</span> <span class="n">column_names</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># only reachable if it is a valid layer type without a reader</span></div>
+
+
+<span class="k">def</span> <span class="nf">_points_csv_to_layerdata</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert table data and column names from a csv file to Points LayerData.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : np.ndarray</span>
+<span class="sd">        CSV data.</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        The column names of the csv file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, &#39;points&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">cn</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;axis-&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">cn</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="n">data_axes</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Add properties to metadata if provided</span>
+    <span class="n">prop_axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_not</span><span class="p">(</span><span class="n">data_axes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">column_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;index&#39;</span><span class="p">:</span>
+        <span class="n">prop_axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">prop_axes</span><span class="p">):</span>
+        <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">prop_axes</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">table</span><span class="p">[:,</span> <span class="n">ind</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">][</span><span class="n">column_names</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">=</span> <span class="n">values</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">,</span> <span class="s1">&#39;points&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_shapes_csv_to_layerdata</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert table data and column names from a csv file to Shapes LayerData.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : np.ndarray</span>
+<span class="sd">        CSV data.</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        The column names of the csv file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, &#39;shapes&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">cn</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;axis-&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">cn</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="n">data_axes</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+
+    <span class="n">inds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+    <span class="n">n_shapes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">inds</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="c1"># Determine when shape id changes</span>
+    <span class="n">transitions</span> <span class="o">=</span> <span class="nb">list</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">inds</span><span class="p">))</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">shape_boundaries</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">transitions</span> <span class="o">+</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">n_shapes</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape_boundaries</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Expected number of shapes not found&#39;</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">shape_type</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ind_a</span><span class="p">,</span> <span class="n">ind_b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">shape_boundaries</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">shape_boundaries</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="n">ind_a</span><span class="p">:</span><span class="n">ind_b</span><span class="p">])</span>
+        <span class="n">shape_type</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">ind_a</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;shape_type&#39;</span><span class="p">:</span> <span class="n">shape_type</span><span class="p">},</span> <span class="s1">&#39;shapes&#39;</span>
+
+
+<span class="n">csv_reader_functions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">_points_csv_to_layerdata</span><span class="p">,</span>
+    <span class="s1">&#39;shapes&#39;</span><span class="p">:</span> <span class="n">_shapes_csv_to_layerdata</span><span class="p">,</span>
+<span class="p">}</span>
 </pre></div>
 
            </div>

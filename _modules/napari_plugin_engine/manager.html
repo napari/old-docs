@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari_plugin_engine.manager &mdash; napari 0.3.0+3.g3274a4a documentation</title>
+  <title>napari_plugin_engine.manager &mdash; napari 0.3.0+4.g95658fc documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.0+3.g3274a4a
+                0.3.0+4.g95658fc
               </div>
             
           
@@ -364,7 +364,9 @@
         <span class="k">with</span> <span class="n">temp_path_additions</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
             <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">count</span><span class="p">,</span> <span class="n">errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_entrypoints</span><span class="p">(</span><span class="n">entry_point</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">)</span>
-            <span class="n">n</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_modules_by_prefix</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">)</span>
+            <span class="n">n</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_modules_by_prefix</span><span class="p">(</span>
+                <span class="n">prefix</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">,</span> <span class="n">ignore_group</span><span class="o">=</span><span class="n">entry_point</span>
+            <span class="p">)</span>
             <span class="n">count</span> <span class="o">+=</span> <span class="n">n</span>
             <span class="n">errs</span> <span class="o">+=</span> <span class="n">err</span>
             <span class="k">if</span> <span class="n">count</span><span class="p">:</span>
@@ -449,7 +451,7 @@
         <span class="k">return</span> <span class="n">count</span><span class="p">,</span> <span class="n">errors</span></div>
 
 <div class="viewcode-block" id="PluginManager.load_modules_by_prefix"><a class="viewcode-back" href="../../api/napari.plugins.html#napari.plugins.PluginManager.load_modules_by_prefix">[docs]</a>    <span class="k">def</span> <span class="nf">load_modules_by_prefix</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">ignore_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">PluginError</span><span class="p">]]:</span>
         <span class="sd">&quot;&quot;&quot;Load plugins by module naming convention.</span>
 
@@ -463,6 +465,11 @@
 <span class="sd">        ignore_errors : bool, optional</span>
 <span class="sd">            If ``False``, any errors raised during registration will be</span>
 <span class="sd">            immediately raised, by default True</span>
+<span class="sd">        ignore_entry : str, optional</span>
+<span class="sd">            If a module name starts with ``prefix`` but declares an entry_point</span>
+<span class="sd">            with a group named ``ignore_group`` or</span>
+<span class="sd">            :attr:`~PluginManager.discover_entry_point`, then it will be</span>
+<span class="sd">            ignored.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -484,7 +491,15 @@
         <span class="k">for</span> <span class="n">finder</span><span class="p">,</span> <span class="n">mod_name</span><span class="p">,</span> <span class="n">ispkg</span> <span class="ow">in</span> <span class="n">pkgutil</span><span class="o">.</span><span class="n">iter_modules</span><span class="p">():</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">mod_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
                 <span class="k">continue</span>
+            <span class="c1"># try to find a distibution for this module</span>
             <span class="n">dist</span> <span class="o">=</span> <span class="n">_top_level_module_to_dist</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mod_name</span><span class="p">)</span>
+            <span class="c1"># if the distribution declares any entrypoints that we known this</span>
+            <span class="c1"># manager supports, or which are explicitly excluded, then skip</span>
+            <span class="c1"># this module.</span>
+            <span class="k">if</span> <span class="n">dist</span><span class="p">:</span>
+                <span class="n">skip</span> <span class="o">=</span> <span class="p">(</span><span class="n">ignore_group</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">discover_entry_point</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">ep</span><span class="o">.</span><span class="n">group</span> <span class="ow">in</span> <span class="n">skip</span> <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="n">dist</span><span class="o">.</span><span class="n">entry_points</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
+                    <span class="k">continue</span>
             <span class="n">name</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">dist</span> <span class="k">else</span> <span class="n">mod_name</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_registered</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blocked</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
                 <span class="k">continue</span>
@@ -1011,8 +1026,17 @@
 <span class="sd">        -------</span>
 <span class="sd">        metadata : dict</span>
 <span class="sd">            A  dicts with plugin metadata. The dict is guaranteed to have the</span>
-<span class="sd">            following keys: {&#39;plugin_name&#39;, &#39;version&#39;, &#39;summary&#39;, &#39;author&#39;,</span>
-<span class="sd">            &#39;license&#39;, &#39;package&#39;, &#39;email&#39;, &#39;url&#39;}</span>
+<span class="sd">            following keys:</span>
+
+<span class="sd">            - **plugin_name**: The name of the plugin as registered</span>
+<span class="sd">            - **package**: The name of the package</span>
+<span class="sd">            - **version**: The version of the plugin package</span>
+<span class="sd">            - **summary**: A one-line summary of what the distribution does</span>
+<span class="sd">            - **author**: The author’s name</span>
+<span class="sd">            - **email**: The author’s (or maintainer&#39;s) e-mail address.</span>
+<span class="sd">            - **license**: The license covering the distribution</span>
+<span class="sd">            - **url**: The home page for the package, or dowload url if N/A.</span>
+<span class="sd">            - **hooks**: A list of hookspec names that this plugin implements.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1021,7 +1045,16 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">plugin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
-        <span class="n">plugin_meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">plugin_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">plugin</span><span class="p">))</span>
+        <span class="n">plugin_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
+        <span class="c1"># TODO: is there no better API for this already?</span>
+        <span class="n">hooks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">caller</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plugin2hookcallers</span><span class="p">[</span><span class="n">plugin</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">impl</span> <span class="o">=</span> <span class="n">caller</span><span class="o">.</span><span class="n">get_plugin_implementation</span><span class="p">(</span><span class="n">plugin_name</span><span class="p">)</span>
+                <span class="n">hooks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">impl</span><span class="o">.</span><span class="n">specname</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="n">plugin_meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span> <span class="n">hooks</span><span class="o">=</span><span class="n">hooks</span><span class="p">)</span>
         <span class="n">plugin_meta</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">standard_metadata</span><span class="p">(</span><span class="n">plugin</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">plugin_meta</span></div>
 
@@ -1030,15 +1063,41 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        metadata : list of dict</span>
+<span class="sd">        metadata : dict</span>
 <span class="sd">            A list of dicts with plugin metadata. Every dict in the list is</span>
-<span class="sd">            guaranteed to have the following keys: {&#39;plugin_name&#39;, &#39;version&#39;,</span>
-<span class="sd">            &#39;summary&#39;, &#39;author&#39;, &#39;license&#39;, &#39;package&#39;, &#39;email&#39;, &#39;url&#39;}</span>
+<span class="sd">            guaranteed to have the following keys mentioned in</span>
+<span class="sd">            :meth:`~PluginManager.get_standard_metadata`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">get_standard_metadata</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plugin2hookcallers</span>
-        <span class="p">]</span></div></div>
+        <span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">nhooks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hooks</span><span class="p">)</span>
+        <span class="n">nplug</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;PluginManager for &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="si">}</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="n">nhooks</span><span class="si">}</span><span class="s1"> hook specs and </span><span class="si">{</span><span class="n">nplug</span><span class="si">}</span><span class="s1"> plugins)</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="mi">45</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugin_info</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="c1"># nhooks = len(self._plugin2hookcallers[plugin])</span>
+            <span class="c1"># text += f&#39;{name:29}  {nhooks:3} hooks\n&#39;</span>
+
+        <span class="k">return</span> <span class="n">text</span>
+
+<div class="viewcode-block" id="PluginManager.plugin_info"><a class="viewcode-back" href="../../api/napari.plugins.html#napari.plugins.PluginManager.plugin_info">[docs]</a>    <span class="k">def</span> <span class="nf">plugin_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">plugin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
+        <span class="n">plugin_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="s1">&#39;version&#39;</span><span class="p">)</span>
+        <span class="n">hooks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plugin2hookcallers</span><span class="p">[</span><span class="n">plugin</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">plugin_name</span><span class="si">}</span><span class="s1"> v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s1">34</span><span class="si">}</span><span class="s1">  </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hooks</span><span class="p">)</span><span class="si">:</span><span class="s1">3</span><span class="si">}</span><span class="s1"> hooks</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">for</span> <span class="n">hook_caller</span> <span class="ow">in</span> <span class="n">hooks</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">impl</span> <span class="ow">in</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">get_hookimpls</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">impl</span><span class="o">.</span><span class="n">plugin_name</span> <span class="o">==</span> <span class="n">plugin_name</span><span class="p">:</span>
+                    <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">impl</span><span class="o">.</span><span class="n">specname</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">text</span></div></div>
 
 
 <span class="k">def</span> <span class="nf">_formatdef</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
@@ -1066,6 +1125,15 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_discovery</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">discover</span><span class="p">()</span>
         <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">hookname</span><span class="p">,</span> <span class="n">hookcaller</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">hookname</span><span class="si">:</span><span class="s1">25</span><span class="si">}</span><span class="s1">  </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hookcaller</span><span class="o">.</span><span class="n">get_hookimpls</span><span class="p">())</span><span class="si">:</span><span class="s1">3</span><span class="si">}</span><span class="s1"> implementations</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="n">text</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">([</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)])</span>
 
     <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">HookCaller</span><span class="p">]]:</span>
         <span class="sd">&quot;&quot;&quot;Iterate through hookcallers, removing private attributes.&quot;&quot;&quot;</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.resources.build_icons &mdash; napari 0.3.0+7.ge876d90 documentation</title>
+  <title>napari.resources.build_icons &mdash; napari 0.3.0+8.g4c8b418 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.0+7.ge876d90
+                0.3.0+8.g4c8b418
               </div>
             
           
@@ -165,7 +165,7 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
-<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">check_call</span><span class="p">,</span> <span class="n">CalledProcessError</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">check_call</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">palettes</span> <span class="k">as</span> <span class="n">_palettes</span>
@@ -326,10 +326,24 @@
     <span class="p">)</span>
 
     <span class="c1"># then convert it to a python file</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;pyrcc5&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
-    <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="n">CalledProcessError</span><span class="p">):</span>
-        <span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;pyside2-rcc&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
+    <span class="c1"># this looks a little funny, but rather than pick the exact binary to try</span>
+    <span class="c1"># once, we use this try/catch loop because</span>
+    <span class="c1"># 1. we always want to use pyrcc5 if it&#39;s available, regardless of API</span>
+    <span class="c1"># 2. it will sometimes, (if not always) be named pyrcc5.bat on windows...</span>
+    <span class="c1"># 3. only then do we try pyside2-rcc</span>
+    <span class="c1"># see https://github.com/napari/napari/issues/1221 for background</span>
+    <span class="k">for</span> <span class="n">binary</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;pyrcc5.bat&#39;</span><span class="p">,</span> <span class="s1">&#39;pyrcc5&#39;</span><span class="p">,</span> <span class="s1">&#39;pyside2-rcc&#39;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">check_call</span><span class="p">([</span><span class="n">binary</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="s2">&quot;Unable to find an executable to build Qt resources (icons).</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;Tried: &#39;pyrcc5.bat&#39;, &#39;pyrcc5&#39;, &#39;pyside2-rcc&#39;.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;Please open issue at https://github.com/napari/napari/issues/.&quot;</span>
+        <span class="p">)</span>
 
     <span class="c1"># make sure we import from qtpy</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.add_layers_mixin &mdash; napari 0.3.0+13.g21e37fb documentation</title>
+  <title>napari.components.add_layers_mixin &mdash; napari 0.3.0+14.g8b2dd4b documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.0+13.g21e37fb
+                0.3.0+14.g8b2dd4b
               </div>
             
           
@@ -157,17 +157,18 @@
   <h1>Source code for napari.components.add_layers_mixin</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">fspath</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
-<span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">layers</span>
-<span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_multiscale</span><span class="p">,</span> <span class="n">guess_labels</span>
+<span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span><span class="p">,</span> <span class="n">guess_multiscale</span>
 <span class="kn">from</span> <span class="nn">..plugins.io</span> <span class="kn">import</span> <span class="n">read_data_with_plugins</span>
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">FullLayerData</span><span class="p">,</span> <span class="n">LayerData</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">colormaps</span>
+<span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">ensure_iterable</span><span class="p">,</span>
     <span class="n">ensure_sequence_of_iterables</span><span class="p">,</span>
@@ -946,7 +947,7 @@
 <span class="sd">            A list of any layers that were added to the viewer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">path</span>
-        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">]</span>  <span class="c1"># PathObjects -&gt; str</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">]</span>  <span class="c1"># PathObjects -&gt; str</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">&quot;&#39;path&#39; argument must be a string, list, or tuple&quot;</span>
@@ -1006,29 +1007,29 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer_data</span> <span class="o">=</span> <span class="n">read_data_with_plugins</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span>
 
+        <span class="c1"># glean layer names from filename. These will be used as *fallback*</span>
+        <span class="c1"># names, if the plugin does not return a name kwarg in their meta dict.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">filenames</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_sequence</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_data</span><span class="p">):</span>
+                <span class="n">filenames</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># if a list of paths has been returned as a list of layer data</span>
+                <span class="c1"># without a 1:1 relationship between the two lists we iterate</span>
+                <span class="c1"># over the first name</span>
+                <span class="n">filenames</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
         <span class="c1"># add each layer to the viewer</span>
         <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
-        <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">layer_data</span><span class="p">:</span>
-            <span class="c1"># normalize layerdata and override layer_type if necessary</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">{})</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">guess_labels</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
-            <span class="k">if</span> <span class="n">layer_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">layer_type</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">layer_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="c1"># if user provided kwargs, use to override any meta dict values</span>
-            <span class="c1"># that were returned by the plugin</span>
-            <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">valid_kwargs</span> <span class="o">=</span> <span class="n">prune_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">)</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">valid_kwargs</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">valid_kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">filenames</span><span class="p">):</span>
+            <span class="n">basename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+            <span class="n">_data</span> <span class="o">=</span> <span class="n">_unify_data_and_user_kwargs</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">,</span> <span class="n">fallback_name</span><span class="o">=</span><span class="n">basename</span>
+            <span class="p">)</span>
             <span class="c1"># actually add the layer</span>
-            <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">)</span>
-            <span class="c1"># some add_* methods return a List[Layer] others just a Layer</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">_data</span><span class="p">)</span>
+            <span class="c1"># some add_* methods return a List[Layer], others just a Layer</span>
             <span class="c1"># we want to always return a list</span>
             <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">new</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">added</span>
@@ -1111,6 +1112,108 @@
                 <span class="k">raise</span> <span class="n">exc</span>
 
         <span class="k">return</span> <span class="n">layer</span></div>
+
+
+<span class="k">def</span> <span class="nf">_normalize_layer_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">LayerData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Accepts any layerdata tuple, and returns a fully qualified tuple.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : LayerData</span>
+<span class="sd">        1-, 2-, or 3-tuple with (data, meta, layer_type).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    FullLayerData</span>
+<span class="sd">        3-tuple with (data, meta, layer_type)</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If data has len &lt; 1 or len &gt; 3, or if the second item in ``data`` is</span>
+<span class="sd">        not a ``dict``, or the third item is not a valid layer_type ``str``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;LayerData must be a 1-, 2-, or 3-tuple&quot;</span><span class="p">)</span>
+    <span class="n">_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The second item in a LayerData tuple must be a dict&quot;</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">NAMES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The third item in a LayerData tuple must be one of: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">layers</span><span class="o">.</span><span class="n">NAMES</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">guess_labels</span><span class="p">(</span><span class="n">_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_data</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+
+<span class="k">def</span> <span class="nf">_unify_data_and_user_kwargs</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">LayerData</span><span class="p">,</span>
+    <span class="n">kwargs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">layer_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">fallback_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Merge data returned from plugins with options specified by user.</span>
+
+<span class="sd">    If ``data == (_data, _meta, _type)``.  Then:</span>
+
+<span class="sd">    - ``kwargs`` will be used to update ``_meta``</span>
+<span class="sd">    - ``layer_type`` will replace ``_type`` and, if provided, ``_meta`` keys</span>
+<span class="sd">        will be pruned to layer_type-appropriate kwargs</span>
+<span class="sd">    - ``fallback_name`` is used if ``not _meta.get(&#39;name&#39;)``</span>
+
+<span class="sd">    .. note:</span>
+
+<span class="sd">        If a user specified both layer_type and additional keyword arguments</span>
+<span class="sd">        to viewer.open(), it is their responsibility to make sure the kwargs</span>
+<span class="sd">        match the layer_type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : LayerData</span>
+<span class="sd">        1-, 2-, or 3-tuple with (data, meta, layer_type) returned from plugin.</span>
+<span class="sd">    kwargs : dict, optional</span>
+<span class="sd">        User-supplied keyword arguments, to override those in ``meta`` supplied</span>
+<span class="sd">        by plugins.</span>
+<span class="sd">    layer_type : str, optional</span>
+<span class="sd">        A user-supplied layer_type string, to override the ``layer_type``</span>
+<span class="sd">        declared by the plugin.</span>
+<span class="sd">    fallback_name : str, optional</span>
+<span class="sd">        A name for the layer, to override any name in ``meta`` supplied by the</span>
+<span class="sd">        plugin.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    FullLayerData</span>
+<span class="sd">        Fully qualified LayerData tuple with user-provided overrides.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_data</span><span class="p">,</span> <span class="n">_meta</span><span class="p">,</span> <span class="n">_type</span> <span class="o">=</span> <span class="n">_normalize_layer_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">layer_type</span><span class="p">:</span>
+        <span class="c1"># the user has explicitly requested this be a certain layer type</span>
+        <span class="c1"># strip any kwargs from the plugin that are no longer relevant</span>
+        <span class="n">_meta</span> <span class="o">=</span> <span class="n">prune_kwargs</span><span class="p">(</span><span class="n">_meta</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">)</span>
+        <span class="n">_type</span> <span class="o">=</span> <span class="n">layer_type</span>
+
+    <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="c1"># if user provided kwargs, use to override any meta dict values that</span>
+        <span class="c1"># were returned by the plugin. We only prune kwargs if the user did</span>
+        <span class="c1"># *not* specify the layer_type. This means that if a user specified</span>
+        <span class="c1"># both layer_type and additional keyword arguments to viewer.open(),</span>
+        <span class="c1"># it is their responsibility to make sure the kwargs match the</span>
+        <span class="c1"># layer_type.</span>
+        <span class="n">_meta</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">prune_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">_type</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">layer_type</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fallback_name</span><span class="p">:</span>
+        <span class="n">_meta</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fallback_name</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_data</span><span class="p">,</span> <span class="n">_meta</span><span class="p">,</span> <span class="n">_type</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="prune_kwargs"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.prune_kwargs">[docs]</a><span class="k">def</span> <span class="nf">prune_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">layer_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>

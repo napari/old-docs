@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils package &mdash; napari 0.3.1+7.g70e57d1 documentation</title>
+  <title>napari.utils package &mdash; napari 0.3.1+8.g90ac9d3 documentation</title>
   
 
   
@@ -63,7 +63,7 @@
             
             
               <div class="version">
-                0.3.1+7.g70e57d1
+                0.3.1+8.g90ac9d3
               </div>
             
           
@@ -139,6 +139,7 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.dask_utils">napari.utils.dask_utils module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.event">napari.utils.event module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.info">napari.utils.info module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.interactions">napari.utils.interactions module</a></li>
@@ -254,6 +255,121 @@
 </div>
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-napari.utils.dask_utils">
+<span id="napari-utils-dask-utils-module"></span><h2>napari.utils.dask_utils module<a class="headerlink" href="#module-napari.utils.dask_utils" title="Permalink to this headline">¶</a></h2>
+<p>Dask cache utilities.</p>
+<dl class="py function">
+<dt id="napari.utils.dask_utils.configure_dask">
+<code class="sig-name descname">configure_dask</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span> &#x2192; Callable<span class="p">[</span><span class="p">]</span><span class="p">, </span>AbstractContextManager<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a><span class="p">]</span><span class="p">]</span><a class="reference internal" href="../_modules/napari/utils/dask_utils.html#configure_dask"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.dask_utils.configure_dask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spin up cache and return context manager that optimizes Dask indexing.</p>
+<p>This function determines whether data is a dask array or list of dask
+arrays and prepares some optimizations if so.</p>
+<p>When a delayed dask array is given to napari, there are couple things that
+need to be done to optimize performance.</p>
+<ol class="arabic">
+<li><p>Opportunistic caching needs to be enabled, such that we don’t recompute
+(or “re-read”) data that has already been computed or read.</p></li>
+<li><p>Dask task fusion must be turned off to prevent napari from triggering
+new io on data that has already been read from disk. For example, with a
+4D timelapse of 3D stacks, napari may actually <em>re-read</em> the entire 3D
+tiff file every time the Z plane index is changed. Turning of Dask task
+fusion with <code class="docutils literal notranslate"><span class="pre">optimization.fuse.active</span> <span class="pre">==</span> <span class="pre">False</span></code> prevents this.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Turning off task fusion requires Dask version 2.15.0 or later.</p>
+</div>
+</li>
+</ol>
+<p>For background and context, see <a class="reference external" href="https://github.com/napari/napari/issues/718">napari/napari#718</a>, <a class="reference external" href="https://github.com/napari/napari/pull/1124">napari/napari#1124</a>, and <a class="reference external" href="https://github.com/dask/dask/pull/6084">dask/dask#6084</a>.</p>
+<p>For details on Dask task fusion, see the documentation on <a class="reference external" href="https://docs.dask.org/en/latest/optimize.html">Dask
+Optimization</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>Any</em>) – data, as passed to a <code class="docutils literal notranslate"><span class="pre">Layer.__init__</span></code> method.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A context manager that can be used to optimize dask indexing</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>ContextManager</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">optimized_slicing</span> <span class="o">=</span> <span class="n">configure_dask</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">optimized_slicing</span><span class="p">():</span>
+<span class="gp">... </span>   <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="napari.utils.dask_utils.create_dask_cache">
+<code class="sig-name descname">create_dask_cache</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nbytes</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mem_fraction</span><span class="o">=</span><span class="default_value">0.5</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/dask_utils.html#create_dask_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.dask_utils.create_dask_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a dask cache at utils.dask_cache if one doesn’t already exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nbytes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>, </em><em>optional</em>) – The desired size of the cache, in bytes.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the cache size
+will autodetermined as fraction of the total memory in the system,
+using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.  If <code class="docutils literal notranslate"><span class="pre">nbytes</span></code> is 0, cache object will be
+created, but not caching will occur. by default, cache size is
+autodetermined using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.</p></li>
+<li><p><strong>mem_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>, </em><em>optional</em>) – The fraction (from 0 to 1) of total memory to use for the dask cache.
+by default, 50% of total memory is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)">type</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="napari.utils.dask_utils.resize_dask_cache">
+<code class="sig-name descname">resize_dask_cache</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nbytes</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mem_fraction</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; dask.cache.Cache<a class="reference internal" href="../_modules/napari/utils/dask_utils.html#resize_dask_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.dask_utils.resize_dask_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create or resize the dask cache used for opportunistic caching.</p>
+<p>The cache object is an instance of a <code class="xref py py-class docutils literal notranslate"><span class="pre">Cache</span></code>, (which
+wraps a <code class="xref py py-class docutils literal notranslate"><span class="pre">cachey.Cache</span></code>), and is made available at
+<a class="reference internal" href="#napari.utils.dask_cache" title="napari.utils.dask_cache"><code class="xref py py-attr docutils literal notranslate"><span class="pre">napari.utils.dask_cache</span></code></a>.</p>
+<p>See <a class="reference external" href="https://docs.dask.org/en/latest/caching.html">Dask opportunistic caching</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nbytes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>, </em><em>optional</em>) – The desired size of the cache, in bytes.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the cache size
+will autodetermined as fraction of the total memory in the system,
+using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.  If <code class="docutils literal notranslate"><span class="pre">nbytes</span></code> is 0. The cache is turned off.
+by default, cache size is autodetermined using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.</p></li>
+<li><p><strong>mem_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>, </em><em>optional</em>) – The fraction (from 0 to 1) of total memory to use for the dask cache.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dask_cache</strong> – An instance of a Dask Cache</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Cache</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">napari.utils</span> <span class="kn">import</span> <span class="n">resize_dask_cache</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span> <span class="o">=</span> <span class="n">resize_dask_cache</span><span class="p">()</span>  <span class="c1"># use 50% of total memory by default</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dask.Cache wraps cachey.Cache</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span> <span class="n">cachey</span><span class="o">.</span><span class="n">Cache</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># useful attributes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">available_bytes</span>  <span class="c1"># full size of cache</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">total_bytes</span>   <span class="c1"># currently used bytes</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </div>
 <div class="section" id="module-napari.utils.event">
 <span id="napari-utils-event-module"></span><h2>napari.utils.event module<a class="headerlink" href="#module-napari.utils.event" title="Permalink to this headline">¶</a></h2>
@@ -855,7 +971,7 @@ CSV is recognized as a valid type.</p>
 
 <dl class="py function">
 <dt id="napari.utils.io.imread">
-<code class="sig-name descname">imread</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a><a class="reference internal" href="../_modules/napari/utils/io.html#imread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.imread" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">imread</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a><a class="reference internal" href="../_modules/napari/utils/io.html#imread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.imread" title="Permalink to this definition">¶</a></dt>
 <dd><p>Custom implementation of imread to avoid skimage dependency.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -872,7 +988,7 @@ CSV is recognized as a valid type.</p>
 
 <dl class="py function">
 <dt id="napari.utils.io.imsave">
-<code class="sig-name descname">imsave</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/io.html#imsave"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.imsave" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">imsave</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/io.html#imsave"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.imsave" title="Permalink to this definition">¶</a></dt>
 <dd><p>Custom implementation of imsave to avoid skimage dependency.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -981,7 +1097,7 @@ or a group of arrays in the case of multiscale data.</p>
 
 <dl class="py function">
 <dt id="napari.utils.io.write_csv">
-<code class="sig-name descname">write_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Union<span class="p">[</span>List<span class="p">, </span><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">column_names</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>List<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/io.html#write_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.write_csv" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">write_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Union<span class="p">[</span>List<span class="p">, </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">column_names</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>List<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/io.html#write_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.io.write_csv" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a csv file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1346,76 +1462,6 @@ input).</p>
 <dd></dd></dl>
 
 <dl class="py function">
-<dt id="napari.utils.misc.configure_dask">
-<code class="sig-name descname">configure_dask</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span> &#x2192; AbstractContextManager<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a><span class="p">]</span><a class="reference internal" href="../_modules/napari/utils/misc.html#configure_dask"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.misc.configure_dask" title="Permalink to this definition">¶</a></dt>
-<dd><p>Spin up cache and return context manager that optimizes Dask indexing.</p>
-<p>This function determines whether data is a dask array or list of dask
-arrays and prepares some optimizations if so.</p>
-<p>When a delayed dask array is given to napari, there are couple things that
-need to be done to optimize performance.</p>
-<ol class="arabic">
-<li><p>Opportunistic caching needs to be enabled, such that we don’t recompute
-(or “re-read”) data that has already been computed or read.</p></li>
-<li><p>Dask task fusion must be turned off to prevent napari from triggering
-new io on data that has already been read from disk. For example, with a
-4D timelapse of 3D stacks, napari may actually <em>re-read</em> the entire 3D
-tiff file every time the Z plane index is changed. Turning of Dask task
-fusion with <code class="docutils literal notranslate"><span class="pre">optimization.fuse.active</span> <span class="pre">==</span> <span class="pre">False</span></code> prevents this.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Turning off task fusion requires Dask version 2.15.0 or later.</p>
-</div>
-</li>
-</ol>
-<p>For background and context, see <a class="reference external" href="https://github.com/napari/napari/issues/718">napari/napari#718</a>, <a class="reference external" href="https://github.com/napari/napari/pull/1124">napari/napari#1124</a>, and <a class="reference external" href="https://github.com/dask/dask/pull/6084">dask/dask#6084</a>.</p>
-<p>For details on Dask task fusion, see the documentation on <a class="reference external" href="https://docs.dask.org/en/latest/optimize.html">Dask
-Optimization</a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>Any</em>) – data, as passed to a <code class="docutils literal notranslate"><span class="pre">Layer.__init__</span></code> method.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A context manager that can be used to optimize dask indexing</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>ContextManager</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">optimized_slicing</span> <span class="o">=</span> <span class="n">configure_dask</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">optimized_slicing</span><span class="p">():</span>
-<span class="gp">... </span>   <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
-<dt id="napari.utils.misc.create_dask_cache">
-<code class="sig-name descname">create_dask_cache</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nbytes</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mem_fraction</span><span class="o">=</span><span class="default_value">0.5</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/misc.html#create_dask_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.misc.create_dask_cache" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a dask cache at utils.dask_cache if one doesn’t already exist.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>nbytes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>, </em><em>optional</em>) – The desired size of the cache, in bytes.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the cache size
-will autodetermined as fraction of the total memory in the system,
-using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.  If <code class="docutils literal notranslate"><span class="pre">nbytes</span></code> is 0, cache object will be
-created, but not caching will occur. by default, cache size is
-autodetermined using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.</p></li>
-<li><p><strong>mem_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>, </em><em>optional</em>) – The fraction (from 0 to 1) of total memory to use for the dask cache.
-by default, 50% of total memory is used.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>[description]</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)">type</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt id="napari.utils.misc.ensure_iterable">
 <code class="sig-name descname">ensure_iterable</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">arg</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/misc.html#ensure_iterable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.misc.ensure_iterable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Ensure an argument is an iterable. Useful when an input argument
@@ -1482,47 +1528,6 @@ dict
 set</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="napari.utils.misc.resize_dask_cache">
-<code class="sig-name descname">resize_dask_cache</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nbytes</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mem_fraction</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; dask.cache.Cache<a class="reference internal" href="../_modules/napari/utils/misc.html#resize_dask_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.utils.misc.resize_dask_cache" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create or resize the dask cache used for opportunistic caching.</p>
-<p>The cache object is an instance of a <code class="xref py py-class docutils literal notranslate"><span class="pre">Cache</span></code>, (which
-wraps a <code class="xref py py-class docutils literal notranslate"><span class="pre">cachey.Cache</span></code>), and is made available at
-<a class="reference internal" href="#napari.utils.dask_cache" title="napari.utils.dask_cache"><code class="xref py py-attr docutils literal notranslate"><span class="pre">napari.utils.dask_cache</span></code></a>.</p>
-<p>See <a class="reference external" href="https://docs.dask.org/en/latest/caching.html">Dask oportunistic caching</a></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>nbytes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>, </em><em>optional</em>) – The desired size of the cache, in bytes.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the cache size
-will autodetermined as fraction of the total memory in the system,
-using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.  If <code class="docutils literal notranslate"><span class="pre">nbytes</span></code> is 0. The cache is turned off.
-by default, cache size is autodetermined using <code class="docutils literal notranslate"><span class="pre">mem_fraction</span></code>.</p></li>
-<li><p><strong>mem_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>, </em><em>optional</em>) – The fraction (from 0 to 1) of total memory to use for the dask cache.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>dask_cache</strong> – An instance of a Dask Cache</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Cache</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">napari.utils</span> <span class="kn">import</span> <span class="n">resize_dask_cache</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span> <span class="o">=</span> <span class="n">resize_dask_cache</span><span class="p">()</span>  <span class="c1"># use 50% of total memory by default</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dask.Cache wraps cachey.Cache</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span> <span class="n">cachey</span><span class="o">.</span><span class="n">Cache</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># useful attributes</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">available_bytes</span>  <span class="c1"># full size of cache</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">total_bytes</span>   <span class="c1"># currently used bytes</span>
-</pre></div>
-</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1686,7 +1691,7 @@ validate([4, 5])  # just fine, thank you very much</p>
 <dt id="napari.utils.dask_cache">
 <code class="sig-name descname">dask_cache</code><em class="property"> = None</em><a class="headerlink" href="#napari.utils.dask_cache" title="Permalink to this definition">¶</a></dt>
 <dd><p>A dask cache for opportunistic caching
-use <a class="reference internal" href="#napari.utils.misc.resize_dask_cache" title="napari.utils.misc.resize_dask_cache"><code class="xref py py-func docutils literal notranslate"><span class="pre">resize_dask_cache()</span></code></a> to actually register and resize.</p>
+use <a class="reference internal" href="#napari.utils.dask_utils.resize_dask_cache" title="napari.utils.dask_utils.resize_dask_cache"><code class="xref py py-func docutils literal notranslate"><span class="pre">resize_dask_cache()</span></code></a> to actually register and resize.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>dask.cache.Cache, optional</p>

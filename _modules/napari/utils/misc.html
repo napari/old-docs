@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.misc &mdash; napari 0.3.1+7.g70e57d1 documentation</title>
+  <title>napari.utils.misc &mdash; napari 0.3.1+8.g90ac9d3 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.1+7.g70e57d1
+                0.3.1+8.g90ac9d3
               </div>
             
           
@@ -161,18 +161,12 @@
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
 <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">EnumMeta</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">PathLike</span><span class="p">,</span> <span class="n">fspath</span><span class="p">,</span> <span class="n">path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">ContextManager</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">TypeVar</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">TypeVar</span>
 
-<span class="kn">import</span> <span class="nn">dask</span>
-<span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">dask.cache</span> <span class="kn">import</span> <span class="n">Cache</span>
-
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
 
 <span class="n">ROOT_DIR</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
 
@@ -449,180 +443,6 @@
     <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__subclasses__</span><span class="p">())</span><span class="o">.</span><span class="n">union</span><span class="p">(</span>
         <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__subclasses__</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">all_subclasses</span><span class="p">(</span><span class="n">c</span><span class="p">)]</span>
     <span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="create_dask_cache"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.misc.create_dask_cache">[docs]</a><span class="k">def</span> <span class="nf">create_dask_cache</span><span class="p">(</span><span class="n">nbytes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mem_fraction</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Create a dask cache at utils.dask_cache if one doesn&#39;t already exist.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    nbytes : int, optional</span>
-<span class="sd">        The desired size of the cache, in bytes.  If ``None``, the cache size</span>
-<span class="sd">        will autodetermined as fraction of the total memory in the system,</span>
-<span class="sd">        using ``mem_fraction``.  If ``nbytes`` is 0, cache object will be</span>
-<span class="sd">        created, but not caching will occur. by default, cache size is</span>
-<span class="sd">        autodetermined using ``mem_fraction``.</span>
-<span class="sd">    mem_fraction : float, optional</span>
-<span class="sd">        The fraction (from 0 to 1) of total memory to use for the dask cache.</span>
-<span class="sd">        by default, 50% of total memory is used.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    [type]</span>
-<span class="sd">        [description]</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">import</span> <span class="nn">psutil</span>
-
-    <span class="k">if</span> <span class="n">nbytes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">nbytes</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="n">mem_fraction</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-        <span class="nb">hasattr</span><span class="p">(</span><span class="n">utils</span><span class="p">,</span> <span class="s1">&#39;dask_cache&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span><span class="p">,</span> <span class="n">Cache</span><span class="p">)</span>
-    <span class="p">):</span>
-        <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span> <span class="o">=</span> <span class="n">Cache</span><span class="p">(</span><span class="n">nbytes</span><span class="p">)</span>
-        <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span><span class="o">.</span><span class="n">register</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span></div>
-
-
-<div class="viewcode-block" id="resize_dask_cache"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.misc.resize_dask_cache">[docs]</a><span class="k">def</span> <span class="nf">resize_dask_cache</span><span class="p">(</span>
-    <span class="n">nbytes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">mem_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Cache</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Create or resize the dask cache used for opportunistic caching.</span>
-
-<span class="sd">    The cache object is an instance of a :class:`Cache`, (which</span>
-<span class="sd">    wraps a :class:`cachey.Cache`), and is made available at</span>
-<span class="sd">    :attr:`napari.utils.dask_cache`.</span>
-
-<span class="sd">    See `Dask oportunistic caching</span>
-<span class="sd">    &lt;https://docs.dask.org/en/latest/caching.html&gt;`_</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    nbytes : int, optional</span>
-<span class="sd">        The desired size of the cache, in bytes.  If ``None``, the cache size</span>
-<span class="sd">        will autodetermined as fraction of the total memory in the system,</span>
-<span class="sd">        using ``mem_fraction``.  If ``nbytes`` is 0. The cache is turned off.</span>
-<span class="sd">        by default, cache size is autodetermined using ``mem_fraction``.</span>
-<span class="sd">    mem_fraction : float, optional</span>
-<span class="sd">        The fraction (from 0 to 1) of total memory to use for the dask cache.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    dask_cache : Cache</span>
-<span class="sd">        An instance of a Dask Cache</span>
-
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
-<span class="sd">    &gt;&gt;&gt; from napari.utils import resize_dask_cache</span>
-<span class="sd">    &gt;&gt;&gt; cache = resize_dask_cache()  # use 50% of total memory by default</span>
-
-<span class="sd">    &gt;&gt;&gt; # dask.Cache wraps cachey.Cache</span>
-<span class="sd">    &gt;&gt;&gt; assert isinstance(cache.cache, cachey.Cache)</span>
-
-<span class="sd">    &gt;&gt;&gt; # useful attributes</span>
-<span class="sd">    &gt;&gt;&gt; cache.cache.available_bytes  # full size of cache</span>
-<span class="sd">    &gt;&gt;&gt; cache.cache.total_bytes   # currently used bytes</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="kn">import</span> <span class="nn">psutil</span>
-
-    <span class="k">if</span> <span class="n">nbytes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">mem_fraction</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">nbytes</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="n">mem_fraction</span>
-
-    <span class="c1"># if we don&#39;t have a cache already, create one.  If neither nbytes nor</span>
-    <span class="c1"># mem_fraction was provided, it will use the default size as determined in</span>
-    <span class="c1"># create_cache.</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-        <span class="nb">hasattr</span><span class="p">(</span><span class="n">utils</span><span class="p">,</span> <span class="s1">&#39;dask_cache&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span><span class="p">,</span> <span class="n">Cache</span><span class="p">)</span>
-    <span class="p">):</span>
-        <span class="k">return</span> <span class="n">create_dask_cache</span><span class="p">(</span><span class="n">nbytes</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>  <span class="c1"># we already have a cache</span>
-        <span class="c1"># if the cache has already been registered, then calling</span>
-        <span class="c1"># resize_dask_cache() without supplying either mem_fraction or nbytes</span>
-        <span class="c1"># is a no-op:</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">nbytes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="ow">and</span> <span class="n">nbytes</span> <span class="o">!=</span> <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">available_bytes</span>
-        <span class="p">):</span>
-            <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">nbytes</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">dask_cache</span></div>
-
-
-<span class="k">def</span> <span class="nf">_is_dask_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Return True if data is a dask array or a list/tuple of dask arrays.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
-        <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span>
-        <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">data</span><span class="p">)</span>
-    <span class="p">)</span>
-
-
-<div class="viewcode-block" id="configure_dask"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.misc.configure_dask">[docs]</a><span class="k">def</span> <span class="nf">configure_dask</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ContextManager</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Spin up cache and return context manager that optimizes Dask indexing.</span>
-
-<span class="sd">    This function determines whether data is a dask array or list of dask</span>
-<span class="sd">    arrays and prepares some optimizations if so.</span>
-
-<span class="sd">    When a delayed dask array is given to napari, there are couple things that</span>
-<span class="sd">    need to be done to optimize performance.</span>
-
-<span class="sd">    1. Opportunistic caching needs to be enabled, such that we don&#39;t recompute</span>
-<span class="sd">       (or &quot;re-read&quot;) data that has already been computed or read.</span>
-
-<span class="sd">    2. Dask task fusion must be turned off to prevent napari from triggering</span>
-<span class="sd">       new io on data that has already been read from disk. For example, with a</span>
-<span class="sd">       4D timelapse of 3D stacks, napari may actually *re-read* the entire 3D</span>
-<span class="sd">       tiff file every time the Z plane index is changed. Turning of Dask task</span>
-<span class="sd">       fusion with ``optimization.fuse.active == False`` prevents this.</span>
-
-<span class="sd">       .. note::</span>
-
-<span class="sd">          Turning off task fusion requires Dask version 2.15.0 or later.</span>
-
-<span class="sd">    For background and context, see `napari/napari#718</span>
-<span class="sd">    &lt;https://github.com/napari/napari/issues/718&gt;`_, `napari/napari#1124</span>
-<span class="sd">    &lt;https://github.com/napari/napari/pull/1124&gt;`_, and `dask/dask#6084</span>
-<span class="sd">    &lt;https://github.com/dask/dask/pull/6084&gt;`_.</span>
-
-<span class="sd">    For details on Dask task fusion, see the documentation on `Dask</span>
-<span class="sd">    Optimization &lt;https://docs.dask.org/en/latest/optimize.html&gt;`_.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    data : Any</span>
-<span class="sd">        data, as passed to a ``Layer.__init__`` method.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    ContextManager</span>
-<span class="sd">        A context manager that can be used to optimize dask indexing</span>
-
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
-<span class="sd">    &gt;&gt;&gt; data = dask.array.ones((10,10,10))</span>
-<span class="sd">    &gt;&gt;&gt; optimized_slicing = configure_dask(data)</span>
-<span class="sd">    &gt;&gt;&gt; with optimized_slicing():</span>
-<span class="sd">    ...    data[0, 2].compute()</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">_is_dask_data</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-        <span class="n">create_dask_cache</span><span class="p">()</span>  <span class="c1"># creates one if it doesn&#39;t exist</span>
-        <span class="n">dask_version</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">dask</span><span class="o">.</span><span class="n">__version__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)))</span>
-        <span class="k">if</span> <span class="n">dask_version</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="s1">&#39;For best performance with Dask arrays in napari, please &#39;</span>
-                <span class="s1">&#39;upgrade Dask to v2.15.0 or later. Current version is &#39;</span>
-                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dask</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="p">)</span>
-
-        <span class="k">def</span> <span class="nf">dask_optimized_slicing</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
-            <span class="k">with</span> <span class="n">dask</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set</span><span class="p">({</span><span class="s2">&quot;optimization.fuse.active&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span> <span class="k">as</span> <span class="n">cfg</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">cfg</span>
-
-    <span class="k">else</span><span class="p">:</span>
-
-        <span class="k">def</span> <span class="nf">dask_optimized_slicing</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
-            <span class="k">yield</span> <span class="p">{}</span>
-
-    <span class="k">return</span> <span class="n">contextmanager</span><span class="p">(</span><span class="n">dask_optimized_slicing</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.resources.build_icons &mdash; napari 0.3.1+10.g9566375 documentation</title>
+  <title>napari.resources.build_icons &mdash; napari 0.3.1+12.g0cd943c documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.1+10.g9566375
+                0.3.1+12.g0cd943c
               </div>
             
           
@@ -165,6 +165,7 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">check_call</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 
@@ -291,6 +292,46 @@
     <span class="k">return</span> <span class="n">qrc_path</span><span class="p">,</span> <span class="n">theme_dir</span></div>
 
 
+<span class="k">def</span> <span class="nf">_find_rcc_or_raise</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Locate the Qt rcc binary to generate resource files</span>
+
+<span class="sd">    1. we always want to use pyrcc5 if it&#39;s available, regardless of API</span>
+<span class="sd">    2. it will sometimes, (if not always) be named pyrcc5.bat on windows...</span>
+<span class="sd">       but shutil.which() will find that too</span>
+<span class="sd">    3. We also want to prefer binaries higher up on the path, and we add</span>
+<span class="sd">       sys.executable to the front of the path (and \\Scripts on windows)</span>
+<span class="sd">    4. after pyrcc5 we try pyside2-rcc</span>
+
+<span class="sd">    see https://github.com/napari/napari/issues/1221</span>
+<span class="sd">    and https://github.com/napari/napari/issues/1254</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to the located rcc binary, or None if not found</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If no executable can be found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">python_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">python_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;PATH&quot;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+        <span class="n">paths</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">python_dir</span><span class="p">,</span> <span class="s1">&#39;Scripts&#39;</span><span class="p">))</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">pathsep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">bin_name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;pyrcc5&#39;</span><span class="p">,</span> <span class="s1">&#39;pyside2-rcc&#39;</span><span class="p">):</span>
+        <span class="n">rcc_binary</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="n">bin_name</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rcc_binary</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rcc_binary</span>
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+        <span class="s2">&quot;Unable to find an executable to build Qt resources (icons).</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Tried: &#39;pyrcc5.bat&#39;, &#39;pyrcc5&#39;, &#39;pyside2-rcc&#39;.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Please open issue at https://github.com/napari/napari/issues/.&quot;</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="build_pyqt_resources"><a class="viewcode-back" href="../../../api/napari.resources.html#napari.resources.build_icons.build_pyqt_resources">[docs]</a><span class="k">def</span> <span class="nf">build_pyqt_resources</span><span class="p">(</span><span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Build a res.qrc file from icons and convert for python usage.</span>
 
@@ -326,24 +367,7 @@
     <span class="p">)</span>
 
     <span class="c1"># then convert it to a python file</span>
-    <span class="c1"># this looks a little funny, but rather than pick the exact binary to try</span>
-    <span class="c1"># once, we use this try/catch loop because</span>
-    <span class="c1"># 1. we always want to use pyrcc5 if it&#39;s available, regardless of API</span>
-    <span class="c1"># 2. it will sometimes, (if not always) be named pyrcc5.bat on windows...</span>
-    <span class="c1"># 3. only then do we try pyside2-rcc</span>
-    <span class="c1"># see https://github.com/napari/napari/issues/1221 for background</span>
-    <span class="k">for</span> <span class="n">binary</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;pyrcc5.bat&#39;</span><span class="p">,</span> <span class="s1">&#39;pyrcc5&#39;</span><span class="p">,</span> <span class="s1">&#39;pyside2-rcc&#39;</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">check_call</span><span class="p">([</span><span class="n">binary</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
-        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
-            <span class="k">continue</span>
-        <span class="k">break</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-            <span class="s2">&quot;Unable to find an executable to build Qt resources (icons).</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="s2">&quot;Tried: &#39;pyrcc5.bat&#39;, &#39;pyrcc5&#39;, &#39;pyside2-rcc&#39;.</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="s2">&quot;Please open issue at https://github.com/napari/napari/issues/.&quot;</span>
-        <span class="p">)</span>
+    <span class="n">check_call</span><span class="p">([</span><span class="n">_find_rcc_or_raise</span><span class="p">(),</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
 
     <span class="c1"># make sure we import from qtpy</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>

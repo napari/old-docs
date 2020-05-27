@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.viewer &mdash; napari 0.3.1+18.gd890f63 documentation</title>
+  <title>napari.viewer &mdash; napari 0.3.1+19.gd99adf8 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.1+18.gd890f63
+                0.3.1+19.gd99adf8
               </div>
             
           
@@ -162,9 +162,9 @@
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QIcon</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QApplication</span>
 
-<span class="kn">from</span> <span class="nn">._qt.qt_update_ui</span> <span class="kn">import</span> <span class="n">QtUpdateUI</span>
 <span class="kn">from</span> <span class="nn">._qt.qt_main_window</span> <span class="kn">import</span> <span class="n">Window</span>
 <span class="kn">from</span> <span class="nn">._qt.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
+<span class="kn">from</span> <span class="nn">._qt.threading</span> <span class="kn">import</span> <span class="n">wait_for_workers_to_quit</span><span class="p">,</span> <span class="n">create_worker</span>
 <span class="kn">from</span> <span class="nn">.components</span> <span class="kn">import</span> <span class="n">ViewerModel</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">__version__</span>
 
@@ -233,6 +233,10 @@
         <span class="n">logopath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;resources&#39;</span><span class="p">,</span> <span class="s1">&#39;logo.png&#39;</span><span class="p">)</span>
         <span class="n">app</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="n">logopath</span><span class="p">))</span>
 
+        <span class="c1"># see docstring of `wait_for_workers_to_quit` for caveats on killing</span>
+        <span class="c1"># workers at shutdown.</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">aboutToQuit</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">wait_for_workers_to_quit</span><span class="p">)</span>
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
             <span class="n">ndisplay</span><span class="o">=</span><span class="n">ndisplay</span><span class="p">,</span>
@@ -285,9 +289,14 @@
         <span class="k">return</span> <span class="n">image</span></div>
 
 <div class="viewcode-block" id="Viewer.update"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">t</span> <span class="o">=</span> <span class="n">QtUpdateUI</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">pool</span>  <span class="c1"># returns threadpool object</span></div>
+        <span class="kn">import</span> <span class="nn">warnings</span>
+
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Viewer.update() is deprecated, use &quot;</span>
+            <span class="s2">&quot;create_worker(func, *args, **kwargs) instead&quot;</span><span class="p">,</span>
+            <span class="ne">DeprecationWarning</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">create_worker</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">_start_thread</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Viewer.show"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Resize, show, and raise the viewer window.&quot;&quot;&quot;</span>

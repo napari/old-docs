@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.labels.labels &mdash; napari 0.3.2+1.g1b9a8fa documentation</title>
+  <title>napari.layers.labels.labels &mdash; napari 0.3.2+2.gc04484f documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.2+1.g1b9a8fa
+                0.3.2+2.gc04484f
               </div>
             
           
@@ -157,7 +157,7 @@
             
   <h1>Source code for napari.layers.labels.labels</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
@@ -168,6 +168,8 @@
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
 <span class="kn">from</span> <span class="nn">._labels_constants</span> <span class="kn">import</span> <span class="n">Mode</span>
 <span class="kn">from</span> <span class="nn">._labels_mouse_bindings</span> <span class="kn">import</span> <span class="n">fill</span><span class="p">,</span> <span class="n">paint</span><span class="p">,</span> <span class="n">pick</span>
+
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">dataframe_to_properties</span>
 
 
 <div class="viewcode-block" id="Labels"><a class="viewcode-back" href="../../../../api/napari.layers.labels.html#napari.layers.labels.labels.Labels">[docs]</a><span class="k">class</span> <span class="nc">Labels</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
@@ -182,6 +184,10 @@
 <span class="sd">        Labels data as an array or multiscale.</span>
 <span class="sd">    num_colors : int</span>
 <span class="sd">        Number of unique colors to use in colormap.</span>
+<span class="sd">    properties : dict {str: array (N,)}, DataFrame</span>
+<span class="sd">        Properties for each label. Each property should be an array of length</span>
+<span class="sd">        N, where N is the number of labels, and the first property corresponds to</span>
+<span class="sd">        background.</span>
 <span class="sd">    seed : float</span>
 <span class="sd">        Seed for colormap random generator.</span>
 <span class="sd">    name : str</span>
@@ -221,6 +227,10 @@
 <span class="sd">        Labels metadata.</span>
 <span class="sd">    num_colors : int</span>
 <span class="sd">        Number of unique colors to use in colormap.</span>
+<span class="sd">    properties : dict {str: array (N,)}, DataFrame</span>
+<span class="sd">        Properties for each label. Each property should be an array of length</span>
+<span class="sd">        N, where N is the number of labels, and the first property corresponds to</span>
+<span class="sd">        background.</span>
 <span class="sd">    seed : float</span>
 <span class="sd">        Seed for colormap random generator.</span>
 <span class="sd">    opacity : float</span>
@@ -270,6 +280,7 @@
         <span class="n">data</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">num_colors</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+        <span class="n">properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">seed</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
         <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -284,6 +295,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span> <span class="o">=</span> <span class="n">seed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_colors</span> <span class="o">=</span> <span class="n">num_colors</span>
         <span class="n">colormap</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;random&#39;</span><span class="p">,</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">label_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_colors</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">label_index</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">properties</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="n">label_index</span> <span class="o">=</span> <span class="n">dataframe_to_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">label_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">props</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">props</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_index</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="n">label_index</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span>
@@ -397,6 +423,42 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_label</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">selected_label</span><span class="p">()</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;dict {str: array (N,)}, DataFrame: Properties for each label.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
+
+    <span class="nd">@properties</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">properties</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">properties</span><span class="p">,</span> <span class="n">label_index</span> <span class="o">=</span> <span class="n">dataframe_to_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">label_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">label_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_index</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="n">label_index</span>
+
+    <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Validate the type and size of properties.&quot;&quot;&quot;</span>
+        <span class="n">lens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">lens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">properties</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">v</span> <span class="o">==</span> <span class="n">lens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">lens</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;the number of items must be equal for all properties&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">properties</span>
+
+    <span class="k">def</span> <span class="nf">_map_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Map rows in given properties to label indices&quot;&quot;&quot;</span>
+        <span class="n">arbitrary_key</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">properties</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">label_index</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">properties</span><span class="p">[</span><span class="n">arbitrary_key</span><span class="p">]))}</span>
+        <span class="k">return</span> <span class="n">label_index</span>
+
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get dictionary of layer state.</span>
 
@@ -410,6 +472,7 @@
             <span class="p">{</span>
                 <span class="s1">&#39;multiscale&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">,</span>
                 <span class="s1">&#39;num_colors&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_colors</span><span class="p">,</span>
+                <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span>
                 <span class="s1">&#39;seed&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
                 <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
             <span class="p">}</span>
@@ -708,7 +771,22 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slice_coord</span><span class="p">][</span><span class="n">keep_coords</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_label</span>
 
         <span class="k">if</span> <span class="n">refresh</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Labels.get_message"><a class="viewcode-back" href="../../../../api/napari.layers.labels.html#napari.layers.labels.labels.Labels.get_message">[docs]</a>    <span class="k">def</span> <span class="nf">get_message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_message</span><span class="p">()</span>
+        <span class="c1"># if this labels layer has properties</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">:</span>
+            <span class="c1"># if the cursor is not outside the image or on the background</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;index&#39;</span><span class="p">:</span>
+                            <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;, </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; [No Properties]&#39;</span>
+        <span class="k">return</span> <span class="n">msg</span></div></div>
 </pre></div>
 
            </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.shapes.shapes &mdash; napari 0.3.2+3.g64eed84 documentation</title>
+  <title>napari.layers.shapes.shapes &mdash; napari 0.3.2+4.g0323c33 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.2+3.g64eed84
+                0.3.2+4.g0323c33
               </div>
             
           
@@ -159,6 +159,15 @@
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
 
+<span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">normalize_and_broadcast_colors</span><span class="p">,</span>
+    <span class="n">transform_color_with_defaults</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">...utils.colormaps.standardize_color</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">transform_color</span><span class="p">,</span>
+    <span class="n">hex_to_name</span><span class="p">,</span>
+    <span class="n">rgb_to_hex</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ensure_iterable</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
@@ -201,13 +210,13 @@
 <span class="sd">        same length as the length of `data` and each element will be</span>
 <span class="sd">        applied to each shape otherwise the same value will be used for all</span>
 <span class="sd">        shapes.</span>
-<span class="sd">    edge_color : str or list</span>
+<span class="sd">    edge_color : str, array-like</span>
 <span class="sd">        If string can be any color name recognized by vispy or hex value if</span>
 <span class="sd">        starting with `#`. If array-like must be 1-dimensional array with 3</span>
 <span class="sd">        or 4 elements. If a list is supplied it must be the same length as</span>
 <span class="sd">        the length of `data` and each element will be applied to each shape</span>
 <span class="sd">        otherwise the same value will be used for all shapes.</span>
-<span class="sd">    face_color : str or list</span>
+<span class="sd">    face_color : str, array-like</span>
 <span class="sd">        If string can be any color name recognized by vispy or hex value if</span>
 <span class="sd">        starting with `#`. If array-like must be 1-dimensional array with 3</span>
 <span class="sd">        or 4 elements. If a list is supplied it must be the same length as</span>
@@ -227,7 +236,7 @@
 <span class="sd">        Scale factors for the layer.</span>
 <span class="sd">    translate : tuple of float</span>
 <span class="sd">        Translation values for the layer.</span>
-<span class="sd">    opacity : float or list</span>
+<span class="sd">    opacity : float</span>
 <span class="sd">        Opacity of the layer visual, between 0.0 and 1.0.</span>
 <span class="sd">    blending : str</span>
 <span class="sd">        One of a list of preset blending modes that determines how RGB and</span>
@@ -243,14 +252,12 @@
 <span class="sd">        N vertices of a shape in D dimensions.</span>
 <span class="sd">    shape_type : (N, ) list of str</span>
 <span class="sd">        Name of shape type for each shape.</span>
-<span class="sd">    edge_color : (N, ) list of str</span>
-<span class="sd">        Name of edge color for each shape.</span>
-<span class="sd">    face_color : (N, ) list of str</span>
-<span class="sd">        Name of face color for each shape.</span>
+<span class="sd">    edge_color : str, array-like</span>
+<span class="sd">        Color of the shape border. Numeric color values should be RGB(A).</span>
+<span class="sd">    face_color : str, array-like</span>
+<span class="sd">        Color of the shape face. Numeric color values should be RGB(A).</span>
 <span class="sd">    edge_width : (N, ) list of float</span>
 <span class="sd">        Edge width for each shape.</span>
-<span class="sd">    opacity : (N, ) list of float</span>
-<span class="sd">        Opacity for each shape.</span>
 <span class="sd">    z_index : (N, ) list of int</span>
 <span class="sd">        z-index for each shape.</span>
 <span class="sd">    current_edge_width : float</span>
@@ -262,8 +269,6 @@
 <span class="sd">    current_face_color : str</span>
 <span class="sd">        Color of the face of the next shape to be added or the currently</span>
 <span class="sd">        selected shape.</span>
-<span class="sd">    current_opacity : float</span>
-<span class="sd">        Opacity of the next shape to be added or the currently selected shape.</span>
 <span class="sd">    selected_data : set</span>
 <span class="sd">        List of currently selected shapes.</span>
 <span class="sd">    nshapes : int</span>
@@ -387,8 +392,6 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">ndim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
-        <span class="c1"># Don&#39;t pass on opacity value to base layer as it could be a list</span>
-        <span class="c1"># and will get set bellow</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span>
             <span class="n">ndim</span><span class="p">,</span>
@@ -396,6 +399,7 @@
             <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
             <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span>
+            <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
         <span class="p">)</span>
@@ -405,6 +409,8 @@
             <span class="n">edge_width</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">edge_color</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">face_color</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">current_edge_color</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">current_face_color</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">highlight</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -421,19 +427,14 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_width</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">edge_color</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="n">edge_color</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">edge_color</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">face_color</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="n">face_color</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">face_color</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="s1">&#39;white&#39;</span>
-
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">opacity</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_opacity</span> <span class="o">=</span> <span class="mf">0.7</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">ShapeList</span><span class="p">(</span><span class="n">ndisplay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">slice_key</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)[</span>
@@ -475,7 +476,6 @@
             <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
             <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
             <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
-            <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
             <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -536,47 +536,32 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">current_edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;str: color of shape edges including lines and paths.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span>
+        <span class="n">hex_</span> <span class="o">=</span> <span class="n">rgb_to_hex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hex_to_name</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hex_</span><span class="p">,</span> <span class="n">hex_</span><span class="p">)</span>
 
     <span class="nd">@current_edge_color</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">current_edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_color</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="n">edge_color</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">edge_color</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_edge_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">edge_color</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_edge_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_face_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">current_face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;str: color of shape faces.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span>
+        <span class="n">hex_</span> <span class="o">=</span> <span class="n">rgb_to_hex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hex_to_name</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hex_</span><span class="p">,</span> <span class="n">hex_</span><span class="p">)</span>
 
     <span class="nd">@current_face_color</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">current_face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">face_color</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="n">face_color</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">face_color</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_face_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">face_color</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_face_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">face_color</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">current_opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;float: Opacity value between 0.0 and 1.0.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_opacity</span>
-
-    <span class="nd">@current_opacity</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">current_opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opacity</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">opacity</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;opacity must be between 0.0 and 1.0; &#39;</span> <span class="sa">f</span><span class="s1">&#39;got </span><span class="si">{</span><span class="n">opacity</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_current_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_opacity</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">opacity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_opacity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">opacity</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_face_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">shape_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -585,23 +570,28 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list of str: name of edge color for each shape.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_colors</span>
+        <span class="sd">&quot;&quot;&quot;(N x 4) np.ndarray: Array of RGBA face colors for each shape&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_color</span>
+
+    <span class="nd">@edge_color</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_color</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_color</span><span class="p">(</span><span class="n">edge_color</span><span class="p">,</span> <span class="s1">&#39;edge&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list of str: name of face color for each shape.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">face_colors</span>
+        <span class="sd">&quot;&quot;&quot;(N x 4) np.ndarray: Array of RGBA face colors for each shape&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">face_color</span>
+
+    <span class="nd">@face_color</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">face_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">face_color</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_color</span><span class="p">(</span><span class="n">face_color</span><span class="p">,</span> <span class="s1">&#39;face&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">face_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edge_width</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;list of float: edge width for each shape.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_widths</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;list of float: opacity for each shape.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">opacities</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">z_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -619,47 +609,63 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interaction_box</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_selected_data</span><span class="p">)</span>
 
         <span class="c1"># Update properties based on selected shapes</span>
-        <span class="n">face_colors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-            <span class="nb">set</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">_face_color_name</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected_data</span>
-                <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">selected_face_colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_face_color</span><span class="p">[</span>
+                <span class="nb">list</span><span class="p">(</span><span class="n">selected_data</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">face_colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">selected_face_colors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">face_colors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">face_color</span> <span class="o">=</span> <span class="n">face_colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_face_color</span> <span class="o">=</span> <span class="n">face_color</span>
+
+            <span class="n">selected_edge_colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_edge_color</span><span class="p">[</span>
+                <span class="nb">list</span><span class="p">(</span><span class="n">selected_data</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">edge_colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">selected_edge_colors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_colors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">edge_color</span> <span class="o">=</span> <span class="n">edge_colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_color</span> <span class="o">=</span> <span class="n">edge_color</span>
+
+            <span class="n">edge_width</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="nb">set</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">edge_width</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected_data</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
             <span class="p">)</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">face_colors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">face_color</span> <span class="o">=</span> <span class="n">face_colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current_face_color</span> <span class="o">=</span> <span class="n">face_color</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_width</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">edge_width</span> <span class="o">=</span> <span class="n">edge_width</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_width</span> <span class="o">=</span> <span class="n">edge_width</span>
 
-        <span class="n">edge_colors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-            <span class="nb">set</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">_edge_color_name</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected_data</span>
-                <span class="p">]</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_colors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">edge_color</span> <span class="o">=</span> <span class="n">edge_colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_color</span> <span class="o">=</span> <span class="n">edge_color</span>
+    <span class="k">def</span> <span class="nf">_set_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Set the face_color or edge_color property</span>
 
-        <span class="n">edge_width</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-            <span class="nb">set</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">edge_width</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected_data</span><span class="p">])</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        color : (N, 4) array or str</span>
+<span class="sd">            The value for setting edge or face_color</span>
+<span class="sd">        attribute : str in {&#39;edge&#39;, &#39;face&#39;}</span>
+<span class="sd">            The name of the attribute to set the color of.</span>
+<span class="sd">            Should be &#39;edge&#39; for edge_color or &#39;face&#39; for face_color.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">transformed_color</span> <span class="o">=</span> <span class="n">transform_color_with_defaults</span><span class="p">(</span>
+            <span class="n">num_entries</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+            <span class="n">colors</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+            <span class="n">elem_name</span><span class="o">=</span><span class="s2">&quot;face_color&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_width</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">edge_width</span> <span class="o">=</span> <span class="n">edge_width</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_width</span> <span class="o">=</span> <span class="n">edge_width</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">normalize_and_broadcast_colors</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">transformed_color</span>
+        <span class="p">)</span>
 
-        <span class="n">opacities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-            <span class="nb">set</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">opacity</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected_data</span><span class="p">])</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">opacities</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">opacity</span> <span class="o">=</span> <span class="n">opacities</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">current_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">attribute</span><span class="si">}</span><span class="s1">_color&#39;</span><span class="p">,</span> <span class="n">colors</span><span class="p">)</span>
+
+        <span class="n">color_event</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">attribute</span><span class="si">}</span><span class="s1">_color&#39;</span><span class="p">)</span>
+        <span class="n">color_event</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get dictionary of layer state.</span>
@@ -810,7 +816,6 @@
         <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">opacity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add shapes to the current layer.</span>
@@ -844,8 +849,6 @@
 <span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
 <span class="sd">            the length of `data` and each element will be applied to each shape</span>
 <span class="sd">            otherwise the same value will be used for all shapes.</span>
-<span class="sd">        opacity : float | list</span>
-<span class="sd">            Opacity of the shapes, must be between 0 and 1.</span>
 <span class="sd">        z_index : int | list</span>
 <span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
 <span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
@@ -856,11 +859,9 @@
         <span class="k">if</span> <span class="n">edge_width</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">edge_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_width</span>
         <span class="k">if</span> <span class="n">edge_color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">edge_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_color</span>
+            <span class="n">edge_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span>
         <span class="k">if</span> <span class="n">face_color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">face_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_face_color</span>
-        <span class="k">if</span> <span class="n">opacity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">opacity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_opacity</span>
+            <span class="n">face_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">z_index</span> <span class="o">=</span> <span class="n">z_index</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_z_index</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
@@ -871,18 +872,37 @@
                 <span class="c1"># If a single array for a shape has been passed turn into list</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">]</span>
 
+            <span class="c1"># transform the colors</span>
+            <span class="n">transformed_ec</span> <span class="o">=</span> <span class="n">transform_color_with_defaults</span><span class="p">(</span>
+                <span class="n">num_entries</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+                <span class="n">colors</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+                <span class="n">elem_name</span><span class="o">=</span><span class="s2">&quot;edge_color&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">transformed_edge_color</span> <span class="o">=</span> <span class="n">normalize_and_broadcast_colors</span><span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">transformed_ec</span>
+            <span class="p">)</span>
+            <span class="n">transformed_fc</span> <span class="o">=</span> <span class="n">transform_color_with_defaults</span><span class="p">(</span>
+                <span class="n">num_entries</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+                <span class="n">colors</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+                <span class="n">elem_name</span><span class="o">=</span><span class="s2">&quot;face_color&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">transformed_face_color</span> <span class="o">=</span> <span class="n">normalize_and_broadcast_colors</span><span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">transformed_fc</span>
+            <span class="p">)</span>
+
             <span class="c1"># Turn input arguments into iterables</span>
             <span class="n">shape_inputs</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
                 <span class="n">data</span><span class="p">,</span>
                 <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">shape_type</span><span class="p">),</span>
                 <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">edge_width</span><span class="p">),</span>
-                <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">edge_color</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-                <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">face_color</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-                <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">opacity</span><span class="p">),</span>
+                <span class="n">transformed_edge_color</span><span class="p">,</span>
+                <span class="n">transformed_face_color</span><span class="p">,</span>
                 <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">z_index</span><span class="p">),</span>
             <span class="p">)</span>
 
-            <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">ec</span><span class="p">,</span> <span class="n">fc</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">shape_inputs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">ec</span><span class="p">,</span> <span class="n">fc</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">shape_inputs</span><span class="p">:</span>
 
                 <span class="c1"># A False slice_key means the shape is invalid as it is not</span>
                 <span class="c1"># confined to a single plane</span>
@@ -890,16 +910,13 @@
                 <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_cls</span><span class="p">(</span>
                     <span class="n">d</span><span class="p">,</span>
                     <span class="n">edge_width</span><span class="o">=</span><span class="n">ew</span><span class="p">,</span>
-                    <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span>
-                    <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">,</span>
-                    <span class="n">opacity</span><span class="o">=</span><span class="n">o</span><span class="p">,</span>
                     <span class="n">z_index</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
                     <span class="n">dims_order</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span><span class="p">,</span>
                     <span class="n">ndisplay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">,</span>
                 <span class="p">)</span>
 
                 <span class="c1"># Add shape</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_display_order_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">)</span>
@@ -1191,6 +1208,14 @@
         <span class="n">to_remove</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">to_remove</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_edge_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_edge_color</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_face_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_face_color</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_finish_drawing</span><span class="p">()</span></div>
 
@@ -1364,11 +1389,14 @@
     <span class="k">def</span> <span class="nf">_copy_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Copy selected shapes to clipboard.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[</span>
                     <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected_data</span>
                 <span class="p">],</span>
+                <span class="s1">&#39;edge_color&#39;</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_edge_color</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
+                <span class="s1">&#39;face_color&#39;</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_face_color</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">&#39;indices&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1385,14 +1413,18 @@
             <span class="p">]</span>
 
             <span class="c1"># Add new shape data</span>
-            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]):</span>
                 <span class="n">shape</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">shape</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
                 <span class="n">data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span>
                     <span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span>
                 <span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
                 <span class="n">shape</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+                <span class="n">face_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">&#39;face_color&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">edge_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">&#39;edge_color&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                    <span class="n">shape</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span>
+                <span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
                 <span class="nb">range</span><span class="p">(</span><span class="n">cur_shapes</span><span class="p">,</span> <span class="n">cur_shapes</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]))</span>

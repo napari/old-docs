@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.labels.labels &mdash; napari 0.1.dev737+ga9d2cda documentation</title>
+  <title>napari.layers.labels.labels &mdash; napari 0.1.dev738+gc2c6b8e documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.1.dev737+ga9d2cda
+                0.1.dev738+gc2c6b8e
               </div>
             
           
@@ -161,12 +161,12 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
-
 <span class="kn">from</span> <span class="nn">..image</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">colormaps</span>
+<span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">transform_color</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
-<span class="kn">from</span> <span class="nn">._labels_constants</span> <span class="kn">import</span> <span class="n">Mode</span>
+<span class="kn">from</span> <span class="nn">._labels_constants</span> <span class="kn">import</span> <span class="n">Mode</span><span class="p">,</span> <span class="n">LabelColorMode</span>
 <span class="kn">from</span> <span class="nn">._labels_mouse_bindings</span> <span class="kn">import</span> <span class="n">draw</span><span class="p">,</span> <span class="n">pick</span>
 
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">dataframe_to_properties</span>
@@ -293,11 +293,17 @@
         <span class="n">blending</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">color_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span> <span class="o">=</span> <span class="n">seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_colors</span> <span class="o">=</span> <span class="n">num_colors</span>
-        <span class="n">colormap</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;random&#39;</span><span class="p">,</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">label_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_colors</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_random_colormap</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;random&#39;</span><span class="p">,</span>
+            <span class="n">colormaps</span><span class="o">.</span><span class="n">label_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_colors</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span>
 
         <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span> <span class="o">=</span> <span class="p">{}</span>
@@ -317,7 +323,7 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span>
             <span class="n">rgb</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">colormap</span><span class="o">=</span><span class="n">colormap</span><span class="p">,</span>
+            <span class="n">colormap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_random_colormap</span><span class="p">,</span>
             <span class="n">contrast_limits</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
             <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span>
             <span class="n">rendering</span><span class="o">=</span><span class="s1">&#39;translucent&#39;</span><span class="p">,</span>
@@ -338,15 +344,16 @@
             <span class="n">contiguous</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">brush_size</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">selected_label</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">color_mode</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_contiguous</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_brush_size</span> <span class="o">=</span> <span class="mi">10</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_label</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_selected_label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_dict</span> <span class="o">=</span> <span class="n">color_dict</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mode_history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
@@ -439,6 +446,34 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="n">label_index</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">color_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;dict: custom color dict for label coloring&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_dict</span>
+
+    <span class="nd">@color_dict</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">color_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color_dict</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">color_dict</span><span class="p">:</span>
+            <span class="n">color_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">DIRECT</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">color_dict</span><span class="p">:</span>
+            <span class="n">color_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;transparent&#39;</span>
+
+        <span class="k">if</span> <span class="kc">None</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">color_dict</span><span class="p">:</span>
+            <span class="n">color_dict</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">label</span><span class="p">:</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">color_str</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">color_str</span> <span class="ow">in</span> <span class="n">color_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_color_dict</span> <span class="o">=</span> <span class="n">colors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="o">=</span> <span class="n">color_mode</span>
+
     <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
@@ -477,6 +512,7 @@
                 <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span>
                 <span class="s1">&#39;seed&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
                 <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                <span class="s1">&#39;color_dict&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_dict</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">state</span>
@@ -496,6 +532,34 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_label</span> <span class="o">=</span> <span class="n">selected_label</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_color</span><span class="p">(</span><span class="n">selected_label</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">selected_label</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">color_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Color mode string&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span><span class="p">)</span>
+
+    <span class="nd">@color_mode</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">color_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color_mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LabelColorMode</span><span class="p">]):</span>
+        <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="p">(</span><span class="n">color_mode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">color_mode</span> <span class="o">==</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">DIRECT</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">custom_colormap</span><span class="p">,</span>
+                <span class="n">label_color_index</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">color_dict_to_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_dict</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="n">custom_colormap</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_color_index</span> <span class="o">=</span> <span class="n">label_color_index</span>
+        <span class="k">elif</span> <span class="n">color_mode</span> <span class="o">==</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_label_color_index</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_colormap</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported Color Mode&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span> <span class="o">=</span> <span class="n">color_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_selected_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">color_mode</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colormap</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">selected_label</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -622,9 +686,22 @@
 <span class="sd">        image : array</span>
 <span class="sd">            Image mapped between 0 and 1 to be displayed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-            <span class="n">raw</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">_low_discrepancy_image</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span><span class="p">),</span> <span class="mi">0</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span> <span class="o">==</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">DIRECT</span><span class="p">:</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_label_color_index</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_color_index</span>
+                    <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_color_index</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">u</span>
+                <span class="p">]</span>
+            <span class="p">)[</span><span class="n">inv</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span> <span class="o">==</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">raw</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">colormaps</span><span class="o">.</span><span class="n">_low_discrepancy_image</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span><span class="p">),</span> <span class="mi">0</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported Color Mode&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">image</span>
 
 <div class="viewcode-block" id="Labels.new_colormap"><a class="viewcode-back" href="../../../../api/napari.layers.labels.html#napari.layers.labels.labels.Labels.new_colormap">[docs]</a>    <span class="k">def</span> <span class="nf">new_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

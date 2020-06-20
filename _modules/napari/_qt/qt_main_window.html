@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.3.5rc1 documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.3.6.dev1+gff7729e documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.5rc1
+                0.3.6.dev1+gff7729e
               </div>
             
           
@@ -170,8 +170,9 @@
 <span class="kn">from</span> <span class="nn">.qt_about</span> <span class="kn">import</span> <span class="n">QtAbout</span>
 <span class="kn">from</span> <span class="nn">.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
 <span class="kn">from</span> <span class="nn">.qt_plugin_sorter</span> <span class="kn">import</span> <span class="n">QtPluginSorter</span>
+<span class="kn">from</span> <span class="nn">.qt_plugin_table</span> <span class="kn">import</span> <span class="n">QtPluginTable</span>
 <span class="kn">from</span> <span class="nn">.qt_debug_menu</span> <span class="kn">import</span> <span class="n">DebugMenu</span>
-<span class="kn">from</span> <span class="nn">.qt_dict_table</span> <span class="kn">import</span> <span class="n">QtDictTable</span>
+
 <span class="kn">from</span> <span class="nn">.qt_viewer_dock_widget</span> <span class="kn">import</span> <span class="n">QtViewerDockWidget</span>
 <span class="kn">from</span> <span class="nn">..resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">perf</span>
@@ -180,18 +181,15 @@
 <span class="c1"># these module-level imports have to come after `app.use_app(API)`</span>
 <span class="c1"># see discussion on #638</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: E402</span>
-    <span class="n">QAbstractItemView</span><span class="p">,</span>
     <span class="n">QApplication</span><span class="p">,</span>
     <span class="n">QMainWindow</span><span class="p">,</span>
     <span class="n">QWidget</span><span class="p">,</span>
     <span class="n">QHBoxLayout</span><span class="p">,</span>
-    <span class="n">QDialog</span><span class="p">,</span>
     <span class="n">QDockWidget</span><span class="p">,</span>
     <span class="n">QLabel</span><span class="p">,</span>
     <span class="n">QAction</span><span class="p">,</span>
     <span class="n">QShortcut</span><span class="p">,</span>
     <span class="n">QStatusBar</span><span class="p">,</span>
-    <span class="n">QVBoxLayout</span><span class="p">,</span>
     <span class="n">QFileDialog</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>  <span class="c1"># noqa: E402</span>
@@ -445,46 +443,7 @@
 
     <span class="k">def</span> <span class="nf">_show_plugin_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show dialog with a table of installed plugins and metadata.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">plugin_manager</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">..plugins</span> <span class="kn">import</span> <span class="n">plugin_manager</span>
-
-        <span class="n">dialog</span> <span class="o">=</span> <span class="n">QDialog</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">setMaximumHeight</span><span class="p">(</span><span class="mi">800</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">1280</span><span class="p">)</span>
-        <span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
-        <span class="c1"># maybe someday add a search bar here?</span>
-        <span class="n">title</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="s2">&quot;Installed Plugins&quot;</span><span class="p">)</span>
-        <span class="n">title</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;h2&quot;</span><span class="p">)</span>
-        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
-        <span class="c1"># get metadata for successfully registered plugins</span>
-        <span class="n">plugin_manager</span><span class="o">.</span><span class="n">discover</span><span class="p">()</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">list_plugin_metadata</span><span class="p">()</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;plugin_name&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;builtins&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
-        <span class="c1"># create a table for it</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">QtDictTable</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">,</span>
-            <span class="n">data</span><span class="p">,</span>
-            <span class="n">headers</span><span class="o">=</span><span class="p">[</span>
-                <span class="s1">&#39;plugin_name&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;package&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;version&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;url&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;author&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;license&#39;</span><span class="p">,</span>
-            <span class="p">],</span>
-            <span class="n">min_section_width</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;pluginTable&quot;</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">horizontalHeader</span><span class="p">()</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;pluginTableHeader&quot;</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">verticalHeader</span><span class="p">()</span><span class="o">.</span><span class="n">setObjectName</span><span class="p">(</span><span class="s2">&quot;pluginTableHeader&quot;</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setGridStyle</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoPen</span><span class="p">)</span>
-        <span class="c1"># prevent editing of table</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">setEditTriggers</span><span class="p">(</span><span class="n">QAbstractItemView</span><span class="o">.</span><span class="n">NoEditTriggers</span><span class="p">)</span>
-        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">dialog</span><span class="o">.</span><span class="n">table</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_plugin_list</span> <span class="o">=</span> <span class="n">dialog</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
+        <span class="n">QtPluginTable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_show_plugin_sorter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show dialog that allows users to sort the call order of plugins.&quot;&quot;&quot;</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>creating a napari plugin &mdash; napari 0.3.6.dev5+gca04e34 documentation</title>
+  <title>creating a napari plugin &mdash; napari 0.3.6.dev6+g7e45c01 documentation</title>
   
 
   
@@ -63,7 +63,7 @@
             
             
               <div class="version">
-                0.3.6.dev5+gca04e34
+                0.3.6.dev6+g7e45c01
               </div>
             
           
@@ -101,6 +101,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#using-package-metadata">Using package metadata</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#step-4-share-your-plugin-with-the-world">Step 4: Share your plugin with the world</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#cookiecutter-template">Cookiecutter template</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#example-plugins">Example Plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#help">Help</a></li>
@@ -185,35 +186,40 @@
             
   <div class="section" id="creating-a-napari-plugin">
 <span id="plugins-for-plugin-developers"></span><h1>creating a napari plugin<a class="headerlink" href="#creating-a-napari-plugin" title="Permalink to this headline">¶</a></h1>
-<p>This document explains how to extend napari functionality by writing a plugin
+<p>This document explains how to extend napari’s functionality by writing a plugin
 that can be installed with <code class="docutils literal notranslate"><span class="pre">pip</span></code> and autodetected by napari.  For more
-information on how plugins are implementated internally in napari, see
+information on how plugins are implemented internally in napari, see
 <a class="reference internal" href="for_napari_developers.html#plugins-for-napari-developers"><span class="std std-ref">napari plugin architecture</span></a>.</p>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">napari</span></code> allows developers to extend the functionality of the program as
-follows:</p>
-<p>1. <strong>Hooks</strong>: We (napari) identify specific places (“<em>hooks</em>”) in the napari
-codebase where we would like external developers to be able to extend
-functionality. For example, when a user tries to open a filepath in napari, we
+<p><code class="docutils literal notranslate"><span class="pre">napari</span></code> supports plugin development through <strong>hooks</strong>:
+specific places in the napari
+codebase where functionality can be extended.
+For example, when a user tries to open a filepath in napari, we
 might want to enable plugins to extend the file formats that can be handled.  A
 <em>hook</em>, then, is the place within napari where we
-“promise” to call functions created by external developers.</p>
-<p>2. <strong>Hook Specifications</strong>:  We then create “<em>hook specifications</em>”, which are
+“promise” to call functions created by external developers &amp; installed by the user.</p>
+<p>1. <strong>Hook Specifications</strong>:  For each supported hook, we have created
+“<em>hook specifications</em>”, which are
 well-documented function signatures that define the API (or
 “contract”) that a plugin developer must adhere to when writing their function
-that we promise to call somewhere in the napari codebase.</p>
-<p>3. <strong>Hook Implementations</strong>: Plugin developers then write functions (“<em>hook
+that we promise to call somewhere in the napari codebase.
+See <a class="reference internal" href="#plugins-hook-spec"><span class="std std-ref">Step 1: Choose a hook specification to implement</span></a>.</p>
+<p>2. <strong>Hook Implementations</strong>: To make a plugin, plugin developers then write functions (“<em>hook
 implementations</em>”) and mark that function as meeting the requirements of a
-specific <em>hook specification</em> offered by napari (using a decorator as
-<a class="reference internal" href="#hookimplementation-decorator"><span class="std std-ref">described below</span></a>).</p>
-<p>4. <strong>Plugin discovery</strong>: Using <a class="reference internal" href="#hookimplementation-decorator"><span class="std std-ref">one of two methods</span></a>, plugins that are installed in the same python
+specific <em>hook specification</em> offered by napari.
+See <a class="reference internal" href="#plugins-hook-implement"><span class="std std-ref">Step 2: Write your hook implementation</span></a>.</p>
+<p>3. <strong>Plugin discovery</strong>: Plugins that are installed in the same python
 environment as napari can make themselves known to napari. <code class="docutils literal notranslate"><span class="pre">napari</span></code> will then
 scan plugin modules for <em>hook implementations</em> that will then be called at the
-appropriate time place during the execution of <code class="docutils literal notranslate"><span class="pre">napari</span></code>.</p>
+appropriate time place during the execution of <code class="docutils literal notranslate"><span class="pre">napari</span></code>.
+See <a class="reference internal" href="#plugin-discovery"><span class="std std-ref">Step 3: Make your plugin discoverable</span></a>.</p>
+<p>4. <strong>Plugin sharing</strong>: When you are ready to share your plugin, tag your repo
+with <cite>napari-plugin</cite>, push a release to pypi, and announce it on Image.sc.
+See <a class="reference internal" href="#plugin-sharing"><span class="std std-ref">Step 4: Share your plugin with the world</span></a>.</p>
 </div>
 <div class="section" id="step-1-choose-a-hook-specification-to-implement">
-<h2>Step 1: Choose a hook specification to implement<a class="headerlink" href="#step-1-choose-a-hook-specification-to-implement" title="Permalink to this headline">¶</a></h2>
+<span id="plugins-hook-spec"></span><h2>Step 1: Choose a hook specification to implement<a class="headerlink" href="#step-1-choose-a-hook-specification-to-implement" title="Permalink to this headline">¶</a></h2>
 <p>The functionality of plugins, as currently designed and implemented in
 <code class="docutils literal notranslate"><span class="pre">napari</span></code>, is rather specific in scope: They are <em>not</em> just independent code
 blocks with their own GUIs that show up next to the main napari window. Rather,
@@ -257,7 +263,7 @@ of <code class="docutils literal notranslate"><span class="pre">(data,)</span></
 contract that you can follow, and know that napari will handle the rest.</p>
 </div>
 <div class="section" id="step-2-write-your-hook-implementation">
-<h2>Step 2: Write your hook implementation<a class="headerlink" href="#step-2-write-your-hook-implementation" title="Permalink to this headline">¶</a></h2>
+<span id="plugins-hook-implement"></span><h2>Step 2: Write your hook implementation<a class="headerlink" href="#step-2-write-your-hook-implementation" title="Permalink to this headline">¶</a></h2>
 <p>Once you have identified the <a class="reference internal" href="hook_specifications.html#hook-specifications-reference"><span class="std std-ref">hook specification</span></a> that you want to implement, you have to create
 a <em>hook implementation</em>: a function that accepts the arguments specified by the
 hook specification signature and returns a value with the expected return type.</p>
@@ -372,8 +378,17 @@ functionality by simply installing your package along with napari:</p>
 </div>
 </div>
 </div>
+<div class="section" id="step-4-share-your-plugin-with-the-world">
+<span id="plugin-sharing"></span><h2>Step 4: Share your plugin with the world<a class="headerlink" href="#step-4-share-your-plugin-with-the-world" title="Permalink to this headline">¶</a></h2>
+<p>Once you are ready to share your plugin, <a class="reference external" href="https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives">upload the Python package to PyPI</a>
+and it can then be installed with a simple <cite>pip install mypackage</cite>.
+If you used the <a class="reference internal" href="#plugin-cookiecutter-template"><span class="std std-ref">Cookiecutter template</span></a>, you can also <a class="reference external" href="https://github.com/napari/cookiecutter-napari-plugin#set-up-automatic-deployments">setup automated deployments</a>.</p>
+<p>If you are using Github, add the <a class="reference external" href="https://github.com/topics/napari-plugin">“napari-plugin” topic</a> to your repo so other developers can
+see your work.</p>
+<p>When you are ready for users, announce your plugin on the <a class="reference external" href="https://forum.image.sc/tag/napari">Image.sc Forum</a>.</p>
+</div>
 <div class="section" id="cookiecutter-template">
-<h2>Cookiecutter template<a class="headerlink" href="#cookiecutter-template" title="Permalink to this headline">¶</a></h2>
+<span id="plugin-cookiecutter-template"></span><h2>Cookiecutter template<a class="headerlink" href="#cookiecutter-template" title="Permalink to this headline">¶</a></h2>
 <p>To quickly generate a new napari plugin project, you may wish to use the
 <a class="reference external" href="https://github.com/napari/cookiecutter-napari-plugin">cookiecutter-napari-plugin</a> template.  This uses
 the <a class="reference external" href="https://github.com/cookiecutter/cookiecutter">cookiecutter</a> command line
@@ -394,6 +409,7 @@ read the <a class="reference external" href="https://github.com/tlambert03/mrc">
 community plugins developed for napari.  This plugin takes advantage of
 <a class="reference internal" href="#entry-point-discovery"><span class="std std-ref">entry_point discovery</span></a> to offer multiple
 readers for both in-memory and lazy-loading of image files.</p>
+<p>More examples of plugins can be found on the <a class="reference external" href="https://github.com/topics/napari-plugin">“napari-plugin” Github topic</a>.</p>
 </div>
 <div class="section" id="help">
 <h2>Help<a class="headerlink" href="#help" title="Permalink to this headline">¶</a></h2>

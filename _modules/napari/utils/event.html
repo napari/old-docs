@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.event &mdash; napari 0.3.6.dev10+ga483f16 documentation</title>
+  <title>napari.utils.event &mdash; napari 0.3.6.dev11+ge43f730 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev10+ga483f16
+                0.3.6.dev11+ge43f730
               </div>
             
           
@@ -618,13 +618,14 @@
         <span class="k">return</span> <span class="n">callback</span>
 
     <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; __call__(**kwargs)</span>
-<span class="sd">        Invoke all callbacks for this emitter.</span>
+        <span class="sd">&quot;&quot;&quot;Invoke all callbacks for this emitter.</span>
 
 <span class="sd">        Emit a new event object, created with the given keyword</span>
 <span class="sd">        arguments, which must match with the input arguments of the</span>
 <span class="sd">        corresponding event class. Note that the &#39;type&#39; argument is</span>
-<span class="sd">        filled in by the emitter.</span>
+<span class="sd">        filled in by the emitter. If no kwargs and only a single arg is</span>
+<span class="sd">        passed (that is not an instance of self.event_class), then assume that</span>
+<span class="sd">        that argument is a value emitted with the &#39;value&#39; kwarg.</span>
 
 <span class="sd">        Alternatively, the emitter can also be called with an Event</span>
 <span class="sd">        instance as the only argument. In this case, the specified</span>
@@ -696,16 +697,23 @@
             <span class="n">event</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="c1"># Ensure that the given event matches what we want to emit</span>
             <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_class</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
-            <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_args</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_class</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;Event emitters can be called with an Event &quot;</span>
-                <span class="s2">&quot;instance or with keyword arguments only.&quot;</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="n">event</span>
+            <span class="k">return</span> <span class="n">event</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="c1"># if an EventEmitter is called with a single argument (that is</span>
+                <span class="c1"># not an instance of self.event_class), assume that that</span>
+                <span class="c1"># argument is a value to be emitted.</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Event emitters may be called with an Event instance, &quot;</span>
+                    <span class="s2">&quot;a single argument, or with keyword arguments only.&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">got: args=</span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">, kwargs=</span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_args</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_class</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>
 
 <div class="viewcode-block" id="EventEmitter.blocked"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.event.EventEmitter.blocked">[docs]</a>    <span class="k">def</span> <span class="nf">blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return boolean indicating whether the emitter is blocked for</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.viewer_model &mdash; napari 0.3.6.dev10+ga483f16 documentation</title>
+  <title>napari.components.viewer_model &mdash; napari 0.3.6.dev11+ge43f730 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev10+ga483f16
+                0.3.6.dev11+ge43f730
               </div>
             
           
@@ -164,7 +164,7 @@
 <span class="kn">from</span> <span class="nn">.add_layers_mixin</span> <span class="kn">import</span> <span class="n">AddLayersMixin</span>
 <span class="kn">from</span> <span class="nn">.dims</span> <span class="kn">import</span> <span class="n">Dims</span>
 <span class="kn">from</span> <span class="nn">.layerlist</span> <span class="kn">import</span> <span class="n">LayerList</span>
-<span class="kn">from</span> <span class="nn">..utils.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">..utils.event</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">EmitterGroup</span>
 <span class="kn">from</span> <span class="nn">..utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapHandler</span><span class="p">,</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">palettes</span>
 
@@ -518,7 +518,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># iteration goes backwards to find top most selected layer if any</span>
         <span class="c1"># if multiple layers are selected sets the active layer to None</span>
-
         <span class="n">active_layer</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">active_layer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">layer</span><span class="o">.</span><span class="n">selected</span><span class="p">:</span>
@@ -596,25 +595,61 @@
 
         <span class="k">return</span> <span class="n">max_dims</span>
 
-    <span class="k">def</span> <span class="nf">_update_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the viewer status with the `event.status` string.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span>
+    <span class="k">def</span> <span class="nf">_on_selected_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_active_layer</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the viewer help with the `event.help` string.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">help</span>
+    <span class="k">def</span> <span class="nf">_on_data_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_interactive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the viewer interactivity with the `event.interactive` bool.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">interactive</span>
+    <span class="k">def</span> <span class="nf">_on_status_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive layer status change event and update viewer status.</span>
 
-    <span class="k">def</span> <span class="nf">_update_cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the viewer cursor with the `event.cursor` string.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">cursor</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        status : str</span>
+<span class="sd">            Viewer status.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>
 
-    <span class="k">def</span> <span class="nf">_update_cursor_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the viewer cursor_size with the `event.cursor_size` int.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">cursor_size</span>
+    <span class="k">def</span> <span class="nf">_on_help_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">help</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive layer help change event and update viewer help.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        help : str</span>
+<span class="sd">            Viewer help.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">help</span>
+
+    <span class="k">def</span> <span class="nf">_on_interactive_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interactive</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive layer interactivity event and update viewer interactivity.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        interactive : bool</span>
+<span class="sd">            Viewer interactivity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="n">interactive</span>
+
+    <span class="k">def</span> <span class="nf">_on_cursor_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive layer cursor change event and update viewer cursor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cursor : str</span>
+<span class="sd">            Cursor name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span>
+
+    <span class="k">def</span> <span class="nf">_on_cursor_size_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor_size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive layer cursor size change and update viewer cursor size.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cursor_size : int</span>
+<span class="sd">            Cursor size.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="n">cursor_size</span>
 
 <div class="viewcode-block" id="ViewerModel.grid_view"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.viewer_model.ViewerModel.grid_view">[docs]</a>    <span class="k">def</span> <span class="nf">grid_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_row</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Arrange the current layers is a 2D grid.</span>

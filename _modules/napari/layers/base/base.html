@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.3.6.dev10+ga483f16 documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.3.6.dev11+ge43f730 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev10+ga483f16
+                0.3.6.dev11+ge43f730
               </div>
             
           
@@ -161,6 +161,7 @@
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -171,8 +172,9 @@
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span><span class="p">,</span> <span class="n">status_format</span>
-<span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span><span class="p">,</span> <span class="n">TransformChain</span>
+<span class="kn">from</span> <span class="nn">...utils.event_handler</span> <span class="kn">import</span> <span class="n">EventHandler</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">compute_multiscale_level</span><span class="p">,</span> <span class="n">convert_to_uint8</span>
+<span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span><span class="p">,</span> <span class="n">TransformChain</span>
 <span class="kn">from</span> <span class="nn">._base_constants</span> <span class="kn">import</span> <span class="n">Blending</span>
 
 
@@ -347,25 +349,31 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">ndim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_editable_history</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_basename</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_handler</span> <span class="o">=</span> <span class="n">EventHandler</span><span class="p">(</span><span class="n">component</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
             <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">refresh</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">set_data</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">slice_data</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">blending</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">select</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">deselect</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">selected</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">translate</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">data</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">name</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">name_unique</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">thumbnail</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">status</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">help</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
@@ -374,10 +382,9 @@
             <span class="n">cursor_size</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">editable</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event_handler</span><span class="o">.</span><span class="n">on_change</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_editable</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_editable</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_editable</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">)</span>
@@ -407,12 +414,20 @@
 
     <span class="nd">@name</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_basename</span><span class="p">()</span>
+        <span class="c1"># When the layer is used in the layer list the name must be unique.</span>
+        <span class="c1"># Emitting the name_unique event first allows the layer list to check</span>
+        <span class="c1"># if the name is unique and change it if necessary.</span>
+        <span class="n">old_name</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name_unique</span><span class="p">((</span><span class="n">old_name</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="c1"># If the name is unchanged that means no name_unique listener was</span>
+        <span class="c1"># present and so emit a normal name change event</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">old_name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_name_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -422,15 +437,17 @@
 
     <span class="nd">@opacity</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opacity</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">opacity</span><span class="p">(</span><span class="n">opacity</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_opacity_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opacity</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">opacity</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;opacity must be between 0.0 and 1.0; &#39;</span> <span class="sa">f</span><span class="s1">&#39;got </span><span class="si">{</span><span class="n">opacity</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Opacity must be between 0.0 and 1.0; got </span><span class="si">{</span><span class="n">opacity</span><span class="si">}</span><span class="s1">.&#39;</span>
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opacity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">opacity</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">blending</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -453,8 +470,10 @@
 
     <span class="nd">@blending</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">blending</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blending</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blending</span><span class="p">(</span><span class="n">blending</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_blending_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blending</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_blending</span> <span class="o">=</span> <span class="n">Blending</span><span class="p">(</span><span class="n">blending</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blending</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">visible</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -462,12 +481,14 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span>
 
     <span class="nd">@visible</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">visible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">visibility</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span> <span class="o">=</span> <span class="n">visibility</span>
+    <span class="k">def</span> <span class="nf">visible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">visible</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">visible</span><span class="p">(</span><span class="n">visible</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_visible_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">visible</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span> <span class="o">=</span> <span class="n">visible</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">visible</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_editable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_editable</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -478,11 +499,13 @@
 
     <span class="nd">@editable</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">editable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">==</span> <span class="n">editable</span><span class="p">:</span>
-            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">editable</span><span class="p">(</span><span class="n">editable</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_editable_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">=</span> <span class="n">editable</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_editable</span><span class="p">(</span><span class="n">editable</span><span class="o">=</span><span class="n">editable</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">editable</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_editable</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -491,9 +514,11 @@
 
     <span class="nd">@scale</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scale</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_on_scale_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">scale</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -502,9 +527,11 @@
 
     <span class="nd">@translate</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_on_translate_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;data2world&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -515,8 +542,10 @@
     <span class="k">def</span> <span class="nf">translate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate_grid</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate_grid</span> <span class="o">==</span> <span class="n">translate_grid</span><span class="p">):</span>
             <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;world2grid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate_grid</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">translate_grid</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_on_translate_grid_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translate_grid</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;world2grid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">translate</span> <span class="o">=</span> <span class="n">translate_grid</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -570,7 +599,7 @@
 
     <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
 
     <span class="nd">@abstractmethod</span>
@@ -581,9 +610,10 @@
     <span class="k">def</span> <span class="nf">_get_ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_set_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">editable</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_is_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Determine if editable based on layer properties.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span>
 
     <span class="k">def</span> <span class="nf">_get_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_extent</span><span class="p">()</span>
@@ -649,8 +679,10 @@
         <span class="n">f_source</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">f_dest</span>
         <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">thumbnail</span> <span class="o">*</span> <span class="n">f_dest</span> <span class="o">+</span> <span class="n">background</span> <span class="o">*</span> <span class="n">f_source</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail</span> <span class="o">=</span> <span class="n">thumbnail</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">(</span><span class="n">thumbnail</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_on_thumbnail_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">thumbnail</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail</span> <span class="o">=</span> <span class="n">thumbnail</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -671,14 +703,12 @@
 
     <span class="nd">@selected</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">selected</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_selected_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">selected</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span> <span class="o">=</span> <span class="n">selected</span>
-
-        <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">deselect</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -687,9 +717,9 @@
 
     <span class="nd">@status</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">status</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_status_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">status</span>
 
     <span class="nd">@property</span>
@@ -699,9 +729,9 @@
 
     <span class="nd">@help</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">help</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">help</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">help</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">help</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_help_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">help</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_help</span> <span class="o">=</span> <span class="n">help</span>
 
     <span class="nd">@property</span>
@@ -711,9 +741,9 @@
 
     <span class="nd">@interactive</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">interactive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interactive</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">interactive</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">interactive</span><span class="p">(</span><span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">interactive</span><span class="p">(</span><span class="n">interactive</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_interactive_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interactive</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_interactive</span> <span class="o">=</span> <span class="n">interactive</span>
 
     <span class="nd">@property</span>
@@ -723,9 +753,9 @@
 
     <span class="nd">@cursor</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">cursor</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">cursor</span><span class="o">=</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_cursor_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span> <span class="o">=</span> <span class="n">cursor</span>
 
     <span class="nd">@property</span>
@@ -735,9 +765,9 @@
 
     <span class="nd">@cursor_size</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">cursor_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor_size</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">cursor_size</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor_size</span><span class="p">(</span><span class="n">cursor_size</span><span class="o">=</span><span class="n">cursor_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor_size</span><span class="p">(</span><span class="n">cursor_size</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_cursor_size_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cursor_size</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor_size</span> <span class="o">=</span> <span class="n">cursor_size</span>
 
 <div class="viewcode-block" id="Layer.set_view_slice"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.set_view_slice">[docs]</a>    <span class="k">def</span> <span class="nf">set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -790,7 +820,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_view_slice</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">slice_data</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_coordinates</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_set_highlight</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>

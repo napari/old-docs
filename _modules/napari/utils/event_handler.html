@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.event_handler &mdash; napari 0.3.6.dev13+g5acd648 documentation</title>
+  <title>napari.utils.event_handler &mdash; napari 0.3.6.dev14+g33e7a74 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev13+g5acd648
+                0.3.6.dev14+g33e7a74
               </div>
             
           
@@ -158,6 +158,7 @@
             
   <h1>Source code for napari.utils.event_handler</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">weakref</span>
 
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -171,7 +172,9 @@
 <span class="sd">        from the data, controls, or visual interface and updates all associated</span>
 <span class="sd">        components.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">components_to_update</span> <span class="o">=</span> <span class="p">[</span><span class="n">component</span><span class="p">]</span> <span class="k">if</span> <span class="n">component</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">component</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_listener</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
 
 <div class="viewcode-block" id="EventHandler.register_listener"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.event_handler.EventHandler.register_listener">[docs]</a>    <span class="k">def</span> <span class="nf">register_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Register a component to listen to emitted events.</span>
@@ -182,7 +185,10 @@
 <span class="sd">            Object that contains callbacks for specific events. These are</span>
 <span class="sd">            methods named according to an &#39;_on_*_change&#39; convention.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">components_to_update</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span></div>
+        <span class="c1"># We need to use weak references here to ensure QWigdets that are</span>
+        <span class="c1"># registered as listeners are not leaked. See this discussion</span>
+        <span class="c1"># https://github.com/napari/napari/pull/1391#issuecomment-653939143</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">component</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="EventHandler.on_change"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.event_handler.EventHandler.on_change">[docs]</a>    <span class="k">def</span> <span class="nf">on_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Process an event from any of our event emitters.</span>
@@ -206,11 +212,15 @@
             <span class="k">return</span>
 
         <span class="c1"># Update based on event value</span>
-        <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_to_update</span><span class="p">:</span>
-            <span class="n">update_method_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_on_</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">_change&quot;</span>
-            <span class="n">update_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="n">update_method_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">update_method</span><span class="p">:</span>
-                <span class="n">update_method</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div></div>
+        <span class="k">for</span> <span class="n">componentref</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="c1"># We use weak references here for reasons discussed inside the</span>
+            <span class="c1"># register_listener method above</span>
+            <span class="n">component</span> <span class="o">=</span> <span class="n">componentref</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">component</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">update_method_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_on_</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">_change&quot;</span>
+                <span class="n">update_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="n">update_method_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">update_method</span><span class="p">:</span>
+                    <span class="n">update_method</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

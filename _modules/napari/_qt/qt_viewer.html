@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.6.dev13+g5acd648 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.6.dev14+g33e7a74 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev13+g5acd648
+                0.3.6.dev14+g33e7a74
               </div>
             
           
@@ -341,9 +341,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_cursor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_view</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_reset_view</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">palette</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_palette</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reordered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reorder_layers</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">added</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_layer</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">removed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_remove_layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">event_handler</span><span class="o">.</span><span class="n">register_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
             <span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_camera</span><span class="p">()</span>
         <span class="p">)</span>
@@ -395,48 +393,49 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">220</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_on_added_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;When a layer is added, set its parent and order.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
-<span class="sd">            Event from the Qt context.</span>
+<span class="sd">        value : 2-tuple</span>
+<span class="sd">            Tuple of layer and index where layer is being added.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">layers</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">source</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">item</span>
+        <span class="n">layer</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">value</span>
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="n">create_vispy_visual</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">scene</span>
-        <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span>
+        <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">vispy_layer</span>
 
-    <span class="k">def</span> <span class="nf">_remove_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_on_removed_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;When a layer is removed, remove its parent.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
-<span class="sd">            Event from the Qt context.</span>
+<span class="sd">        value : 2-tuple</span>
+<span class="sd">            Tuple of layer and index where layer is being removed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">item</span>
+        <span class="n">layer</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">value</span>
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">draw</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">transforms</span> <span class="o">=</span> <span class="n">ChainTransform</span><span class="p">()</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">del</span> <span class="n">vispy_layer</span>
 
-    <span class="k">def</span> <span class="nf">_reorder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_on_reordered_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;When the list is reordered, propagate changes to draw order.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event : qtpy.QtCore.QEvent</span>
-<span class="sd">            Event from the Qt context.</span>
+<span class="sd">        indices : 2-tuple</span>
+<span class="sd">            Tuple of old indices and new indices of layers and new indices</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">):</span>
-            <span class="n">vispy_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-            <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="n">old_indices</span><span class="p">,</span> <span class="n">new_indices</span> <span class="o">=</span> <span class="n">indices</span>
+        <span class="k">for</span> <span class="n">visual</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">visual</span><span class="o">.</span><span class="n">order</span> <span class="ow">in</span> <span class="n">old_indices</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">old_indices</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">visual</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
+                <span class="n">visual</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="n">new_indices</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">_draw_order</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
@@ -666,7 +665,7 @@
         <span class="n">mouse_press_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
-        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">:</span>
             <span class="c1"># update cursor position in visual and layer</span>
             <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
             <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
@@ -687,7 +686,7 @@
         <span class="n">mouse_move_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
-        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">:</span>
             <span class="c1"># update cursor position in visual and layer</span>
             <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
             <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
@@ -708,7 +707,7 @@
         <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
-        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">:</span>
             <span class="c1"># update cursor position in visual and layer</span>
             <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
             <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>

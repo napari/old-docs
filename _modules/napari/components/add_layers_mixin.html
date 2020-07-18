@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.add_layers_mixin &mdash; napari 0.3.6.dev34+g1ed178f documentation</title>
+  <title>napari.components.add_layers_mixin &mdash; napari 0.3.6.dev35+ga119296 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.6.dev34+g1ed178f
+                0.3.6.dev35+ga119296
               </div>
             
           
@@ -163,20 +163,15 @@
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Union</span>
-
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">layers</span>
-<span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span><span class="p">,</span> <span class="n">guess_multiscale</span>
+<span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
+<span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
 <span class="kn">from</span> <span class="nn">..plugins.io</span> <span class="kn">import</span> <span class="n">read_data_with_plugins</span>
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">FullLayerData</span><span class="p">,</span> <span class="n">LayerData</span>
-<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">colormaps</span>
 <span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span>
-<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">ensure_iterable</span><span class="p">,</span>
-    <span class="n">ensure_sequence_of_iterables</span><span class="p">,</span>
-    <span class="n">is_sequence</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">is_sequence</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -388,55 +383,13 @@
 
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Determine if data is a multiscale</span>
-            <span class="k">if</span> <span class="n">multiscale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">multiscale</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">guess_multiscale</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="n">n_channels</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">multiscale</span> <span class="k">else</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">channel_axis</span><span class="p">]</span>
-            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;blending&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;blending&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;additive&#39;</span>
+            <span class="n">layerdata_list</span> <span class="o">=</span> <span class="n">split_channels</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">channel_axis</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-            <span class="c1"># turn the kwargs dict into a mapping of {key: iterator}</span>
-            <span class="c1"># so that we can use {k: next(v) for k, v in kwargs.items()} below</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;colormap&#39;</span> <span class="ow">and</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">n_channels</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">([</span><span class="s1">&#39;gray&#39;</span><span class="p">])</span>
-                    <span class="k">elif</span> <span class="n">n_channels</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">colormaps</span><span class="o">.</span><span class="n">MAGENTA_GREEN</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">colormaps</span><span class="o">.</span><span class="n">CYMRGB</span><span class="p">)</span>
-
-                <span class="c1"># make sure that iterable_kwargs are a *sequence* of iterables</span>
-                <span class="c1"># for the multichannel case.  For example: if scale == (1, 2) &amp;</span>
-                <span class="c1"># n_channels = 3, then scale should == [(1, 2), (1, 2), (1, 2)]</span>
-                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">iterable_kwargs</span><span class="p">:</span>
-                    <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span>
-                        <span class="n">ensure_sequence_of_iterables</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">n_channels</span><span class="p">)</span>
-                    <span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">ensure_iterable</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
-
-            <span class="n">layer_list</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_channels</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">multiscale</span><span class="p">:</span>
-                    <span class="n">image</span> <span class="o">=</span> <span class="p">[</span>
-                        <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">channel_axis</span><span class="p">)</span>
-                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
-                    <span class="p">]</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">channel_axis</span><span class="p">)</span>
-                <span class="n">i_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
-                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">i_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
-                    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span>
-                            <span class="s2">&quot;Error adding multichannel image with data shape &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="si">!r}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">Requested channel_axis &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">channel_axis</span><span class="si">}</span><span class="s2">) had length </span><span class="si">{</span><span class="n">n_channels</span><span class="si">}</span><span class="s2">, but &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;the &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; argument only provided </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> values. &quot;</span>
-                        <span class="p">)</span>
+            <span class="n">layer_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">i_kwargs</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">layerdata_list</span><span class="p">:</span>
                 <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="o">**</span><span class="n">i_kwargs</span><span class="p">))</span>
                 <span class="n">layer_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
             <span class="k">return</span> <span class="n">layer_list</span></div>
 
 <div class="viewcode-block" id="AddLayersMixin.add_points"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.AddLayersMixin.add_points">[docs]</a>    <span class="k">def</span> <span class="nf">add_points</span><span class="p">(</span>

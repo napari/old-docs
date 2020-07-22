@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.viewer &mdash; napari 0.3.7.dev2+gffd0a29 documentation</title>
+  <title>napari.viewer &mdash; napari 0.3.7.dev3+gc53051e documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.7.dev2+gffd0a29
+                0.3.7.dev3+gc53051e
               </div>
             
           
@@ -157,18 +157,19 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.viewer</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">platform</span>
+<span></span><span class="kn">import</span> <span class="nn">platform</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
 
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QIcon</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QApplication</span>
 
+<span class="kn">from</span> <span class="nn">.components</span> <span class="kn">import</span> <span class="n">ViewerModel</span>
 <span class="kn">from</span> <span class="nn">._qt.qt_main_window</span> <span class="kn">import</span> <span class="n">Window</span>
 <span class="kn">from</span> <span class="nn">._qt.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
 <span class="kn">from</span> <span class="nn">._qt.threading</span> <span class="kn">import</span> <span class="n">wait_for_workers_to_quit</span><span class="p">,</span> <span class="n">create_worker</span>
-<span class="kn">from</span> <span class="nn">.components</span> <span class="kn">import</span> <span class="n">ViewerModel</span>
+<span class="kn">from</span> <span class="nn">.utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
+
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">__version__</span>
 
 
@@ -222,13 +223,19 @@
             <span class="p">)</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
 
-        <span class="c1"># For perfmon we need a special QApplication. If using gui_qt we already</span>
-        <span class="c1"># have the special one, and this is a noop. When running inside IPython</span>
-        <span class="c1"># or Jupyter however this is where we switch out the QApplication.</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAPARI_PERFMON&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">._qt.qt_event_timing</span> <span class="kn">import</span> <span class="n">convert_app_for_timing</span>
+        <span class="k">if</span> <span class="n">perf_config</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">perf_config</span><span class="o">.</span><span class="n">trace_qt_events</span><span class="p">:</span>
+                <span class="kn">from</span> <span class="nn">._qt.qt_event_tracing</span> <span class="kn">import</span> <span class="n">convert_app_for_tracing</span>
 
-            <span class="n">app</span> <span class="o">=</span> <span class="n">convert_app_for_timing</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+                <span class="c1"># For tracing Qt events we need a special QApplication. If</span>
+                <span class="c1"># using `gui_qt` we already have the special one, and no</span>
+                <span class="c1"># conversion is done here. However when running inside</span>
+                <span class="c1"># IPython or Jupyter this is where we switch out the</span>
+                <span class="c1"># QApplication.</span>
+                <span class="n">app</span> <span class="o">=</span> <span class="n">convert_app_for_tracing</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+            <span class="c1"># Will patch based on config file.</span>
+            <span class="n">perf_config</span><span class="o">.</span><span class="n">patch_callables</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="p">(</span>
             <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span>

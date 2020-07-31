@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.viewer_model &mdash; napari 0.3.7.dev6+g875048a documentation</title>
+  <title>napari.components.viewer_model &mdash; napari 0.3.7.dev7+g936d289 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.3.7.dev6+g875048a
+                0.3.7.dev7+g936d289
               </div>
             
           
@@ -253,8 +253,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">mouse_move_callbacks</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="c1"># Hold callbacks for when mouse is pressed, dragged, and released</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Hold callbacks for when mouse wheel is scrolled</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mouse_wheel_callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_scroll</span><span class="p">]</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_persisted_mouse_event</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mouse_drag_gen</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mouse_wheel_gen</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">palette</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -550,6 +554,17 @@
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">layer_range</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">layers_change</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_scroll</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;Control&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">event</span><span class="o">.</span><span class="n">modifiers</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">delta</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">_increment_dims_left</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">_increment_dims_right</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_calc_layers_ranges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Calculates the range along each axis from all present layers.</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.shapes.shapes &mdash; napari 0.3.7.dev19+ge9b0a04 documentation</title>
+  <title>napari.layers.shapes.shapes &mdash; napari 0.3.7.dev20+g5e8be09 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev19+ge9b0a04
+                0.3.7.dev20+g5e8be09
               </div>
             
           
@@ -160,59 +160,60 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.shapes.shapes</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">get_color_names</span>
 <span class="kn">from</span> <span class="nn">vispy.color.colormap</span> <span class="kn">import</span> <span class="n">Colormap</span>
 
 <span class="kn">from</span> <span class="nn">...types</span> <span class="kn">import</span> <span class="n">ValidColormapArg</span>
-<span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">normalize_and_broadcast_colors</span><span class="p">,</span>
-    <span class="n">transform_color_with_defaults</span><span class="p">,</span>
-<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap_tuple</span>
 <span class="kn">from</span> <span class="nn">...utils.colormaps.standardize_color</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">transform_color</span><span class="p">,</span>
     <span class="n">hex_to_name</span><span class="p">,</span>
     <span class="n">rgb_to_hex</span><span class="p">,</span>
+    <span class="n">transform_color</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">transform_color_cycle</span><span class="p">,</span> <span class="n">ColorType</span>
 <span class="kn">from</span> <span class="nn">...utils.event</span> <span class="kn">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ensure_iterable</span>
+<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ColorType</span><span class="p">,</span>
+    <span class="n">normalize_and_broadcast_colors</span><span class="p">,</span>
+    <span class="n">transform_color_cycle</span><span class="p">,</span>
+    <span class="n">transform_color_with_defaults</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">dataframe_to_properties</span><span class="p">,</span>
     <span class="n">guess_continuous</span><span class="p">,</span>
     <span class="n">map_property</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..utils.text</span> <span class="kn">import</span> <span class="n">TextManager</span>
-<span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ensure_iterable</span>
-<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
-<span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">get_color_names</span>
-<span class="kn">from</span> <span class="nn">._shapes_constants</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">Mode</span><span class="p">,</span>
-    <span class="n">Box</span><span class="p">,</span>
-    <span class="n">BACKSPACE</span><span class="p">,</span>
-    <span class="n">shape_classes</span><span class="p">,</span>
-    <span class="n">ShapeType</span><span class="p">,</span>
-    <span class="n">ColorMode</span><span class="p">,</span>
-<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">._shape_list</span> <span class="kn">import</span> <span class="n">ShapeList</span>
-<span class="kn">from</span> <span class="nn">._shapes_utils</span> <span class="kn">import</span> <span class="n">create_box</span><span class="p">,</span> <span class="n">get_shape_ndim</span>
-<span class="kn">from</span> <span class="nn">._shapes_models</span> <span class="kn">import</span> <span class="n">Rectangle</span><span class="p">,</span> <span class="n">Ellipse</span><span class="p">,</span> <span class="n">Polygon</span>
+<span class="kn">from</span> <span class="nn">._shapes_constants</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BACKSPACE</span><span class="p">,</span>
+    <span class="n">Box</span><span class="p">,</span>
+    <span class="n">ColorMode</span><span class="p">,</span>
+    <span class="n">Mode</span><span class="p">,</span>
+    <span class="n">ShapeType</span><span class="p">,</span>
+    <span class="n">shape_classes</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">._shapes_models</span> <span class="kn">import</span> <span class="n">Ellipse</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">Rectangle</span>
 <span class="kn">from</span> <span class="nn">._shapes_mouse_bindings</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">highlight</span><span class="p">,</span>
-    <span class="n">select</span><span class="p">,</span>
-    <span class="n">add_line</span><span class="p">,</span>
     <span class="n">add_ellipse</span><span class="p">,</span>
-    <span class="n">add_rectangle</span><span class="p">,</span>
+    <span class="n">add_line</span><span class="p">,</span>
     <span class="n">add_path_polygon</span><span class="p">,</span>
     <span class="n">add_path_polygon_creating</span><span class="p">,</span>
+    <span class="n">add_rectangle</span><span class="p">,</span>
+    <span class="n">highlight</span><span class="p">,</span>
+    <span class="n">select</span><span class="p">,</span>
     <span class="n">vertex_insert</span><span class="p">,</span>
     <span class="n">vertex_remove</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">._shapes_utils</span> <span class="kn">import</span> <span class="n">create_box</span><span class="p">,</span> <span class="n">get_shape_ndim</span>
 
 <span class="n">DEFAULT_COLOR_CYCLE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
 

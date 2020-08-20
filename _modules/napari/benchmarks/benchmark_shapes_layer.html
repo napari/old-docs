@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.benchmarks.benchmark_shapes_layer &mdash; napari 0.3.7.dev29+gc8d755b documentation</title>
+  <title>napari.benchmarks.benchmark_shapes_layer &mdash; napari 0.3.7.dev30+gf101ef7 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev29+gc8d755b
+                0.3.7.dev30+gf101ef7
               </div>
             
           
@@ -164,9 +164,21 @@
 <span class="c1"># https://asv.readthedocs.io/en/latest/writing_benchmarks.html</span>
 <span class="c1"># or the napari documentation on benchmarking</span>
 <span class="c1"># https://github.com/napari/napari/blob/master/docs/BENCHMARKS.md</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">napari.layers</span> <span class="kn">import</span> <span class="n">Shapes</span>
+<span class="kn">from</span> <span class="nn">napari.utils.interactions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ReadOnlyWrapper</span><span class="p">,</span>
+    <span class="n">mouse_move_callbacks</span><span class="p">,</span>
+    <span class="n">mouse_press_callbacks</span><span class="p">,</span>
+    <span class="n">mouse_release_callbacks</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">Event</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span>
+    <span class="s1">&#39;Event&#39;</span><span class="p">,</span> <span class="n">field_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;is_dragging&#39;</span><span class="p">,</span> <span class="s1">&#39;modifiers&#39;</span><span class="p">]</span>
+<span class="p">)</span>
 
 
 <div class="viewcode-block" id="Shapes2DSuite"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.Shapes2DSuite">[docs]</a><span class="k">class</span> <span class="nc">Shapes2DSuite</span><span class="p">:</span>
@@ -245,6 +257,69 @@
 <div class="viewcode-block" id="Shapes3DSuite.mem_data"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.Shapes3DSuite.mem_data">[docs]</a>    <span class="k">def</span> <span class="nf">mem_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Memory used by raw data.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span></div></div>
+
+
+<div class="viewcode-block" id="ShapesInteractionSuite"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.ShapesInteractionSuite">[docs]</a><span class="k">class</span> <span class="nc">ShapesInteractionSuite</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Benchmarks for interacting with the Shapes layer with 2D data&quot;&quot;&quot;</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">**</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">)]</span>
+
+<div class="viewcode-block" id="ShapesInteractionSuite.setup"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.ShapesInteractionSuite.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">Shapes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span><span class="o">=</span><span class="s1">&#39;polygon&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;select&#39;</span>
+
+        <span class="c1"># create events</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">click_event</span> <span class="o">=</span> <span class="n">ReadOnlyWrapper</span><span class="p">(</span>
+            <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">&#39;mouse_press&#39;</span><span class="p">,</span> <span class="n">is_dragging</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">modifiers</span><span class="o">=</span><span class="p">[])</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release_event</span> <span class="o">=</span> <span class="n">ReadOnlyWrapper</span><span class="p">(</span>
+            <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">&#39;mouse_release&#39;</span><span class="p">,</span> <span class="n">is_dragging</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">modifiers</span><span class="o">=</span><span class="p">[])</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drag_event</span> <span class="o">=</span> <span class="n">ReadOnlyWrapper</span><span class="p">(</span>
+            <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">&#39;mouse_move&#39;</span><span class="p">,</span> <span class="n">is_dragging</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">modifiers</span><span class="o">=</span><span class="p">[])</span>
+        <span class="p">)</span>
+
+        <span class="c1"># initialize the position and select a shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># Simulate click</span>
+        <span class="n">mouse_press_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">click_event</span><span class="p">)</span>
+
+        <span class="c1"># Simulate release</span>
+        <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release_event</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ShapesInteractionSuite.time_drag_shape"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.ShapesInteractionSuite.time_drag_shape">[docs]</a>    <span class="k">def</span> <span class="nf">time_drag_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Time to process 5 shape drag events&quot;&quot;&quot;</span>
+        <span class="c1"># Simulate click</span>
+        <span class="n">mouse_press_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">click_event</span><span class="p">)</span>
+
+        <span class="c1"># start drag event</span>
+        <span class="n">mouse_move_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">drag_event</span><span class="p">)</span>
+
+        <span class="c1"># simulate 5 drag events</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">]))</span>
+            <span class="c1"># Simulate move, click, and release</span>
+            <span class="n">mouse_move_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">drag_event</span><span class="p">)</span>
+
+        <span class="c1"># Simulate release</span>
+        <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release_event</span><span class="p">)</span></div>
+
+    <span class="n">time_drag_shape</span><span class="o">.</span><span class="n">param_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;n_shapes&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="ShapesInteractionSuite.time_select_shape"><a class="viewcode-back" href="../../../api/napari.benchmarks.html#napari.benchmarks.benchmark_shapes_layer.ShapesInteractionSuite.time_select_shape">[docs]</a>    <span class="k">def</span> <span class="nf">time_select_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Time to process shape selection events&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># Simulate click</span>
+        <span class="n">mouse_press_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">click_event</span><span class="p">)</span>
+
+        <span class="c1"># Simulate release</span>
+        <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release_event</span><span class="p">)</span></div>
+
+    <span class="n">time_select_shape</span><span class="o">.</span><span class="n">param_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;n_shapes&#39;</span><span class="p">]</span></div>
 </pre></div>
 
            </div>

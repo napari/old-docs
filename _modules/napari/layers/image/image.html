@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.image &mdash; napari 0.3.7.dev30+gf101ef7 documentation</title>
+  <title>napari.layers.image.image &mdash; napari 0.3.7.dev31+g2389901 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev30+gf101ef7
+                0.3.7.dev31+g2389901
               </div>
             
           
@@ -160,12 +160,15 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.image.image</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">types</span>
+<span></span><span class="sd">&quot;&quot;&quot;Image class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">types</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
 
+<span class="kn">from</span> <span class="nn">...components.chunk</span> <span class="kn">import</span> <span class="n">ChunkKey</span><span class="p">,</span> <span class="n">ChunkRequest</span><span class="p">,</span> <span class="n">chunk_loader</span>
 <span class="kn">from</span> <span class="nn">...utils.colormaps</span> <span class="kn">import</span> <span class="n">AVAILABLE_COLORMAPS</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span>
@@ -282,7 +285,7 @@
 <span class="sd">        Attenuation rate for attenuated maximum intensity projection.</span>
 
 <span class="sd">    Extended Summary</span>
-<span class="sd">    ----------</span>
+<span class="sd">    ----------------</span>
 <span class="sd">    _data_view : array (N, M), (N, M, 3), or (N, M, 4)</span>
 <span class="sd">        Image data for the currently viewed slice. Must be 2D image data, but</span>
 <span class="sd">        can be multidimensional for RGB or RGBA images if multidimensional is</span>
@@ -380,7 +383,7 @@
 
         <span class="c1"># Initialize the current slice to an empty image.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">ImageSlice</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_image</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_image</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span>
         <span class="p">)</span>
 
         <span class="c1"># Set contrast_limits and colormaps</span>
@@ -599,6 +602,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_rendering</span> <span class="o">=</span> <span class="n">Rendering</span><span class="p">(</span><span class="n">rendering</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">rendering</span><span class="p">()</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Has the data for this layer been loaded yet.</span>
+
+<span class="sd">        With asynchronous loading the layer might exist but its data</span>
+<span class="sd">        for the current slice has not been loaded.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">loaded</span>
+
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get dictionary of layer state.</span>
 
@@ -645,7 +657,6 @@
     <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set the view given the indices to slice with.&quot;&quot;&quot;</span>
         <span class="n">not_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span>
-        <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_order</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="c1"># If 3d redering just show lowest level of multiscale</span>
@@ -688,9 +699,8 @@
                     <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;tile2data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span>
                 <span class="p">)</span>
 
-            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]),</span> <span class="n">order</span>
-            <span class="p">)</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
+            <span class="n">image_indices</span> <span class="o">=</span> <span class="n">indices</span>
 
             <span class="c1"># Slice thumbnail</span>
             <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
@@ -708,27 +718,109 @@
             <span class="p">)</span>
             <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">]</span> <span class="o">=</span> <span class="n">downsampled_indices</span>
 
-            <span class="n">thumbnail_source</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+            <span class="n">thumbnail_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_level</span><span class="p">][</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">&#39;tile2data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
-            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
-            <span class="n">thumbnail_source</span> <span class="o">=</span> <span class="n">image</span>
+            <span class="n">image_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">indices</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">image_indices</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="ow">and</span> <span class="n">image</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">thumbnail</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">thumbnail_source</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># For single-scale we don&#39;t request a separate thumbnail_source</span>
+            <span class="c1"># from the ChunkLoader because in ImageSlice.chunk_loaded we</span>
+            <span class="c1"># call request.thumbnail_source() and it knows to just use the</span>
+            <span class="c1"># image itself is there is no explicit thumbnail_source.</span>
+            <span class="n">thumbnail_source</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Load our images, might be sync or async.</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">ChunkKey</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load_images</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">thumbnail_source</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_load_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">ChunkKey</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">thumbnail_source</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load the image and maybe thumbnail source.</span>
+
+<span class="sd">        The load will happen synchronously if any of these are true:</span>
+<span class="sd">        1) The arrays are already ndarrays, or</span>
+<span class="sd">        2) We are in synchronous mode, or</span>
+<span class="sd">        3) The arrays were found in the ChunkCache.</span>
+
+<span class="sd">        If the load is synchronous we immediately call our on_chunk_loaded()</span>
+<span class="sd">        method so that we use the new data right away. If the load is</span>
+<span class="sd">        asynchronous then sometime later our on_chunk_loaded() method will be</span>
+<span class="sd">        called with the loaded data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># We always load the image.</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">image</span><span class="p">}</span>
+
+        <span class="c1"># Optionally also load the thumbnail_source.</span>
+        <span class="k">if</span> <span class="n">thumbnail_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">chunks</span><span class="p">[</span><span class="s1">&#39;thumbnail_source&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">thumbnail_source</span>
+
+        <span class="c1"># Create the ChunkRequest for the chunks we are going to load.</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">chunk_loader</span><span class="o">.</span><span class="n">create_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">chunks</span><span class="p">)</span>
+
+        <span class="c1"># Load the chunk(s), the load could happen sync or async.</span>
+        <span class="n">satisfied_request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">load_chunk</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">satisfied_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># The load is going to be async, announce that a load is</span>
+            <span class="c1"># underway, that we are no longer in the loaded state.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">image</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">thumbnail</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">thumbnail_source</span>
+            <span class="c1"># The load was sync, it&#39;s done, so use the chunk now.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">satisfied_request</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
+<div class="viewcode-block" id="Image.on_chunk_loaded"><a class="viewcode-back" href="../../../../api/napari.layers.image.html#napari.layers.image.image.Image.on_chunk_loaded">[docs]</a>    <span class="k">def</span> <span class="nf">on_chunk_loaded</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">ChunkRequest</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The given ChunkRequest was satisfied, we can use the data now.</span>
+
+<span class="sd">        This routine is called synchronously from _load_async() above, or</span>
+<span class="sd">        it is called asynchronously sometime later when the ChunkLoader</span>
+<span class="sd">        finishes loading the data in a worker thread or process.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        request : ChunkRequest</span>
+<span class="sd">            The request that was satisfied/loaded.</span>
+<span class="sd">        sync : bool</span>
+<span class="sd">            If True the chunk was loaded synchronously.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Chunks get transposed after load.</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">transpose_chunks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_order</span><span class="p">())</span>
+
+        <span class="c1"># The shape of the array after we loaded it was &quot;wrong&quot; in that it</span>
+        <span class="c1"># didn&#39;t match the rgb flag that the user specified (or we inferred?).</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="o">!=</span> <span class="n">guess_rgb</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Loaded chunk was the wrong shape, was rgb set correctly?&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Pass the loaded data to the slice.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+            <span class="c1"># Slice rejected it, was it for the wrong indices?</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Notify the world.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">scale</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
 
+        <span class="c1"># Announcing we are in the loaded state will make our node visible</span>
+        <span class="c1"># if it was invisible during the load.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sync</span><span class="p">:</span>
+            <span class="c1"># If this specific load itself was async we need a full refresh.</span>
+            <span class="c1"># Note: even in async mode, some loads are sync, such as cache hits</span>
+            <span class="c1"># and loads of ndarray data.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span></div>
+
     <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Update thumbnail with current image data and colormap.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">loaded</span><span class="p">:</span>
+            <span class="c1"># ASYNC_TODO: Do not compute the thumbnail until we are loaded.</span>
+            <span class="c1"># Is there a nicer way to prevent this from getting called?</span>
+            <span class="k">return</span>
+
         <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">thumbnail</span><span class="o">.</span><span class="n">view</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>

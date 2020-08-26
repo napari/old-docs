@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.perf package &mdash; napari 0.3.7.dev32+g67eb690 documentation</title>
+  <title>napari.utils.perf package &mdash; napari 0.3.7.dev35+ge65825e documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                0.3.7.dev32+g67eb690
+                0.3.7.dev35+ge65825e
               </div>
             
           
@@ -170,7 +170,13 @@
 <li class="toctree-l2"><a class="reference internal" href="napari.utils.events.containers.html">napari.utils.events.containers package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="napari.utils.list.html">napari.utils.list package</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">napari.utils.perf package</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.perf">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-napari.utils.perf">Module contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#chrome-tracing">Chrome Tracing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#monkey-patching">Monkey Patching</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#trace-on-start">Trace On Start</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#manual-timing">Manual Timing</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -256,17 +262,50 @@
 <h1>napari.utils.perf package<a class="headerlink" href="#napari-utils-perf-package" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="module-napari.utils.perf">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-napari.utils.perf" title="Permalink to this headline">¶</a></h2>
-<p>Performance Monitoring init.</p>
-<p>USE_PERFMON is true only if NAPARI_PERFMON environment variable is set and not
-zero.</p>
+<p>Performance Monitoring.</p>
+<p>The perfmon module lets you instrument your code and visualize its run-time
+behavior and timings in Chrome’s Tracing GUI.</p>
+<p>To enable perfmon define the env var NAPARI_PERFMON as follows:</p>
 <dl class="simple">
-<dt>timers is an instance of PerfTimers with these methods:</dt><dd><p>add_event(event: PerfEvent)
-clear()
-start_trace_file(path: str)
-stop_trace_file()</p>
+<dt>NAPARI_PERFMON=1</dt><dd><p>Activates perfmon, trace using Debug -&gt; Performance Trace menu.</p>
+</dd>
+<dt>NAPARI_PERFMON=/path/to/config.json</dt><dd><p>Configure perfmon using the config.json configuration. See the
+PerfmonConfig docs for the spec of the config file.</p>
 </dd>
 </dl>
-<p>Use perf_timer to time blocks of code.</p>
+<div class="section" id="chrome-tracing">
+<h3>Chrome Tracing<a class="headerlink" href="#chrome-tracing" title="Permalink to this headline">¶</a></h3>
+<p>Chrome has a nice built-in performance tool called chrome://tracing. Chrome
+can record traces of web applications. But the format is well-documented and
+anyone can create the files and use the nice GUI. And other programs accept
+the format including:
+1) https://www.speedscope.app/ which does flamegraphs (Chrome doesn’t).
+2) Qt Creator’s performance tools.</p>
+</div>
+<div class="section" id="monkey-patching">
+<h3>Monkey Patching<a class="headerlink" href="#monkey-patching" title="Permalink to this headline">¶</a></h3>
+<p>The best way to add perf_timers is using the perfmon config file. You can
+list which methods or functions you want to time, and a perf_timer will be
+monkey-patched into each callable on startup. The monkey patching
+is done only if perfmon is enabled.</p>
+</div>
+<div class="section" id="trace-on-start">
+<h3>Trace On Start<a class="headerlink" href="#trace-on-start" title="Permalink to this headline">¶</a></h3>
+<p>Add a line to the config file like:</p>
+<blockquote>
+<div><p>“trace_file_on_start”: “/Path/to/my/trace.json”</p>
+</div></blockquote>
+<p>Perfmon will start tracing on startup. You must quit napari with the Quit
+command for napari to write trace file. See PerfmonConfig docs.</p>
+</div>
+<div class="section" id="manual-timing">
+<h3>Manual Timing<a class="headerlink" href="#manual-timing" title="Permalink to this headline">¶</a></h3>
+<p>You can also manually add “perf_timer” context objects and
+“add_counter_event()” and “add_instant_event()” functions to your code. All
+three of these should be removed before merging the PR into master. While
+they have almost zero overhead when perfmon is disabled, it’s still better
+not to leave them in the code. Think of them as similar to debug prints.</p>
+</div>
 </div>
 </div>
 

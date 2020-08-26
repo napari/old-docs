@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.shapes.shapes &mdash; napari 0.3.7.dev32+g67eb690 documentation</title>
+  <title>napari.layers.shapes.shapes &mdash; napari 0.3.7.dev35+ge65825e documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev32+g67eb690
+                0.3.7.dev35+ge65825e
               </div>
             
           
@@ -161,6 +161,7 @@
             
   <h1>Source code for napari.layers.shapes.shapes</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
@@ -411,18 +412,24 @@
 <span class="sd">        shapes when they are changed. Blocking this prevents circular loops</span>
 <span class="sd">        when shapes are selected and the properties are changed based on that</span>
 <span class="sd">        selection</span>
+<span class="sd">    _allow_thumnail_update : bool</span>
+<span class="sd">        Flag set to true to allow the thumbnail to be updated. Blocking the thumbnail</span>
+<span class="sd">        can be advantageous where responsiveness is critical.</span>
 <span class="sd">    _clipboard : dict</span>
 <span class="sd">        Dict of shape objects that are to be used during a copy and paste.</span>
 <span class="sd">    _colors : list</span>
 <span class="sd">        List of supported vispy color names.</span>
 <span class="sd">    _vertex_size : float</span>
-<span class="sd">        Size of the vertices of the shapes and boudning box in Canvas</span>
+<span class="sd">        Size of the vertices of the shapes and bounding box in Canvas</span>
 <span class="sd">        coordinates.</span>
 <span class="sd">    _rotation_handle_length : float</span>
 <span class="sd">        Length of the rotation handle of the boudning box in Canvas</span>
 <span class="sd">        coordinates.</span>
 <span class="sd">    _input_ndim : int</span>
 <span class="sd">        Dimensions of shape data.</span>
+<span class="sd">    _thumbnail_update_thresh : int</span>
+<span class="sd">        If there are more than this number of shapes, the thumnail</span>
+<span class="sd">        won&#39;t update during interactive events</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">_colors</span> <span class="o">=</span> <span class="n">get_color_names</span><span class="p">()</span>
@@ -430,6 +437,10 @@
     <span class="n">_rotation_handle_length</span> <span class="o">=</span> <span class="mi">20</span>
     <span class="n">_highlight_color</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">_highlight_width</span> <span class="o">=</span> <span class="mf">1.5</span>
+
+    <span class="c1"># If more shapes are present then they are randomly subsampled</span>
+    <span class="c1"># in the thumbnail</span>
+    <span class="n">_max_shapes_thumbnail</span> <span class="o">=</span> <span class="mi">100</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -489,6 +500,9 @@
             <span class="n">current_properties</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">highlight</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
+
+        <span class="c1"># Flag set to false to block thumbnail refresh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_allow_thumbnail_update</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_display_order_stored</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay_stored</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
@@ -763,7 +777,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_edge_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_edge_color</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_edge_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -778,7 +792,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">update_face_color</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_face_color</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">face_color</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">face_color</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_face_color</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -1519,9 +1533,14 @@
         <span class="p">]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">mode</span> <span class="ow">in</span> <span class="n">draw_modes</span> <span class="ow">and</span> <span class="n">old_mode</span> <span class="ow">in</span> <span class="n">draw_modes</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_finish_drawing</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+
+        <span class="c1"># don&#39;t update thumbnail on mode changes</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_thumbnail_update</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">mode</span> <span class="ow">in</span> <span class="n">draw_modes</span> <span class="ow">and</span> <span class="n">old_mode</span> <span class="ow">in</span> <span class="n">draw_modes</span><span class="p">):</span>
+                <span class="c1"># Shapes._finish_drawing() calls Shapes.refresh()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_finish_drawing</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_set_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set editable mode based on layer properties.&quot;&quot;&quot;</span>
@@ -1702,16 +1721,18 @@
                 <span class="n">face_color</span><span class="p">,</span> <span class="n">attribute</span><span class="o">=</span><span class="s1">&#39;face&#39;</span><span class="p">,</span> <span class="n">n_shapes</span><span class="o">=</span><span class="n">n_shapes</span>
             <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_shapes</span><span class="p">(</span>
-            <span class="n">data</span><span class="p">,</span>
-            <span class="n">shape_type</span><span class="o">=</span><span class="n">shape_type</span><span class="p">,</span>
-            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
-            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
-            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
-            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_colors</span><span class="p">()</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_thumbnail_update</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_shapes</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">shape_type</span><span class="o">=</span><span class="n">shape_type</span><span class="p">,</span>
+                <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+                <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+                <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+                <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+                <span class="n">z_refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_update_z_order</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh_colors</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_add_shapes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1722,6 +1743,7 @@
         <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add shapes to the data view.</span>
 
@@ -1760,6 +1782,12 @@
 <span class="sd">            same length as the length of `data` and each element will be</span>
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
 <span class="sd">            shapes.</span>
+<span class="sd">        z_refresh : bool</span>
+<span class="sd">            If set to true, the mesh elements are reindexed with the new z order.</span>
+<span class="sd">            When shape_index is provided, z_refresh will be overwritten to false,</span>
+<span class="sd">            as the z indices will not change.</span>
+<span class="sd">            When adding a batch of shapes, set to false  and then call</span>
+<span class="sd">            ShapesList._update_z_order() once at the end.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">edge_width</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">edge_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_width</span>
@@ -1821,7 +1849,9 @@
                 <span class="p">)</span>
 
                 <span class="c1"># Add shape</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                    <span class="n">shape</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">,</span> <span class="n">z_refresh</span><span class="o">=</span><span class="n">z_refresh</span>
+                <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_display_order_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span><span class="p">)</span>
@@ -2114,28 +2144,41 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_is_creating</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
 
+<div class="viewcode-block" id="Shapes.block_thumbnail_update"><a class="viewcode-back" href="../../../../api/napari.layers.shapes.html#napari.layers.shapes.shapes.Shapes.block_thumbnail_update">[docs]</a>    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">block_thumbnail_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use this context manager to block thumbnail updates&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_allow_thumbnail_update</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">yield</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_allow_thumbnail_update</span> <span class="o">=</span> <span class="kc">True</span></div>
+
     <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Update thumbnail with current shapes and colors.&quot;&quot;&quot;</span>
-        <span class="c1"># calculate min vals for the vertices and pad with 0.5</span>
-        <span class="c1"># the offset is needed to ensure that the top left corner of the shapes</span>
-        <span class="c1"># corresponds to the top left corner of the thumbnail</span>
-        <span class="n">de</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
-        <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">de</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">])</span> <span class="o">+</span> <span class="mf">0.5</span>
-        <span class="c1"># calculate range of values for the vertices and pad with 1</span>
-        <span class="c1"># padding ensures the entire shape can be represented in the thumbnail</span>
-        <span class="c1"># without getting clipped</span>
-        <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">de</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">-</span> <span class="n">de</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-        <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
 
-        <span class="n">colormapped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">to_colors</span><span class="p">(</span>
-            <span class="n">colors_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
-            <span class="n">zoom_factor</span><span class="o">=</span><span class="n">zoom_factor</span><span class="p">,</span>
-            <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:],</span>
-        <span class="p">)</span>
+        <span class="c1"># don&#39;t update the thumbnail if dragging a shape</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_moving</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_allow_thumbnail_update</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># calculate min vals for the vertices and pad with 0.5</span>
+            <span class="c1"># the offset is needed to ensure that the top left corner of the shapes</span>
+            <span class="c1"># corresponds to the top left corner of the thumbnail</span>
+            <span class="n">de</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">de</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">])</span> <span class="o">+</span> <span class="mf">0.5</span>
+            <span class="c1"># calculate range of values for the vertices and pad with 1</span>
+            <span class="c1"># padding ensures the entire shape can be represented in the thumbnail</span>
+            <span class="c1"># without getting clipped</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">de</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">-</span> <span class="n">de</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">colormapped</span>
+            <span class="n">colormapped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">to_colors</span><span class="p">(</span>
+                <span class="n">colors_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+                <span class="n">zoom_factor</span><span class="o">=</span><span class="n">zoom_factor</span><span class="p">,</span>
+                <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:],</span>
+                <span class="n">max_shapes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_shapes_thumbnail</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">thumbnail</span> <span class="o">=</span> <span class="n">colormapped</span>
 
 <div class="viewcode-block" id="Shapes.remove_selected"><a class="viewcode-back" href="../../../../api/napari.layers.shapes.html#napari.layers.shapes.shapes.Shapes.remove_selected">[docs]</a>    <span class="k">def</span> <span class="nf">remove_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove any selected shapes.&quot;&quot;&quot;</span>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.dims &mdash; napari 0.3.7.dev35+ge65825e documentation</title>
+  <title>napari.components.dims &mdash; napari 0.3.7.dev36+g2ff87e5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev35+ge65825e
+                0.3.7.dev36+g2ff87e5
               </div>
             
           
@@ -166,7 +166,6 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span>
-<span class="kn">from</span> <span class="nn">.dims_constants</span> <span class="kn">import</span> <span class="n">DimsMode</span>
 
 
 <div class="viewcode-block" id="Dims"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims">[docs]</a><span class="k">class</span> <span class="nc">Dims</span><span class="p">:</span>
@@ -190,24 +189,17 @@
 <span class="sd">    events : EmitterGroup</span>
 <span class="sd">        Event emitter group</span>
 <span class="sd">    range : list of 3-tuple</span>
-<span class="sd">        List of tuples (min, max, step), one for each dimension</span>
+<span class="sd">        List of tuples (min, max, step), one for each dimension. In a world</span>
+<span class="sd">        coordinates space.</span>
 <span class="sd">    point : list of float</span>
 <span class="sd">        List of floats setting the current value of the range slider when in</span>
-<span class="sd">        POINT mode, one for each dimension</span>
-<span class="sd">    interval : list of 2-tuple</span>
-<span class="sd">        List of tuples (min, max) setting the current selection of the range</span>
-<span class="sd">        slider when in INTERVAL mode, one for each dimension</span>
-<span class="sd">    mode : list of DimsMode</span>
-<span class="sd">        List of DimsMode, one for each dimension</span>
-<span class="sd">    clip : bool</span>
-<span class="sd">        Flag if to clip indices based on range. Needed for image-like</span>
-<span class="sd">        layers, but prevents shape-like layers from adding new shapes</span>
-<span class="sd">        outside their range.</span>
+<span class="sd">        POINT mode, one for each dimension. In a world coordinates space.</span>
+<span class="sd">    current_step : tuple of int</span>
+<span class="sd">        Tuple the slider position for each dims slider, in slider coordinates.</span>
+<span class="sd">    nsteps : tuple of int</span>
+<span class="sd">        Number of steps available to each slider.</span>
 <span class="sd">    ndim : int</span>
 <span class="sd">        Number of dimensions.</span>
-<span class="sd">    indices : tuple of slice object</span>
-<span class="sd">        Tuple of slice objects for slicing arrays on each dimension, one for</span>
-<span class="sd">        each dimension</span>
 <span class="sd">    displayed : tuple</span>
 <span class="sd">        List of dimensions that are displayed.</span>
 <span class="sd">    not_displayed : tuple</span>
@@ -223,7 +215,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
             <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
             <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">current_step</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">axis_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">ndim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">ndisplay</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -232,14 +224,11 @@
             <span class="n">camera</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_range</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_point</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_axis_labels</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_scroll_progress</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">clip</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span> <span class="o">=</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">ndisplay</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ndisplay</span>
 
         <span class="k">if</span> <span class="n">ndim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">order</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">axis_labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -265,21 +254,6 @@
                 <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_axis_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">axis_labels</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;~~&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="nb">map</span><span class="p">(</span>
-                <span class="nb">str</span><span class="p">,</span>
-                <span class="p">[</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">interval</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">axis_labels</span><span class="p">,</span>
-                <span class="p">],</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
-
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;List of 3-tuple: (min, max, step size) of each dimension.</span>
@@ -287,26 +261,30 @@
         <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">max_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Maximum index for each dimension (in data space).</span>
+    <span class="k">def</span> <span class="nf">nsteps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Number of slider steps for each dimension.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[((</span><span class="n">ma</span> <span class="o">-</span> <span class="n">st</span><span class="p">)</span> <span class="o">//</span> <span class="n">st</span><span class="p">)</span> <span class="k">for</span> <span class="n">mi</span><span class="p">,</span> <span class="n">ma</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="nb">int</span><span class="p">((</span><span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span> <span class="o">-</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">//</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">for</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">step_size</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span>
+        <span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">current_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tuple of int: value of slider position for each dimension.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List of int: value of each dimension if in POINT mode.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_point</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">interval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List of 2-tuple: (min, max) of each dimension if in INTERVAL mode.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interval</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;List of DimsMode: List of DimsMode, one for each dimension.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;List of float: value of each dimension.&quot;&quot;&quot;</span>
+        <span class="c1"># The point value is computed from the current_step</span>
+        <span class="n">point</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">min_val</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">value</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">step_size</span><span class="p">),</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">point</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axis_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -369,11 +347,7 @@
             <span class="c1"># Range value is (min, max, step) for the entire slider</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_range</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span>
             <span class="c1"># Point is the slider value if in point mode</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_point</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_point</span>
-            <span class="c1"># Interval value is the (min, max) of the slider selection</span>
-            <span class="c1"># if in interval mode</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="p">[</span><span class="n">DimsMode</span><span class="o">.</span><span class="n">POINT</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">))</span> <span class="o">+</span> <span class="p">[</span>
                 <span class="n">o</span> <span class="o">+</span> <span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span>
             <span class="p">]</span>
@@ -390,12 +364,10 @@
 
             <span class="c1"># Notify listeners of which dimensions have been affected</span>
             <span class="k">for</span> <span class="n">axis_changed</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">cur_ndim</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis_changed</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_step</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis_changed</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">ndim</span> <span class="o">&lt;</span> <span class="n">cur_ndim</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_point</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reorder_after_dim_reduction</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
             <span class="p">)</span>
@@ -421,26 +393,6 @@
         <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
         <span class="n">arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">arr</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Tuple of slice objects for slicing arrays on each dimension.&quot;&quot;&quot;</span>
-        <span class="n">slice_list</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">displayed</span><span class="p">:</span>
-                <span class="n">slice_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip</span><span class="p">:</span>
-                    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span>
-                        <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span>
-                        <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">p</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-                <span class="n">slice_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">slice_list</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">ndisplay</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -484,11 +436,7 @@
             <span class="c1"># Range value is (min, max, step) for the entire slider</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="c1"># Point is the slider value if in point mode</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="c1"># Interval value is the (min, max) of the slider selection</span>
-            <span class="c1"># if in interval mode</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">DimsMode</span><span class="o">.</span><span class="n">POINT</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">axis</span>
             <span class="c1"># Default axis labels go from &quot;-ndim&quot; to &quot;-1&quot; so new axes can easily be added</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_axis_labels</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">axis</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span></div>
@@ -509,7 +457,10 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Dims.set_point"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims.set_point">[docs]</a>    <span class="k">def</span> <span class="nf">set_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]):</span>
-        <span class="sd">&quot;&quot;&quot;Sets the point at which to slice this dimension.</span>
+        <span class="sd">&quot;&quot;&quot;Sets point to slice dimension in world coordinates.</span>
+
+<span class="sd">        The desired point gets transformed into an integer step</span>
+<span class="sd">        of the slider and stored in the current_step.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -519,24 +470,29 @@
 <span class="sd">            Value of the point.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assert_axis_in_bounds</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span></div>
+        <span class="p">(</span><span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="n">raw_step</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span> <span class="o">/</span> <span class="n">step_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_current_step</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">raw_step</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Dims.set_interval"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims.set_interval">[docs]</a>    <span class="k">def</span> <span class="nf">set_interval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">interval</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]):</span>
-        <span class="sd">&quot;&quot;&quot;Sets the interval used for cropping and projecting this dimension.</span>
+<div class="viewcode-block" id="Dims.set_current_step"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims.set_current_step">[docs]</a>    <span class="k">def</span> <span class="nf">set_current_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets the slider step at which to slice this dimension.</span>
+
+<span class="sd">        The position of the slider in world coordinates gets</span>
+<span class="sd">        calculated from the current_step of the slider.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        axis : int</span>
 <span class="sd">            Dimension index.</span>
-<span class="sd">        interval : tuple</span>
-<span class="sd">            INTERVAL specified with (min, max).</span>
+<span class="sd">        value : int or float</span>
+<span class="sd">            Value of the point.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assert_axis_in_bounds</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">interval</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">interval</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_interval</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">interval</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">step</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">step</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_step</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">step</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_increment_dims_right</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Increment dimensions to the right along given axis, or last used axis if None</span>
@@ -549,14 +505,7 @@
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">cur_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-            <span class="n">axis_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-            <span class="n">new_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-                <span class="n">cur_point</span> <span class="o">+</span> <span class="n">axis_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-                <span class="n">axis_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                <span class="n">axis_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">axis_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">new_point</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_current_step</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_increment_dims_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Increment dimensions to the left along given axis, or last used axis if None</span>
@@ -569,29 +518,7 @@
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_used</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">cur_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-            <span class="n">axis_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-            <span class="n">new_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-                <span class="n">cur_point</span> <span class="o">-</span> <span class="n">axis_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-                <span class="n">axis_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                <span class="n">axis_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">axis_range</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_point</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">new_point</span><span class="p">)</span>
-
-<div class="viewcode-block" id="Dims.set_mode"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims.set_mode">[docs]</a>    <span class="k">def</span> <span class="nf">set_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">DimsMode</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Sets the mode: POINT or INTERVAL.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        axis : int</span>
-<span class="sd">            Dimension index.</span>
-<span class="sd">        mode : POINT or INTERVAL</span>
-<span class="sd">            Whether dimension is in the POINT or INTERVAL mode.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assert_axis_in_bounds</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">mode</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">mode</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_current_step</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Dims.set_axis_label"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.dims.Dims.set_axis_label">[docs]</a>    <span class="k">def</span> <span class="nf">set_axis_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Sets a new axis label for the given axis.</span>

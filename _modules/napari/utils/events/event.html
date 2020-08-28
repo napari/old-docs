@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.events.event &mdash; napari 0.3.7.dev37+g62a046d documentation</title>
+  <title>napari.utils.events.event &mdash; napari 0.3.7.dev39+g475bd52 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7.dev37+g62a046d
+                0.3.7.dev39+g475bd52
               </div>
             
           
@@ -216,6 +216,7 @@
 
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">weakref</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
@@ -828,14 +829,19 @@
 <span class="sd">        &lt;vispy.event.EventEmitter.connect&gt;`.</span>
 <span class="sd">        This provides a simple mechanism for automatically connecting a large</span>
 <span class="sd">        group of emitters to default callbacks.</span>
+<span class="sd">    deprecated: dict</span>
+<span class="sd">        dict with mapping old emitter name to new emitter name</span>
 <span class="sd">    emitters : keyword arguments</span>
 <span class="sd">        See the :func:`add &lt;vispy.event.EmitterGroup.add&gt;` method.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">emitters</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">deprecated</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">emitters</span>
+    <span class="p">):</span>
         <span class="n">EventEmitter</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_connect</span> <span class="o">=</span> <span class="n">auto_connect</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">deprecated</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">deprecated</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_connect_format</span> <span class="o">=</span> <span class="s2">&quot;on_</span><span class="si">%s</span><span class="s2">&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_emitters</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
         <span class="c1"># whether the sub-emitters have been connected to the group:</span>
@@ -844,6 +850,12 @@
 
     <span class="c1"># mypy fix for dynamic attribute access</span>
     <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;emitter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is deprecated, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="si">}</span><span class="s2"> provided instead&quot;</span><span class="p">,</span>
+                <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
         <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
@@ -852,6 +864,12 @@
 <span class="sd">        Note that emitters may also be retrieved as an attribute of the</span>
 <span class="sd">        EmitterGroup.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;emitter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is deprecated, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="si">}</span><span class="s2"> provided instead&quot;</span><span class="p">,</span>
+                <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_emitters</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_deprecated</span><span class="p">[</span><span class="n">name</span><span class="p">]]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_emitters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">emitter</span><span class="p">):</span>

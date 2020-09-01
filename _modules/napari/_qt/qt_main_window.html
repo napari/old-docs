@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.3.7rc1.dev2+gc71644a documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.3.7rc1.dev3+gad149be documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.7rc1.dev2+gc71644a
+                0.3.7rc1.dev3+gad149be
               </div>
             
           
@@ -184,6 +184,7 @@
 <span class="kn">from</span> <span class="nn">..resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.io</span> <span class="kn">import</span> <span class="n">imsave</span>
+<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">in_jupyter</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">template</span>
 <span class="kn">from</span> <span class="nn">.dialogs.qt_about</span> <span class="kn">import</span> <span class="n">QtAbout</span>
 <span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
@@ -590,17 +591,24 @@
         <span class="c1"># Resize axis labels now that window is shown</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">_resize_axis_labels</span><span class="p">()</span>
 
-        <span class="c1"># We want to call Window._qt_window.raise_() in every case *except*</span>
-        <span class="c1"># when instantiating a viewer within a gui_qt() context for the</span>
-        <span class="c1"># _first_ time within the Qt app&#39;s lifecycle.</span>
-        <span class="c1">#</span>
+        <span class="c1"># We want to bring the viewer to the front when</span>
+        <span class="c1"># A) it is our own (gui_qt) event loop OR we are running in jupyter</span>
+        <span class="c1"># B) it is not the first time a QMainWindow is being created</span>
+
         <span class="c1"># `app_name` will be &quot;napari&quot; iff the application was instantiated in</span>
         <span class="c1"># gui_qt(). isActiveWindow() will be True if it is the second time a</span>
-        <span class="c1"># _qt_window has been created. See #732</span>
+        <span class="c1"># _qt_window has been created.</span>
+        <span class="c1"># See #721, #732, #735, #795, #1594</span>
         <span class="n">app_name</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">app_name</span> <span class="o">!=</span> <span class="s1">&#39;napari&#39;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">isActiveWindow</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span>  <span class="c1"># for macOS</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">activateWindow</span><span class="p">()</span>  <span class="c1"># for Windows</span></div>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">app_name</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span> <span class="ow">or</span> <span class="n">in_jupyter</span><span class="p">()</span>
+        <span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">isActiveWindow</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">activate</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Window.activate"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.activate">[docs]</a>    <span class="k">def</span> <span class="nf">activate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make the viewer the currently active window.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span>  <span class="c1"># for macOS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">activateWindow</span><span class="p">()</span>  <span class="c1"># for Windows</span></div>
 
     <span class="k">def</span> <span class="nf">_update_palette</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Update widget color palette.&quot;&quot;&quot;</span>

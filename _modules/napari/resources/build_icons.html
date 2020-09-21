@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.resources.build_icons &mdash; napari 0.3.8.dev6+g4e954d3 documentation</title>
+  <title>napari.resources.build_icons &mdash; napari 0.3.8.dev9+g58bde45 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.8.dev6+g4e954d3
+                0.3.8.dev9+g58bde45
               </div>
             
           
@@ -171,7 +171,7 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">check_call</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">SubprocessError</span><span class="p">,</span> <span class="n">check_call</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">palettes</span> <span class="k">as</span> <span class="n">_palettes</span>
@@ -329,7 +329,7 @@
     <span class="k">for</span> <span class="n">bin_name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;pyrcc5&#39;</span><span class="p">,</span> <span class="s1">&#39;pyside2-rcc&#39;</span><span class="p">):</span>
         <span class="n">rcc_binary</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="n">bin_name</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">rcc_binary</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">rcc_binary</span>
+            <span class="k">yield</span> <span class="n">rcc_binary</span>
     <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
         <span class="s2">&quot;Unable to find an executable to build Qt resources (icons).</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="s2">&quot;Tried: &#39;pyrcc5.bat&#39;, &#39;pyrcc5&#39;, &#39;pyside2-rcc&#39;.</span><span class="se">\n</span><span class="s2">&quot;</span>
@@ -372,8 +372,19 @@
     <span class="p">)</span>
 
     <span class="c1"># then convert it to a python file</span>
-    <span class="n">check_call</span><span class="p">([</span><span class="n">_find_rcc_or_raise</span><span class="p">(),</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
-
+    <span class="c1"># When user use pyenv to manage python version it create shortcut</span>
+    <span class="c1"># to inform in which environment command is available. For example:</span>
+    <span class="c1"># &gt; pyenv: pyrcc5: command not found</span>
+    <span class="c1">#</span>
+    <span class="c1">#   The `pyrcc5&#39; command exists in these Python versions:</span>
+    <span class="c1">#     3.7.4/envs/napari-pyqt5</span>
+    <span class="c1">#     napari-pyqt5</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_find_rcc_or_raise</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">check_call</span><span class="p">([</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">qrc_path</span><span class="p">])</span>
+            <span class="k">break</span>
+        <span class="k">except</span> <span class="n">SubprocessError</span><span class="p">:</span>
+            <span class="k">pass</span>
     <span class="c1"># make sure we import from qtpy</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">fin</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>

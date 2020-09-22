@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.3.8.dev10+g7e6b80b documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.3.8.dev12+g6d66729 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.8.dev10+g7e6b80b
+                0.3.8.dev12+g6d66729
               </div>
             
           
@@ -164,6 +164,7 @@
 <span class="sd">Custom Qt widgets that serve as native objects that the public-facing elements</span>
 <span class="sd">wrap.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
 <span class="kn">import</span> <span class="nn">time</span>
 
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
@@ -172,7 +173,6 @@
     <span class="n">QAction</span><span class="p">,</span>
     <span class="n">QApplication</span><span class="p">,</span>
     <span class="n">QDockWidget</span><span class="p">,</span>
-    <span class="n">QFileDialog</span><span class="p">,</span>
     <span class="n">QHBoxLayout</span><span class="p">,</span>
     <span class="n">QLabel</span><span class="p">,</span>
     <span class="n">QMainWindow</span><span class="p">,</span>
@@ -189,6 +189,7 @@
 <span class="kn">from</span> <span class="nn">.dialogs.qt_about</span> <span class="kn">import</span> <span class="n">QtAbout</span>
 <span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
 <span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_table</span> <span class="kn">import</span> <span class="n">QtPluginTable</span>
+<span class="kn">from</span> <span class="nn">.dialogs.screenshot_dialog</span> <span class="kn">import</span> <span class="n">ScreenshotDialog</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
 <span class="kn">from</span> <span class="nn">.tracing.qt_debug_menu</span> <span class="kn">import</span> <span class="n">DebugMenu</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">QImg2array</span>
@@ -659,21 +660,11 @@
 
     <span class="k">def</span> <span class="nf">_screenshot_dialog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Save screenshot of current display with viewer, default .png&quot;&quot;&quot;</span>
-        <span class="n">filename</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span>
-            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">,</span>
-            <span class="n">caption</span><span class="o">=</span><span class="s1">&#39;Save screenshot with viewer&#39;</span><span class="p">,</span>
-            <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_last_visited_dir</span><span class="p">,</span>  <span class="c1"># home dir by default</span>
-            <span class="nb">filter</span><span class="o">=</span><span class="s2">&quot;Image files (*.png *.bmp *.gif *.tif *.tiff)&quot;</span><span class="p">,</span>  <span class="c1"># first one used by default</span>
-            <span class="c1"># jpg and jpeg not included as they don&#39;t support an alpha channel</span>
+        <span class="n">dial</span> <span class="o">=</span> <span class="n">ScreenshotDialog</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">screenshot</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_last_visited_dir</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">filename</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="c1"># double check that an appropriate extension has been added as the</span>
-            <span class="c1"># filter option does not always add an extension on linux and windows</span>
-            <span class="c1"># see https://bugreports.qt.io/browse/QTBUG-27186</span>
-            <span class="n">image_extensions</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;.bmp&#39;</span><span class="p">,</span> <span class="s1">&#39;.gif&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">,</span> <span class="s1">&#39;.tif&#39;</span><span class="p">,</span> <span class="s1">&#39;.tiff&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">image_extensions</span><span class="p">):</span>
-                <span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="o">+</span> <span class="s1">&#39;.png&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dial</span><span class="o">.</span><span class="n">exec_</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">dial</span><span class="o">.</span><span class="n">selectedFiles</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
 
 <div class="viewcode-block" id="Window.screenshot"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.screenshot">[docs]</a>    <span class="k">def</span> <span class="nf">screenshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Take currently displayed viewer and convert to an image array.</span>

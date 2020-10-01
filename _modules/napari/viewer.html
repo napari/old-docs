@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.viewer &mdash; napari 0.3.9.dev6+g032855e documentation</title>
+  <title>napari.viewer &mdash; napari 0.3.9.dev7+g8feab9d documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev6+g032855e
+                0.3.9.dev7+g8feab9d
               </div>
             
           
@@ -160,7 +160,8 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.viewer</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">platform</span>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">platform</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
 
@@ -172,8 +173,9 @@
 <span class="kn">from</span> <span class="nn">._qt.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
 <span class="kn">from</span> <span class="nn">._qt.qthreading</span> <span class="kn">import</span> <span class="n">create_worker</span><span class="p">,</span> <span class="n">wait_for_workers_to_quit</span>
 <span class="kn">from</span> <span class="nn">.components</span> <span class="kn">import</span> <span class="n">ViewerModel</span>
-<span class="kn">from</span> <span class="nn">.components.chunk</span> <span class="kn">import</span> <span class="n">chunk_loader</span>
 <span class="kn">from</span> <span class="nn">.utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
+
+<span class="n">_use_async</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAPARI_ASYNC&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span>
 
 
 <div class="viewcode-block" id="Viewer"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer">[docs]</a><span class="k">class</span> <span class="nc">Viewer</span><span class="p">(</span><span class="n">ViewerModel</span><span class="p">):</span>
@@ -330,12 +332,13 @@
         <span class="sd">&quot;&quot;&quot;Close the viewer window.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-        <span class="c1"># TODO_ASYNC: Tell the ChunkLoader which layers are in the</span>
-        <span class="c1"># viewer that&#39;s being closed. This is surely not what we want</span>
-        <span class="c1"># to do long term, but it fixes some tests for now. See:</span>
-        <span class="c1"># https://github.com/napari/napari/issues/1500</span>
-        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
-            <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">_use_async</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">.components.experimental.chunk</span> <span class="kn">import</span> <span class="n">chunk_loader</span>
+
+            <span class="c1"># TODO_ASYNC: Find a cleaner way to do this? Fixes some tests.</span>
+            <span class="c1"># https://github.com/napari/napari/issues/1500</span>
+            <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+                <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Simple string representation&quot;&quot;&quot;</span>

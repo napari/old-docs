@@ -1,0 +1,760 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari._qt.qt_main_window &mdash; napari 0.3.2.dev178+g36e95e9 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3.2.dev178+g36e95e9
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../events/index.html">Events and Threading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari._qt.qt_main_window</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari._qt.qt_main_window</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Custom Qt widgets that serve as native objects that the public-facing elements</span>
+<span class="sd">wrap.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QIcon</span><span class="p">,</span> <span class="n">QKeySequence</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">QAction</span><span class="p">,</span>
+    <span class="n">QApplication</span><span class="p">,</span>
+    <span class="n">QDockWidget</span><span class="p">,</span>
+    <span class="n">QFileDialog</span><span class="p">,</span>
+    <span class="n">QHBoxLayout</span><span class="p">,</span>
+    <span class="n">QLabel</span><span class="p">,</span>
+    <span class="n">QMainWindow</span><span class="p">,</span>
+    <span class="n">QShortcut</span><span class="p">,</span>
+    <span class="n">QStatusBar</span><span class="p">,</span>
+    <span class="n">QWidget</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">..resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">perf</span>
+<span class="kn">from</span> <span class="nn">..utils.io</span> <span class="kn">import</span> <span class="n">imsave</span>
+<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">in_jupyter</span>
+<span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">template</span>
+<span class="kn">from</span> <span class="nn">.dialogs.qt_about</span> <span class="kn">import</span> <span class="n">QtAbout</span>
+<span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
+<span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_table</span> <span class="kn">import</span> <span class="n">QtPluginTable</span>
+<span class="kn">from</span> <span class="nn">.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
+<span class="kn">from</span> <span class="nn">.tracing.qt_debug_menu</span> <span class="kn">import</span> <span class="n">DebugMenu</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">QImg2array</span>
+<span class="kn">from</span> <span class="nn">.widgets.qt_plugin_sorter</span> <span class="kn">import</span> <span class="n">QtPluginSorter</span>
+<span class="kn">from</span> <span class="nn">.widgets.qt_viewer_dock_widget</span> <span class="kn">import</span> <span class="n">QtViewerDockWidget</span>
+
+
+<div class="viewcode-block" id="Window"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window">[docs]</a><span class="k">class</span> <span class="nc">Window</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Application window that contains the menu bar and viewer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    qt_viewer : QtViewer</span>
+<span class="sd">        Contained viewer widget.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_menu : qtpy.QtWidgets.QMenu</span>
+<span class="sd">        File menu.</span>
+<span class="sd">    help_menu : qtpy.QtWidgets.QMenu</span>
+<span class="sd">        Help menu.</span>
+<span class="sd">    main_menu : qtpy.QtWidgets.QMainWindow.menuBar</span>
+<span class="sd">        Main menubar.</span>
+<span class="sd">    qt_viewer : QtViewer</span>
+<span class="sd">        Contained viewer widget.</span>
+<span class="sd">    view_menu : qtpy.QtWidgets.QMenu</span>
+<span class="sd">        View menu.</span>
+<span class="sd">    window_menu : qtpy.QtWidgets.QMenu</span>
+<span class="sd">        Window menu.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">raw_stylesheet</span> <span class="o">=</span> <span class="n">get_stylesheet</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qt_viewer</span><span class="p">:</span> <span class="n">QtViewer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">show</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span> <span class="o">=</span> <span class="n">qt_viewer</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span> <span class="o">=</span> <span class="n">QMainWindow</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setUnifiedTitleAndToolBarOnMac</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">QHBoxLayout</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span> <span class="o">=</span> <span class="n">QStatusBar</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setStatusBar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_menubar</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_file_menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_view_menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_window_menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_plugins_menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_help_menu</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s1">&#39;Ready&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_help</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="o">.</span><span class="n">addPermanentWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_help</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_palette</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dockConsole</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dockLayerControls</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dockLayerList</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_status_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">help</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_help_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_title_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">palette</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_palette</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
+            <span class="c1"># Add DebugMenu if using perfmon. The DebugMenu is intended to</span>
+            <span class="c1"># contain non-perfmon stuff as well. When it does we will want</span>
+            <span class="c1"># a separate env variable for it.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_debug_menu</span> <span class="o">=</span> <span class="n">DebugMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+            <span class="c1"># The QtPerformance widget only exists if we are using perfmon.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dockPerformance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_debug_menu</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">show</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_add_menubar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add menubar to napari app.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">menuBar</span><span class="p">()</span>
+        <span class="c1"># Menubar shortcuts are only active when the menubar is visible.</span>
+        <span class="c1"># Therefore, we set a global shortcut not associated with the menubar</span>
+        <span class="c1"># to toggle visibility, *but*, in order to not shadow the menubar</span>
+        <span class="c1"># shortcut, we disable it, and only enable it when the menubar is</span>
+        <span class="c1"># hidden. See this stackoverflow link for details:</span>
+        <span class="c1"># https://stackoverflow.com/questions/50537642/how-to-keep-the-shortcuts-of-a-hidden-widget-in-pyqt5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_main_menu_shortcut</span> <span class="o">=</span> <span class="n">QShortcut</span><span class="p">(</span>
+            <span class="n">QKeySequence</span><span class="p">(</span><span class="s1">&#39;Ctrl+M&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_main_menu_shortcut</span><span class="o">.</span><span class="n">activated</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_toggle_menubar_visible</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_main_menu_shortcut</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_toggle_menubar_visible</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Toggle visibility of app menubar.</span>
+
+<span class="sd">        This function also disables or enables a global keyboard shortcut to</span>
+<span class="sd">        show the menubar, since menubar shortcuts are only available while the</span>
+<span class="sd">        menubar is visible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">isVisible</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_main_menu_shortcut</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_main_menu_shortcut</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_file_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add &#39;File&#39; menu to app menubar.&quot;&quot;&quot;</span>
+        <span class="n">open_images</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Open File(s)...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">open_images</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+O&#39;</span><span class="p">)</span>
+        <span class="n">open_images</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Open file(s)&#39;</span><span class="p">)</span>
+        <span class="n">open_images</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_open_files_dialog</span><span class="p">)</span>
+
+        <span class="n">open_stack</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Open Files as Stack...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">open_stack</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Alt+O&#39;</span><span class="p">)</span>
+        <span class="n">open_stack</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Open files&#39;</span><span class="p">)</span>
+        <span class="n">open_stack</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_open_files_dialog_as_stack_dialog</span>
+        <span class="p">)</span>
+
+        <span class="n">open_folder</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Open Folder...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">open_folder</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Shift+O&#39;</span><span class="p">)</span>
+        <span class="n">open_folder</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Open a folder&#39;</span><span class="p">)</span>
+        <span class="n">open_folder</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_open_folder_dialog</span><span class="p">)</span>
+
+        <span class="n">save_selected_layers</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span>
+            <span class="s1">&#39;Save Selected Layer(s)...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
+        <span class="p">)</span>
+        <span class="n">save_selected_layers</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+S&#39;</span><span class="p">)</span>
+        <span class="n">save_selected_layers</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Save selected layers&#39;</span><span class="p">)</span>
+        <span class="n">save_selected_layers</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_save_layers_dialog</span><span class="p">(</span><span class="n">selected</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">save_all_layers</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Save All Layers...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">save_all_layers</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Shift+S&#39;</span><span class="p">)</span>
+        <span class="n">save_all_layers</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Save all layers&#39;</span><span class="p">)</span>
+        <span class="n">save_all_layers</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_save_layers_dialog</span><span class="p">(</span><span class="n">selected</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">screenshot</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Save Screenshot...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">screenshot</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Alt+S&#39;</span><span class="p">)</span>
+        <span class="n">screenshot</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span>
+            <span class="s1">&#39;Save screenshot of current display, default .png&#39;</span>
+        <span class="p">)</span>
+        <span class="n">screenshot</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_screenshot_dialog</span><span class="p">)</span>
+
+        <span class="n">screenshot_wv</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span>
+            <span class="s1">&#39;Save Screenshot with Viewer...&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
+        <span class="p">)</span>
+        <span class="n">screenshot_wv</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Alt+Shift+S&#39;</span><span class="p">)</span>
+        <span class="n">screenshot_wv</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span>
+            <span class="s1">&#39;Save screenshot of current display with the viewer, default .png&#39;</span>
+        <span class="p">)</span>
+        <span class="n">screenshot_wv</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_screenshot_dialog</span><span class="p">)</span>
+
+        <span class="c1"># OS X will rename this to Quit and put it in the app menu.</span>
+        <span class="n">exitAction</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Exit&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">exitAction</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Q&#39;</span><span class="p">)</span>
+        <span class="n">exitAction</span><span class="o">.</span><span class="n">setMenuRole</span><span class="p">(</span><span class="n">QAction</span><span class="o">.</span><span class="n">QuitRole</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">handle_exit</span><span class="p">():</span>
+            <span class="c1"># if the event loop was started in gui_qt() then the app will be</span>
+            <span class="c1"># named &#39;napari&#39;. Since the Qapp was started by us, just close it.</span>
+            <span class="k">if</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
+                <span class="n">QApplication</span><span class="o">.</span><span class="n">closeAllWindows</span><span class="p">()</span>
+                <span class="n">QApplication</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+            <span class="c1"># otherwise, something else created the QApp before us (such as</span>
+            <span class="c1"># %gui qt IPython magic).  If we quit the app in this case, then</span>
+            <span class="c1"># *later* attempts to instantiate a napari viewer won&#39;t work until</span>
+            <span class="c1"># the event loop is restarted with app.exec_().  So rather than</span>
+            <span class="c1"># quit just close all the windows (and clear our app icon).</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">QApplication</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
+                <span class="c1"># Write trace file before exit, if we were writing one.</span>
+                <span class="c1"># Is there a better place to make sure this is done on exit?</span>
+                <span class="n">perf</span><span class="o">.</span><span class="n">timers</span><span class="o">.</span><span class="n">stop_trace_file</span><span class="p">()</span>
+
+        <span class="n">exitAction</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">handle_exit</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;File&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">open_images</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">open_stack</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">open_folder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addSeparator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">save_selected_layers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">save_all_layers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">screenshot</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">screenshot_wv</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addSeparator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">exitAction</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_view_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add &#39;View&#39; menu to app menubar.&quot;&quot;&quot;</span>
+        <span class="n">toggle_visible</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Toggle Menubar Visibility&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">toggle_visible</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+M&#39;</span><span class="p">)</span>
+        <span class="n">toggle_visible</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Hide Menubar&#39;</span><span class="p">)</span>
+        <span class="n">toggle_visible</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_toggle_menubar_visible</span><span class="p">)</span>
+        <span class="n">toggle_theme</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Toggle Theme&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">toggle_theme</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Shift+T&#39;</span><span class="p">)</span>
+        <span class="n">toggle_theme</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Toggle theme&#39;</span><span class="p">)</span>
+        <span class="n">toggle_theme</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">_toggle_theme</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;View&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">toggle_visible</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">toggle_theme</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_window_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add &#39;Window&#39; menu to app menubar.&quot;&quot;&quot;</span>
+        <span class="n">exit_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Close Window&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">exit_action</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s2">&quot;Ctrl+W&quot;</span><span class="p">)</span>
+        <span class="n">exit_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Close napari window&#39;</span><span class="p">)</span>
+        <span class="n">exit_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;Window&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">exit_action</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_plugins_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add &#39;Plugins&#39; menu to app menubar.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;Plugins&#39;</span><span class="p">)</span>
+
+        <span class="n">list_plugins_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span>
+            <span class="s2">&quot;List Installed Plugins...&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
+        <span class="p">)</span>
+        <span class="n">list_plugins_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;List installed plugins&#39;</span><span class="p">)</span>
+        <span class="n">list_plugins_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show_plugin_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">list_plugins_action</span><span class="p">)</span>
+
+        <span class="n">pip_install_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span>
+            <span class="s2">&quot;Install/Uninstall Package(s)...&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
+        <span class="p">)</span>
+        <span class="n">pip_install_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show_pip_install_dialog</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">pip_install_action</span><span class="p">)</span>
+
+        <span class="n">order_plugin_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Plugin Call Order...&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">order_plugin_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Change call order for plugins&#39;</span><span class="p">)</span>
+        <span class="n">order_plugin_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show_plugin_sorter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">order_plugin_action</span><span class="p">)</span>
+
+        <span class="n">report_plugin_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Plugin Errors...&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">report_plugin_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span>
+            <span class="s1">&#39;Review stack traces for plugin exceptions and notify developers&#39;</span>
+        <span class="p">)</span>
+        <span class="n">report_plugin_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show_plugin_err_reporter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">report_plugin_action</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_show_plugin_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show dialog with a table of installed plugins and metadata.&quot;&quot;&quot;</span>
+        <span class="n">QtPluginTable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_show_plugin_sorter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show dialog that allows users to sort the call order of plugins.&quot;&quot;&quot;</span>
+        <span class="n">plugin_sorter</span> <span class="o">=</span> <span class="n">QtPluginSorter</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">dock_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_dock_widget</span><span class="p">(</span>
+            <span class="n">plugin_sorter</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Plugin Sorter&#39;</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">&quot;right&quot;</span>
+        <span class="p">)</span>
+        <span class="n">plugin_sorter</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="n">plugin_sorter</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">plugin_sorter</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">)</span>
+        <span class="n">plugin_sorter</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_show_pip_install_dialog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show dialog that allows users to sort the call order of plugins.&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.qt_pip_dialog</span> <span class="kn">import</span> <span class="n">QtPipDialog</span>
+
+        <span class="n">dialog</span> <span class="o">=</span> <span class="n">QtPipDialog</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">dialog</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_show_plugin_err_reporter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show dialog that allows users to review and report plugin errors.&quot;&quot;&quot;</span>
+        <span class="n">plugin_sorter</span> <span class="o">=</span> <span class="n">QtPluginErrReporter</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">plugin_sorter</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_add_help_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add &#39;Help&#39; menu to app menubar.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;Help&#39;</span><span class="p">)</span>
+
+        <span class="n">about_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;napari Info&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">about_action</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s2">&quot;Ctrl+/&quot;</span><span class="p">)</span>
+        <span class="n">about_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;About napari&#39;</span><span class="p">)</span>
+        <span class="n">about_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">QtAbout</span><span class="o">.</span><span class="n">showAbout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">about_action</span><span class="p">)</span>
+
+        <span class="n">about_key_bindings</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Show Key Bindings&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">about_key_bindings</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s2">&quot;Ctrl+Alt+/&quot;</span><span class="p">)</span>
+        <span class="n">about_key_bindings</span><span class="o">.</span><span class="n">setShortcutContext</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">ApplicationShortcut</span><span class="p">)</span>
+        <span class="n">about_key_bindings</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;key_bindings&#39;</span><span class="p">)</span>
+        <span class="n">about_key_bindings</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">show_key_bindings_dialog</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">about_key_bindings</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Window.add_dock_widget"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.add_dock_widget">[docs]</a>    <span class="k">def</span> <span class="nf">add_dock_widget</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">widget</span><span class="p">:</span> <span class="n">QWidget</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">area</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;bottom&#39;</span><span class="p">,</span>
+        <span class="n">allowed_areas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">shortcut</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convenience method to add a QDockWidget to the main window</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        widget : QWidget</span>
+<span class="sd">            `widget` will be added as QDockWidget&#39;s main widget.</span>
+<span class="sd">        name : str, optional</span>
+<span class="sd">            Name of dock widget to appear in window menu.</span>
+<span class="sd">        area : str</span>
+<span class="sd">            Side of the main window to which the new dock widget will be added.</span>
+<span class="sd">            Must be in {&#39;left&#39;, &#39;right&#39;, &#39;top&#39;, &#39;bottom&#39;}</span>
+<span class="sd">        allowed_areas : list[str], optional</span>
+<span class="sd">            Areas, relative to main window, that the widget is allowed dock.</span>
+<span class="sd">            Each item in list must be in {&#39;left&#39;, &#39;right&#39;, &#39;top&#39;, &#39;bottom&#39;}</span>
+<span class="sd">            By default, all areas are allowed.</span>
+<span class="sd">        shortcut : str, optional</span>
+<span class="sd">            Keyboard shortcut to appear in dropdown menu.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dock_widget : QtViewerDockWidget</span>
+<span class="sd">            `dock_widget` that can pass viewer events.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dock_widget</span> <span class="o">=</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">,</span>
+            <span class="n">widget</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">area</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+            <span class="n">allowed_areas</span><span class="o">=</span><span class="n">allowed_areas</span><span class="p">,</span>
+            <span class="n">shortcut</span><span class="o">=</span><span class="n">shortcut</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="n">dock_widget</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dock_widget</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dock_widget</span><span class="p">:</span> <span class="n">QtViewerDockWidget</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a QtViewerDockWidget to the main window</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dock_widget : QtViewerDockWidget</span>
+<span class="sd">            `dock_widget` will be added to the main window.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dock_widget</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">addDockWidget</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">qt_area</span><span class="p">,</span> <span class="n">dock_widget</span><span class="p">)</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">dock_widget</span><span class="o">.</span><span class="n">toggleViewAction</span><span class="p">()</span>
+        <span class="n">action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">action</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dock_widget</span><span class="o">.</span><span class="n">shortcut</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">action</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="n">dock_widget</span><span class="o">.</span><span class="n">shortcut</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Window.remove_dock_widget"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.remove_dock_widget">[docs]</a>    <span class="k">def</span> <span class="nf">remove_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">widget</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Removes specified dock widget.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        widget : QWidget | str</span>
+<span class="sd">            If widget == &#39;all&#39;, all docked widgets will be removed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">widget</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">dw</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">findChildren</span><span class="p">(</span><span class="n">QDockWidget</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">removeDockWidget</span><span class="p">(</span><span class="n">dw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">removeDockWidget</span><span class="p">(</span><span class="n">widget</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Window.resize"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.resize">[docs]</a>    <span class="k">def</span> <span class="nf">resize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Resize the window.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        width : int</span>
+<span class="sd">            Width in logical pixels.</span>
+<span class="sd">        height : int</span>
+<span class="sd">            Height in logical pixels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Window.show"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Resize, show, and bring forward the window.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">sizeHint</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="c1"># Resize axis labels now that window is shown</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">_resize_axis_labels</span><span class="p">()</span>
+
+        <span class="c1"># We want to bring the viewer to the front when</span>
+        <span class="c1"># A) it is our own (gui_qt) event loop OR we are running in jupyter</span>
+        <span class="c1"># B) it is not the first time a QMainWindow is being created</span>
+
+        <span class="c1"># `app_name` will be &quot;napari&quot; iff the application was instantiated in</span>
+        <span class="c1"># gui_qt(). isActiveWindow() will be True if it is the second time a</span>
+        <span class="c1"># _qt_window has been created.</span>
+        <span class="c1"># See #721, #732, #735, #795, #1594</span>
+        <span class="n">app_name</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">app_name</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span> <span class="ow">or</span> <span class="n">in_jupyter</span><span class="p">()</span>
+        <span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">isActiveWindow</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">activate</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Window.activate"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.activate">[docs]</a>    <span class="k">def</span> <span class="nf">activate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make the viewer the currently active window.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">raise_</span><span class="p">()</span>  <span class="c1"># for macOS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">activateWindow</span><span class="p">()</span>  <span class="c1"># for Windows</span></div>
+
+    <span class="k">def</span> <span class="nf">_update_palette</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update widget color palette.&quot;&quot;&quot;</span>
+        <span class="c1"># set window styles which don&#39;t use the primary stylesheet</span>
+        <span class="c1"># FIXME: this is a problem with the stylesheet not using properties</span>
+        <span class="n">palette</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">palette</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
+            <span class="n">template</span><span class="p">(</span>
+                <span class="s1">&#39;QStatusBar { background: {{ background }}; &#39;</span>
+                <span class="s1">&#39;color: {{ text }}; }&#39;</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">palette</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
+            <span class="n">template</span><span class="p">(</span><span class="s1">&#39;QWidget { background: {{ background }}; }&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">palette</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">template</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_stylesheet</span><span class="p">,</span> <span class="o">**</span><span class="n">palette</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_status_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update status bar.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event : napari.utils.event.Event</span>
+<span class="sd">            The napari event that triggered this method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_title_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update window title.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event : napari.utils.event.Event</span>
+<span class="sd">            The napari event that triggered this method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_help_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update help message on status bar.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event : napari.utils.event.Event</span>
+<span class="sd">            The napari event that triggered this method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_help</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_screenshot_dialog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save screenshot of current display with viewer, default .png&quot;&quot;&quot;</span>
+        <span class="n">filename</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span>
+            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">,</span>
+            <span class="n">caption</span><span class="o">=</span><span class="s1">&#39;Save screenshot with viewer&#39;</span><span class="p">,</span>
+            <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">_last_visited_dir</span><span class="p">,</span>  <span class="c1"># home dir by default</span>
+            <span class="nb">filter</span><span class="o">=</span><span class="s2">&quot;Image files (*.png *.bmp *.gif *.tif *.tiff)&quot;</span><span class="p">,</span>  <span class="c1"># first one used by default</span>
+            <span class="c1"># jpg and jpeg not included as they don&#39;t support an alpha channel</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">filename</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># double check that an appropriate extension has been added as the</span>
+            <span class="c1"># filter option does not always add an extension on linux and windows</span>
+            <span class="c1"># see https://bugreports.qt.io/browse/QTBUG-27186</span>
+            <span class="n">image_extensions</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;.bmp&#39;</span><span class="p">,</span> <span class="s1">&#39;.gif&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">,</span> <span class="s1">&#39;.tif&#39;</span><span class="p">,</span> <span class="s1">&#39;.tiff&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">image_extensions</span><span class="p">):</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="o">+</span> <span class="s1">&#39;.png&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Window.screenshot"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.screenshot">[docs]</a>    <span class="k">def</span> <span class="nf">screenshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Take currently displayed viewer and convert to an image array.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Filename for saving screenshot image.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        image : array</span>
+<span class="sd">            Numpy array of type ubyte and shape (h, w, 4). Index [0, 0] is the</span>
+<span class="sd">            upper-left corner of the rendered region.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">grab</span><span class="p">()</span><span class="o">.</span><span class="n">toImage</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">imsave</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">QImg2array</span><span class="p">(</span><span class="n">img</span><span class="p">))</span>  <span class="c1"># scikit-image imsave method</span>
+        <span class="k">return</span> <span class="n">QImg2array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Window.close"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close the viewer window and cleanup sub-widgets.&quot;&quot;&quot;</span>
+
+        <span class="c1"># Someone is closing us twice? Only try to delete self._qt_window</span>
+        <span class="c1"># if we still have one.</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_qt_window&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_delete_qt_window</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_delete_qt_window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete our self._qt_window.&quot;&quot;&quot;</span>
+
+        <span class="c1"># On some versions of Darwin, exiting while fullscreen seems to tickle</span>
+        <span class="c1"># some bug deep in NSWindow.  This forces the fullscreen keybinding</span>
+        <span class="c1"># test to complete its draw cycle, then pop back out of fullscreen.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">isFullScreen</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">showNormal</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+                <span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,634 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.utils.colormaps.standardize_color &mdash; napari 0.3.9.dev13+g36e95e9 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+        <script src="../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3.9.dev13+g36e95e9
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.utils.colormaps.standardize_color</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.utils.colormaps.standardize_color</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;This module contains functions that &#39;standardize&#39; the color handling</span>
+<span class="sd">of napari layers by supplying functions that are able to convert most</span>
+<span class="sd">color representation the user had in mind into a single representation -</span>
+<span class="sd">a numpy Nx4 array of float32 values between 0 and 1 - that is used across</span>
+<span class="sd">the codebase. The color is always in an RGBA format. To handle colors in</span>
+<span class="sd">HSV, for example, we should point users to skimage, matplotlib and others.</span>
+
+<span class="sd">The main function of the module is &quot;transform_color&quot;, which might call</span>
+<span class="sd">a cascade of other, private, function in the module to do the hard work</span>
+<span class="sd">of converting the input. This function will either be called directly, or</span>
+<span class="sd">used by the function &quot;transform_color_with_defaults&quot;, which is a helper</span>
+<span class="sd">function for the layer objects located in</span>
+<span class="sd">``layers.utils.color_transformations.py``.</span>
+
+<span class="sd">In general, when handling colors we try to catch invalid color</span>
+<span class="sd">representations, warn the users of their misbehaving and return a default</span>
+<span class="sd">white color array, since it seems unreasonable to crash the entire napari</span>
+<span class="sd">session due to mis-represented colors.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">ColorArray</span><span class="p">,</span> <span class="n">get_color_dict</span><span class="p">,</span> <span class="n">get_color_names</span>
+<span class="kn">from</span> <span class="nn">vispy.color.color_array</span> <span class="kn">import</span> <span class="n">_string_to_rgb</span>
+
+
+<div class="viewcode-block" id="transform_color"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.standardize_color.transform_color">[docs]</a><span class="k">def</span> <span class="nf">transform_color</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Transforms provided color(s) to an Nx4 array of RGBA np.float32</span>
+<span class="sd">    values.</span>
+
+<span class="sd">    N is the number of given colors. The function is designed to parse all</span>
+<span class="sd">    valid color representations a user might have and convert them properly.</span>
+<span class="sd">    That being said, combinations of different color representation in the</span>
+<span class="sd">    same list of colors is prohibited, and will error. This means that a list</span>
+<span class="sd">    of [&#39;red&#39;, np.array([1, 0, 0])] cannot be parsed and has to be manually</span>
+<span class="sd">    pre-processed by the user before sent to this function. In addition, the</span>
+<span class="sd">    provided colors - if numeric - should already be in an RGB(A) format. To</span>
+<span class="sd">    convert an existing numeric color array to RGBA format use skimage before</span>
+<span class="sd">    calling this function.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colors : string and array-like.</span>
+<span class="sd">        The color(s) to interpret and convert</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    colors : np.ndarray</span>
+<span class="sd">        An instance of np.ndarray with a data type of float32, 4 columns in</span>
+<span class="sd">        RGBA order and N rows, with N being the number of colors. The array</span>
+<span class="sd">        will always be 2D even if a single color is passed.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError, AttributeError, KeyError</span>
+<span class="sd">        invalid inputs</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">colortype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_color_switch</span><span class="p">[</span><span class="n">colortype</span><span class="p">](</span><span class="n">colors</span><span class="p">)</span></div>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1024</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_handle_str</span><span class="p">(</span><span class="n">color</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Creates an array from a color of type string.</span>
+
+<span class="sd">    The function uses an LRU cache to enhance performance.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    color : str</span>
+<span class="sd">        A single string as an input color. Can be a color name or a</span>
+<span class="sd">        hex representation of a color, with either 6 or 8 hex digits.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    colorarray : np.ndarray</span>
+<span class="sd">        1x4 array</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Empty string detected. Returning black instead.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="c1"># This line will stay here until vispy adds a &quot;transparent&quot; key</span>
+    <span class="c1"># to their color dictionary. A PR was sent and approved, currently</span>
+    <span class="c1"># waiting to be merged.</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">color</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;transparent&quot;</span><span class="p">,</span> <span class="s2">&quot;#00000000&quot;</span><span class="p">)</span>
+    <span class="n">colorarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">_string_to_rgb</span><span class="p">(</span><span class="n">color</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">colorarray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">colorarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">colorarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">colorarray</span>
+
+
+<span class="k">def</span> <span class="nf">_handle_list_like</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Parse a list-like container of colors into a numpy Nx4 array.</span>
+
+<span class="sd">    Handles all list-like containers of colors using recursion (if necessary).</span>
+<span class="sd">    The colors inside the container should all be represented in the same</span>
+<span class="sd">    manner. This means that a list containing [&#39;r&#39;, (1., 1., 1.)] will raise</span>
+<span class="sd">    an error. Note that numpy arrays are handled in _handle_array. Lists which</span>
+<span class="sd">    are known to contain strings will be parsed with _handle_str_list_like.</span>
+<span class="sd">    Generators should first visit _handle_generator before arriving as input.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colors : Sequence</span>
+<span class="sd">        A list-like container of colors. The colors inside should be homogeneuous</span>
+<span class="sd">        in their representation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    color_array : np.ndarray</span>
+<span class="sd">        Nx4 numpy array, with N being the length of ``colors``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># The following conversion works for most cases, and so it&#39;s expected</span>
+        <span class="c1"># that most valid inputs will pass this .asarray() call</span>
+        <span class="c1"># with ease. Those who don&#39;t are usually too cryptic to decipher.</span>
+        <span class="n">color_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">colors</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Coudln&#39;t convert input color array to a proper numpy array.&quot;</span>
+            <span class="s2">&quot; Please make sure that your input data is in a parsable format.&quot;</span>
+            <span class="s2">&quot; Converting input to a white color array.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># Happy path - converted to a float\integer array</span>
+    <span class="k">if</span> <span class="n">color_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_handle_array</span><span class="p">(</span><span class="n">color_array</span><span class="p">)</span>
+
+    <span class="c1"># User input was an iterable with strings</span>
+    <span class="k">if</span> <span class="n">color_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="s1">&#39;O&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_handle_str_list_like</span><span class="p">(</span><span class="n">color_array</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+
+
+<span class="k">def</span> <span class="nf">_handle_generator</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Generators are converted to lists since we need to know their</span>
+<span class="sd">    length to instantiate a proper array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_handle_list_like</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">colors</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="handle_nested_colors"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.standardize_color.handle_nested_colors">[docs]</a><span class="k">def</span> <span class="nf">handle_nested_colors</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ColorArray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;In case of an array-like container holding colors, unpack it.&quot;&quot;&quot;</span>
+    <span class="n">colors_as_rbga</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">colors</span><span class="p">):</span>
+        <span class="n">colors_as_rbga</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">_color_switch</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">color</span><span class="p">)](</span><span class="n">color</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ColorArray</span><span class="p">(</span><span class="n">colors_as_rbga</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_handle_array</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Converts the given array into an array in the right format.&quot;&quot;&quot;</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span>
+
+    <span class="c1"># Object arrays aren&#39;t handled by napari</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;O&#39;</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;An object array was passed as the color input.&quot;</span>
+            <span class="s2">&quot; Please convert its datatype before sending it to napari.&quot;</span>
+            <span class="s2">&quot; Converting input to a white color array.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># An array of strings will be treated as a list if compatible</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;U&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_handle_str_list_like</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;String color arrays should be one-dimensional.&quot;</span>
+                <span class="s2">&quot; Converting input to a white color array.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># Test the dimensionality of the input array</span>
+
+    <span class="c1"># Empty color array can be a way for the user to signal</span>
+    <span class="c1"># that it wants the &quot;default&quot; colors of napari. We return</span>
+    <span class="c1"># a single white color.</span>
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Given color input is empty. Converting input to&quot;</span>
+            <span class="s2">&quot; a white color array.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+
+    <span class="c1"># Arrays with more than two dimensions don&#39;t have a clear</span>
+    <span class="c1"># conversion method to a color array and thus raise an error.</span>
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Given colors input should contain one or two dimensions.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; Received array with </span><span class="si">{</span><span class="n">colors</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># User provided a list of numbers as color input. This input</span>
+    <span class="c1"># cannot be coerced into something understandable and thus</span>
+    <span class="c1"># will return an error.</span>
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Given color array has an unsupported format.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; Received the following array:</span><span class="se">\n</span><span class="si">{</span><span class="n">colors</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;A proper color array should have 3-4 columns&quot;</span>
+            <span class="s2">&quot; with a row per data entry.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># The user gave a list of colors, but it contains a wrong number</span>
+    <span class="c1"># of columns. This check will also drop Nx1 (2D) arrays, since</span>
+    <span class="c1"># numpy has vectors, and representing colors in this way</span>
+    <span class="c1"># (column vector-like) is redundant. However, this results in a</span>
+    <span class="c1"># warning and not a ValueError since we know the number of colors</span>
+    <span class="c1"># in this dataset, meaning we can save the napari session by</span>
+    <span class="c1"># rendering the data in white, which better than crashing.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">3</span> <span class="o">&lt;=</span> <span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Given colors input should contain three or four columns.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; Received array with </span><span class="si">{</span><span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> columns.&quot;</span>
+            <span class="s2">&quot; Converting input to a white color array.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># Arrays with floats and ints can be safely converted to the proper format</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_convert_array_to_correct_format</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data type of array (</span><span class="si">{</span><span class="n">colors</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">) not supported.&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_convert_array_to_correct_format</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Asserts shape, dtype and normalization of given color array.</span>
+
+<span class="sd">    This function deals with arrays which are already &#39;well-behaved&#39;,</span>
+<span class="sd">    i.e. have (almost) the correct number of columns and are able to represent</span>
+<span class="sd">    colors correctly. It then it makes sure that the array indeed has exactly</span>
+<span class="sd">    four columns and that its values are normalized between 0 and 1, with a</span>
+<span class="sd">    data type of float32.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colors : np.ndarray</span>
+<span class="sd">        Input color array, perhaps un-normalized and without the alpha channel.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    colors : np.ndarray</span>
+<span class="sd">        Nx4, float32 color array with values in the range [0, 1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">colors</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)]</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Colors input had negative values.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">colors</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Colors with values larger than one detected. napari&quot;</span>
+            <span class="s2">&quot; will normalize these colors for you. If you&#39;d like to convert these&quot;</span>
+            <span class="s2">&quot; yourself, please use the proper method from skimage.color.&quot;</span>
+        <span class="p">)</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">_normalize_color_array</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_handle_str_list_like</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Converts lists or arrays filled with strings to the proper color array</span>
+<span class="sd">    format.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colors : list-like</span>
+<span class="sd">        A sequence of string colors</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    color_array : np.ndarray</span>
+<span class="sd">        Nx4, float32 color array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">color_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">colors</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">color_array</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">_color_switch</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">c</span><span class="p">)](</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid color found: </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2"> at index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">color_array</span>
+
+
+<span class="k">def</span> <span class="nf">_handle_none</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Converts color given as None to black.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    color : NoneType</span>
+<span class="sd">        None value given as a color</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    arr : np.ndarray</span>
+<span class="sd">        1x4 numpy array of float32 zeros</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_normalize_color_array</span><span class="p">(</span><span class="n">colors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Normalize all array values to the range [0, 1].</span>
+
+<span class="sd">    The added complexity here stems from the fact that if a row in the given</span>
+<span class="sd">    array contains four identical value a simple normalization might raise a</span>
+<span class="sd">    division by zero exception.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    colors : np.ndarray</span>
+<span class="sd">        A numpy array with values possibly outside the range of [0, 1]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    colors : np.ndarray</span>
+<span class="sd">        Copy of input array with normalized values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">out_of_bounds_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">colors</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">colors</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">out_of_bounds</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">out_of_bounds_idx</span><span class="p">]</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">out_of_bounds</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">out_of_bounds</span> <span class="o">=</span> <span class="n">out_of_bounds</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">colors</span><span class="p">[</span><span class="n">out_of_bounds_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_of_bounds</span>
+    <span class="k">return</span> <span class="n">colors</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+
+<span class="n">_color_switch</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nb">str</span><span class="p">:</span> <span class="n">_handle_str</span><span class="p">,</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">str_</span><span class="p">:</span> <span class="n">_handle_str</span><span class="p">,</span>
+    <span class="nb">list</span><span class="p">:</span> <span class="n">_handle_list_like</span><span class="p">,</span>
+    <span class="nb">tuple</span><span class="p">:</span> <span class="n">_handle_list_like</span><span class="p">,</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">GeneratorType</span><span class="p">:</span> <span class="n">_handle_generator</span><span class="p">,</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="n">_handle_array</span><span class="p">,</span>
+    <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">):</span> <span class="n">_handle_none</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_create_hex_to_name_dict</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Create a dictionary mapping hexadecimal RGB colors into their</span>
+<span class="sd">    &#39;official&#39; name.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    hex_to_rgb : dict</span>
+<span class="sd">        Mapping from hexadecimal RGB (&#39;#ff0000&#39;) to name (&#39;red&#39;).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">colordict</span> <span class="o">=</span> <span class="n">get_color_dict</span><span class="p">()</span>
+    <span class="n">hex_to_name</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">ff&quot;</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">colordict</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">hex_to_name</span><span class="p">[</span><span class="s2">&quot;#00000000&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;transparent&quot;</span>
+    <span class="k">return</span> <span class="n">hex_to_name</span>
+
+
+<div class="viewcode-block" id="get_color_namelist"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.standardize_color.get_color_namelist">[docs]</a><span class="k">def</span> <span class="nf">get_color_namelist</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;A wrapper around vispy&#39;s get_color_names designed to add a</span>
+<span class="sd">    &quot;transparent&quot; (alpha = 0) color to it.</span>
+
+<span class="sd">    Once https://github.com/vispy/vispy/pull/1794 is merged this</span>
+<span class="sd">    function is no longer necessary.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    color_dict : list</span>
+<span class="sd">        A list of all valid vispy color names plus &quot;transparent&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">get_color_names</span><span class="p">()</span>
+    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;transparent&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">names</span></div>
+
+
+<span class="n">hex_to_name</span> <span class="o">=</span> <span class="n">_create_hex_to_name_dict</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_check_color_dim</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ensures input is Nx4.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    val : np.ndarray</span>
+<span class="sd">        A color array of possibly less than 4 columns</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    val : np.ndarray</span>
+<span class="sd">        A four columns version of the input array. If the original array</span>
+<span class="sd">        was a missing the fourth channel, it&#39;s added as 1.0 values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Value must have second dimension of size 3 or 4&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">val</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">val</span>
+
+
+<div class="viewcode-block" id="rgb_to_hex"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.standardize_color.rgb_to_hex">[docs]</a><span class="k">def</span> <span class="nf">rgb_to_hex</span><span class="p">(</span><span class="n">rgbs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert RGB to hex quadruplet.</span>
+
+<span class="sd">    Taken from vispy with slight modifications.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rgbs : Sequence</span>
+<span class="sd">        A list-like container of colors in RGBA format with values</span>
+<span class="sd">        between [0, 1]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    arr : np.ndarray</span>
+<span class="sd">        An array of the hex representation of the input colors</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rgbs</span> <span class="o">=</span> <span class="n">_check_color_dim</span><span class="p">(</span><span class="n">rgbs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="sa">f</span><span class="s1">&#39;#</span><span class="si">{</span><span class="s2">&quot;</span><span class="si">%02x</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="mi">4</span><span class="si">}</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">((</span><span class="mi">255</span> <span class="o">*</span> <span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">rgb</span> <span class="ow">in</span> <span class="n">rgbs</span>
+        <span class="p">],</span>
+        <span class="s1">&#39;|U9&#39;</span><span class="p">,</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

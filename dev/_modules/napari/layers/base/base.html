@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.3.9.dev22+gff438b1 documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.3.9.dev23+g7d288e5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev22+gff438b1
+                0.3.9.dev23+g7d288e5
               </div>
             
           
@@ -175,7 +175,10 @@
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span><span class="p">,</span> <span class="n">status_format</span>
 <span class="kn">from</span> <span class="nn">..transforms</span> <span class="kn">import</span> <span class="n">ScaleTranslate</span><span class="p">,</span> <span class="n">TransformChain</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">compute_multiscale_level</span><span class="p">,</span> <span class="n">convert_to_uint8</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">compute_multiscale_level_and_corners</span><span class="p">,</span>
+    <span class="n">convert_to_uint8</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">._base_constants</span> <span class="kn">import</span> <span class="n">Blending</span>
 
 
@@ -238,14 +241,14 @@
 <span class="sd">    z_index : int</span>
 <span class="sd">        Depth of the layer visual relative to other visuals in the scenecanvas.</span>
 <span class="sd">    coordinates : tuple of float</span>
-<span class="sd">        Coordinates of the cursor in the data space of each layer. The length</span>
-<span class="sd">        of the tuple is equal to the number of dimensions of the layer.</span>
+<span class="sd">        Cursor position in data coordinates.</span>
 <span class="sd">    corner_pixels : array</span>
 <span class="sd">        Coordinates of the top-left and bottom-right canvas pixels in the data</span>
-<span class="sd">        space of each layer. The length of the tuple is equal to the number of</span>
-<span class="sd">        dimensions of the layer.</span>
-<span class="sd">    position : 2-tuple of int</span>
-<span class="sd">        Cursor position in the image space of only the displayed dimensions.</span>
+<span class="sd">        coordinates of each layer. For multiscale data the coordinates are in</span>
+<span class="sd">        the space of the currently viewed data level, not the highest resolution</span>
+<span class="sd">        level.</span>
+<span class="sd">    position : tuple</span>
+<span class="sd">        Cursor position in world coordinates.</span>
 <span class="sd">    shape : tuple of int</span>
 <span class="sd">        Size of the data in the layer.</span>
 <span class="sd">    ndim : int</span>
@@ -346,8 +349,7 @@
             <span class="p">]</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndim</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">ndim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">=</span> <span class="kc">True</span>
@@ -529,46 +531,37 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;tuple of int: Cursor position in image of displayed dimensions.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;tuple: Cursor position in world slice coordinates.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span>
 
     <span class="nd">@position</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">==</span> <span class="n">position</span><span class="p">:</span>
+        <span class="n">_position</span> <span class="o">=</span> <span class="n">position</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">==</span> <span class="n">_position</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="n">position</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_coordinates</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="n">_position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Updates dims model, which is useful after data has been changed.&quot;&quot;&quot;</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ndim</span><span class="p">()</span>
-        <span class="n">ndisplay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
-
-        <span class="c1"># If the dimensionality is changing then if the number of dimensions</span>
-        <span class="c1"># is becoming smaller trim the property from the beginning, and if</span>
-        <span class="c1"># the number of dimensions is becoming larger pad from the beginning</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">ndisplay</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">[</span><span class="o">-</span><span class="n">ndisplay</span><span class="p">:]</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ndisplay</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndisplay</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">))</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">position</span>
-            <span class="p">)</span>
 
         <span class="n">old_ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
         <span class="k">if</span> <span class="n">old_ndim</span> <span class="o">&gt;</span> <span class="n">ndim</span><span class="p">:</span>
             <span class="n">keep_axes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">old_ndim</span> <span class="o">-</span> <span class="n">ndim</span><span class="p">,</span> <span class="n">old_ndim</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">set_slice</span><span class="p">(</span><span class="n">keep_axes</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">[</span><span class="o">-</span><span class="n">ndim</span><span class="p">:]</span>
         <span class="k">elif</span> <span class="n">old_ndim</span> <span class="o">&lt;</span> <span class="n">ndim</span><span class="p">:</span>
             <span class="n">new_axes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">new_axes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_coordinates</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="nd">@abstractmethod</span>
@@ -614,11 +607,6 @@
         <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ax</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">):</span>
             <span class="n">indices</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_pts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
-        <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">:</span>
-            <span class="n">coords</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 
@@ -897,67 +885,63 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">set_view_slice</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_coordinates</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_set_highlight</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_update_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Insert the cursor position into the correct position in the</span>
-<span class="sd">        tuple of indices and update the cursor coordinates.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">):</span>
-            <span class="n">coords</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Cursor position in data coordinates.&quot;&quot;&quot;</span>
+        <span class="c1"># Note we ignore the first transform which is tile2data</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_update_value_and_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update value and status message.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_message</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_update_multiscale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Refresh layer multiscale if new resolution level or tile is required.</span>
+    <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_factors</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update canvas scale and corner values on draw.</span>
+
+<span class="sd">        For layer multiscale determing if a new resolution level or tile is</span>
+<span class="sd">        required.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
+<span class="sd">        scale_factors : list</span>
+<span class="sd">            Scale factors going from canvas to world coordinates.</span>
 <span class="sd">        corner_pixels : array</span>
 <span class="sd">            Coordinates of the top-left and bottom-right canvas pixels in the</span>
-<span class="sd">            data space of each layer. The length of the tuple is equal to the</span>
-<span class="sd">            number of dimensions of the layer. If different from the current</span>
-<span class="sd">            layer corner_pixels the layer needs refreshing.</span>
+<span class="sd">            world coordinates.</span>
 <span class="sd">        shape_threshold : tuple</span>
-<span class="sd">            Requested shape of field of view in data coordinates</span>
+<span class="sd">            Requested shape of field of view in data coordinates.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Note we ignore the first transform which is tile2data</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">scale_factors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+        <span class="n">data_corners</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">corner_pixels</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">data_level</span> <span class="o">=</span> <span class="n">corner_pixels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Round and clip data corners</span>
+        <span class="n">data_corners</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">data_corners</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">data_corners</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">data_corners</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+            <span class="n">data_corners</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
+            <span class="n">level</span><span class="p">,</span> <span class="n">corners</span> <span class="o">=</span> <span class="n">compute_multiscale_level_and_corners</span><span class="p">(</span>
+                <span class="n">data_corners</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">!=</span> <span class="n">level</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">==</span> <span class="n">corners</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="n">level</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">corners</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Clip corner pixels inside data shape</span>
-            <span class="n">new_corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span><span class="p">,</span>
-                <span class="mi">0</span><span class="p">,</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_shapes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span>
-            <span class="p">)</span>
-
-            <span class="c1"># Scale to full resolution of the data</span>
-            <span class="n">requested_shape</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">new_corner_pixels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">]</span>
-
-            <span class="n">downsample_factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_factors</span><span class="p">[</span>
-                <span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span>
-            <span class="p">]</span>
-
-            <span class="n">data_level</span> <span class="o">=</span> <span class="n">compute_multiscale_level</span><span class="p">(</span>
-                <span class="n">requested_shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">],</span>
-                <span class="n">shape_threshold</span><span class="p">,</span>
-                <span class="n">downsample_factors</span><span class="p">,</span>
-            <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">data_level</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span><span class="p">:</span>
-            <span class="c1"># Set the data level, which will trigger a layer refresh and</span>
-            <span class="c1"># further updates including recalculation of the corner_pixels</span>
-            <span class="c1"># for the new level</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="n">data_level</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">==</span> <span class="n">corner_pixels</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">data_corners</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">displayed_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -972,8 +956,7 @@
 <span class="sd">        msg : string</span>
 <span class="sd">            String containing a message that can be used as a status update.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">coordinates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">simplified</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span>
-        <span class="n">full_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">full_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
         <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">full_coord</span><span class="si">}</span><span class="s1">&#39;</span>
 

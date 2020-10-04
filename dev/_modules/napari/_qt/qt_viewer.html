@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev22+gff438b1 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev23+g7d288e5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev22+gff438b1
+                0.3.9.dev23+g7d288e5
               </div>
             
           
@@ -161,8 +161,10 @@
             
   <h1>Source code for napari._qt.qt_viewer</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QCoreApplication</span><span class="p">,</span> <span class="n">QSize</span><span class="p">,</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QCursor</span><span class="p">,</span> <span class="n">QGuiApplication</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>
@@ -328,6 +330,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_key_press</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_key_release</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_mouse_wheel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">central_widget</span><span class="o">.</span><span class="n">add_view</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_camera</span><span class="p">()</span>
@@ -427,7 +430,6 @@
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="n">create_vispy_visual</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">scene</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="o">=</span> <span class="n">vispy_layer</span>
 
     <span class="k">def</span> <span class="nf">_remove_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -440,7 +442,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">item</span>
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">draw</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">transforms</span> <span class="o">=</span> <span class="n">ChainTransform</span><span class="p">()</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">del</span> <span class="n">vispy_layer</span>
@@ -662,6 +663,52 @@
         <span class="n">dialog</span> <span class="o">=</span> <span class="n">QtAboutKeyBindings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">dialog</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_canvas2world_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;list: Scale factors from canvas pixels to world coordinates.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_map_canvas2world</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map position from canvas pixels into world coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : 2-tuple</span>
+<span class="sd">            Position in canvas (x, y).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        coords : tuple</span>
+<span class="sd">            Position in world coordinates, matches the total dimensionality</span>
+<span class="sd">            of the viewer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndisplay</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">transform</span><span class="o">.</span><span class="n">inverse</span>
+        <span class="n">mapped_position</span> <span class="o">=</span> <span class="n">transform</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">position</span><span class="p">))[:</span><span class="n">nd</span><span class="p">]</span>
+        <span class="n">position_world_slice</span> <span class="o">=</span> <span class="n">mapped_position</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">position_world</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">point</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">):</span>
+            <span class="n">position_world</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">position_world_slice</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position_world</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_canvas_corners_in_world</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Location of the corners of canvas in world coordinates.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        corners : 2-tuple</span>
+<span class="sd">            Coordinates of top left and bottom right canvas pixel in the world.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Find corners of canvas in world coordinates</span>
+        <span class="n">top_left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">bottom_right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">top_left</span><span class="p">,</span> <span class="n">bottom_right</span><span class="p">])</span>
+
 <div class="viewcode-block" id="QtViewer.on_mouse_wheel"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_mouse_wheel">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_wheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever mouse wheel activated in canvas.</span>
 
@@ -677,9 +724,8 @@
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-            <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">visual</span><span class="o">.</span><span class="n">_transform_position</span><span class="p">(</span><span class="n">visual</span><span class="o">.</span><span class="n">_position</span><span class="p">)</span>
+            <span class="c1"># set cursor position in world coordinates</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">))</span>
             <span class="n">mouse_wheel_callbacks</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_mouse_press"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_mouse_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -698,10 +744,8 @@
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># update cursor position in visual and layer</span>
-            <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-            <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">visual</span><span class="o">.</span><span class="n">_transform_position</span><span class="p">(</span><span class="n">visual</span><span class="o">.</span><span class="n">_position</span><span class="p">)</span>
+            <span class="c1"># set cursor position in world coordinates</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">))</span>
             <span class="n">mouse_press_callbacks</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_mouse_move"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_mouse_move">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -719,10 +763,8 @@
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># update cursor position in visual and layer</span>
-            <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-            <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">visual</span><span class="o">.</span><span class="n">_transform_position</span><span class="p">(</span><span class="n">visual</span><span class="o">.</span><span class="n">_position</span><span class="p">)</span>
+            <span class="c1"># set cursor position in world coordinates</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">))</span>
             <span class="n">mouse_move_callbacks</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_mouse_release"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_mouse_release">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -740,10 +782,8 @@
 
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># update cursor position in visual and layer</span>
-            <span class="n">visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
-            <span class="n">visual</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">visual</span><span class="o">.</span><span class="n">_transform_position</span><span class="p">(</span><span class="n">visual</span><span class="o">.</span><span class="n">_position</span><span class="p">)</span>
+            <span class="c1"># set cursor position in world coordinates</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_canvas2world</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pos</span><span class="p">))</span>
             <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_key_press"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_key_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_key_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -783,6 +823,22 @@
             <span class="k">return</span>
         <span class="n">combo</span> <span class="o">=</span> <span class="n">components_to_key_combo</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">modifiers</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">release_key</span><span class="p">(</span><span class="n">combo</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QtViewer.on_draw"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_draw">[docs]</a>    <span class="k">def</span> <span class="nf">on_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called whenever the canvas is drawn.</span>
+
+<span class="sd">        This is triggered from vispy whenever new data is sent to the canvas or</span>
+<span class="sd">        the camera is moved and is connected in the `QtViewer`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">_update_draw</span><span class="p">(</span>
+                    <span class="n">scale_factors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_canvas2world_scale</span><span class="p">[</span><span class="o">-</span><span class="n">layer</span><span class="o">.</span><span class="n">ndim</span> <span class="p">:],</span>
+                    <span class="n">corner_pixels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_canvas_corners_in_world</span><span class="p">[</span>
+                        <span class="p">:,</span> <span class="o">-</span><span class="n">layer</span><span class="o">.</span><span class="n">ndim</span> <span class="p">:</span>
+                    <span class="p">],</span>
+                    <span class="n">shape_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                <span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.keyPressEvent"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.keyPressEvent">[docs]</a>    <span class="k">def</span> <span class="nf">keyPressEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever a key is pressed.</span>

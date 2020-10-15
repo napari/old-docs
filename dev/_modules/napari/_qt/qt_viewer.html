@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev45+g70d0a79 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev46+g47f233b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev45+g70d0a79
+                0.3.9.dev46+g47f233b
               </div>
             
           
@@ -198,7 +198,11 @@
 <span class="kn">from</span> <span class="nn">.widgets.qt_viewer_buttons</span> <span class="kn">import</span> <span class="n">QtLayerButtons</span><span class="p">,</span> <span class="n">QtViewerButtons</span>
 <span class="kn">from</span> <span class="nn">.widgets.qt_viewer_dock_widget</span> <span class="kn">import</span> <span class="n">QtViewerDockWidget</span>
 
-<span class="kn">from</span> <span class="nn">.._vispy</span> <span class="kn">import</span> <span class="n">VispyAxesVisual</span><span class="p">,</span> <span class="n">create_vispy_visual</span>  <span class="c1"># isort:skip</span>
+<span class="kn">from</span> <span class="nn">.._vispy</span> <span class="kn">import</span> <span class="p">(</span>  <span class="c1"># isort:skip</span>
+    <span class="n">VispyAxesVisual</span><span class="p">,</span>
+    <span class="n">VispyScaleBarVisual</span><span class="p">,</span>
+    <span class="n">create_vispy_visual</span><span class="p">,</span>
+<span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">KeyModifierFilterSceneCanvas</span><span class="p">(</span><span class="n">SceneCanvas</span><span class="p">):</span>
@@ -343,6 +347,10 @@
             <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">scene</span><span class="p">,</span>
             <span class="n">order</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_bar</span> <span class="o">=</span> <span class="n">VispyScaleBarVisual</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">scale_bar</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mf">1e6</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">resize</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_bar</span><span class="o">.</span><span class="n">_on_position_change</span><span class="p">)</span>
 
         <span class="n">main_widget</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">()</span>
         <span class="n">main_layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
@@ -641,7 +649,6 @@
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">themed_stylesheet</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">bgcolor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">palette</span><span class="p">[</span><span class="s1">&#39;canvas&#39;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">background_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">palette</span><span class="p">[</span><span class="s1">&#39;canvas&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="QtViewer.toggle_console_visibility"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.toggle_console_visibility">[docs]</a>    <span class="k">def</span> <span class="nf">toggle_console_visibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Toggle console visible and not visible.</span>
@@ -847,6 +854,8 @@
 <span class="sd">        the camera is moved and is connected in the `QtViewer`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">scale_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_canvas2world_scale</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">scale_bar</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_bar</span><span class="o">.</span><span class="n">update_scale</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">update_scale</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">)</span>
 

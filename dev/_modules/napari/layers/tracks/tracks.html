@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.tracks.tracks &mdash; napari 0.3.9.dev47+g5a2487c documentation</title>
+  <title>napari.layers.tracks.tracks &mdash; napari 0.3.9.dev48+gf8f6173 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev47+g5a2487c
+                0.3.9.dev48+gf8f6173
               </div>
             
           
@@ -165,6 +165,7 @@
 <span class="c1"># from napari.utils.colormaps import AVAILABLE_COLORMAPS</span>
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -176,7 +177,7 @@
 
 
 <div class="viewcode-block" id="Tracks"><a class="viewcode-back" href="../../../../api/napari.layers.tracks.html#napari.layers.tracks.tracks.Tracks">[docs]</a><span class="k">class</span> <span class="nc">Tracks</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Tracks layer.</span>
+    <span class="sd">&quot;&quot;&quot;Tracks layer.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -465,8 +466,8 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">use_fade</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot; toggle whether we fade the tail of the track, depending on whether</span>
-<span class="sd">        the time dimension is displayed &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;toggle whether we fade the tail of the track, depending on whether</span>
+<span class="sd">        the time dimension is displayed&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="mi">0</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">not_displayed</span>
 
     <span class="nd">@property</span>
@@ -508,6 +509,15 @@
     <span class="nd">@properties</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot; set track properties &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_by</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">properties</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="s1">&#39;track_id&#39;</span><span class="p">]:</span>
+            <span class="n">warn</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Previous color_by key </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_color_by</span><span class="si">}</span><span class="s2"> not present in&quot;</span>
+                    <span class="s2">&quot; new properties. Falling back to track_id&quot;</span>
+                <span class="p">),</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_color_by</span> <span class="o">=</span> <span class="s1">&#39;track_id&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="n">properties</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">properties</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">color_by</span><span class="p">()</span>
@@ -585,7 +595,7 @@
     <span class="k">def</span> <span class="nf">color_by</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color_by</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; set the property to color vertices by &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">color_by</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties_to_color_by</span><span class="p">:</span>
-            <span class="k">return</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">color_by</span><span class="si">}</span><span class="s1"> is not a valid property key&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_color_by</span> <span class="o">=</span> <span class="n">color_by</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_recolor_tracks</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">color_by</span><span class="p">()</span>
@@ -644,8 +654,8 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">track_colors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot; return the vertex colors according to the currently selected</span>
-<span class="sd">        property &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;return the vertex colors according to the currently selected</span>
+<span class="sd">        property&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_track_colors</span>
 
     <span class="nd">@property</span>

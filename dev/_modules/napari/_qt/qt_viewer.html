@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev48+gf8f6173 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev49+gf5de41a documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev48+gf8f6173
+                0.3.9.dev49+gf5de41a
               </div>
             
           
@@ -682,16 +682,20 @@
     <span class="k">def</span> <span class="nf">_canvas2world_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;list: Scale factors from canvas pixels to world coordinates.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">PanZoomCamera</span><span class="p">):</span>
-            <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">scale_factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">ArcballCamera</span><span class="p">):</span>
-            <span class="c1"># Note magic number 598 is empirically determined so that</span>
-            <span class="c1"># Arcball camera and PanZoomCamera match</span>
-            <span class="n">scale_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">scale_factor</span> <span class="o">/</span> <span class="mi">598</span>
-            <span class="k">return</span> <span class="n">scale_factor</span>
+            <span class="c1"># For fov = 0.0 normalize scale factor by canvas size to get scale factor.</span>
+            <span class="c1"># Note that the scaling is stored in the `_projection` property of the</span>
+            <span class="c1"># camera which is updated in vispy here</span>
+            <span class="c1"># https://github.com/vispy/vispy/blob/v0.6.5/vispy/scene/cameras/perspective.py#L301-L313</span>
+            <span class="n">scale_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">scale_factor</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">size</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s1">&#39;Camera type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span><span class="si">}</span><span class="s1"> not recognized&#39;</span>
             <span class="p">)</span>
+        <span class="k">return</span> <span class="n">scale_factor</span>
 
     <span class="k">def</span> <span class="nf">_map_canvas2world</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Map position from canvas pixels into world coordinates.</span>

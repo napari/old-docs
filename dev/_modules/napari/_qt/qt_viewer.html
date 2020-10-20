@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev53+g02bb678 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev54+g8228269 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev53+g02bb678
+                0.3.9.dev54+g8228269
               </div>
             
           
@@ -257,6 +257,7 @@
     <span class="n">raw_stylesheet</span> <span class="o">=</span> <span class="n">get_stylesheet</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">):</span>
+        <span class="c1"># Avoid circular import.</span>
         <span class="kn">from</span> <span class="nn">.layer_controls</span> <span class="kn">import</span> <span class="n">QtLayerControlsContainer</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -314,7 +315,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">dockLayerList</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">258</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dockLayerList</span><span class="o">.</span><span class="n">setMinimumWidth</span><span class="p">(</span><span class="mi">258</span><span class="p">)</span>
 
+        <span class="c1"># Only created if using perfmon.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dockPerformance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_performance_dock_widget</span><span class="p">()</span>
+
+        <span class="c1"># Only created if using async rendering.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dockRender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_render_dock_widget</span><span class="p">()</span>
 
         <span class="c1"># This dictionary holds the corresponding vispy visual for each layer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layer_to_visual</span> <span class="o">=</span> <span class="p">{}</span>
@@ -392,16 +397,33 @@
     <span class="k">def</span> <span class="nf">_create_performance_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create the dock widget that shows performance metrics.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span>
+                <span class="n">QtPerformance</span><span class="p">(),</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;performance&#39;</span><span class="p">,</span>
+                <span class="n">area</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span>
+                <span class="n">shortcut</span><span class="o">=</span><span class="s1">&#39;Ctrl+Shift+P&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="k">return</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span>
-            <span class="n">QtPerformance</span><span class="p">(),</span>
-            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;performance&#39;</span><span class="p">,</span>
-            <span class="n">area</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span>
-            <span class="n">shortcut</span><span class="o">=</span><span class="s1">&#39;Ctrl+Shift+P&#39;</span><span class="p">,</span>
-        <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_create_render_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create the dock widget that shows async controls.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAPARI_ASYNC&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">..components.experimental.chunk</span> <span class="kn">import</span> <span class="n">async_config</span>
+
+            <span class="k">if</span> <span class="n">async_config</span><span class="o">.</span><span class="n">octree_visuals</span><span class="p">:</span>
+                <span class="kn">from</span> <span class="nn">.experimental.qt_render_container</span> <span class="kn">import</span> <span class="n">QtRenderContainer</span>
+
+                <span class="k">return</span> <span class="n">QtViewerDockWidget</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="p">,</span>
+                    <span class="n">QtRenderContainer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">),</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;render&#39;</span><span class="p">,</span>
+                    <span class="n">area</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                    <span class="n">shortcut</span><span class="o">=</span><span class="s1">&#39;Ctrl+Shift+R&#39;</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">console</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

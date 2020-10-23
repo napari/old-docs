@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.3.9.dev67+gd3ea593 documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.3.9.dev68+g7b7936b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev67+gd3ea593
+                0.3.9.dev68+g7b7936b
               </div>
             
           
@@ -167,6 +167,8 @@
 <span class="kn">from</span> <span class="nn">._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
 <span class="kn">from</span> <span class="nn">._octree_image_slice</span> <span class="kn">import</span> <span class="n">OctreeImageSlice</span>
 
+<span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>
+
 
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;OctreeImage layer.</span>
@@ -177,22 +179,41 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">DEFAULT_TILE_SIZE</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span>
+
+    <span class="nd">@tile_size</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">tile_size</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">octree_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the currently displayed octree level.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_octree_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the total number of octree levels.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">num_octree_levels</span>
+
     <span class="nd">@octree_level</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">octree_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
-        <span class="n">max_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">num_octree_levels</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="k">if</span> <span class="n">level</span> <span class="o">&gt;</span> <span class="n">max_level</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">max_level</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>  <span class="c1"># Report we modified the request.</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">level</span>
+    <span class="k">def</span> <span class="nf">octree_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the octree level we should be displaying.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        level : int</span>
+<span class="sd">            Display this octree level.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">level</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_octree_levels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">level</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>  <span class="c1"># Create new slice with this level.</span>
 
     <span class="k">def</span> <span class="nf">_new_empty_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -202,7 +223,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_image</span><span class="p">(),</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_empty</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -223,7 +246,21 @@
         <span class="n">has_event</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="s1">&#39;octree_level&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">has_event</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
+
+        <span class="c1"># If self._data_corners was not set yet, we have not been drawn</span>
+        <span class="c1"># yet, and we need to refresh to draw ourselves for the first time.</span>
+        <span class="n">need_refresh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span> <span class="ow">is</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span>
+            <span class="n">corner_pixels</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_update_draw</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">need_refresh</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span></div>
 </pre></div>
 
            </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree &mdash; napari 0.3.9.dev67+gd3ea593 documentation</title>
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.3.9.dev68+g7b7936b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev67+gd3ea593
+                0.3.9.dev68+g7b7936b
               </div>
             
           
@@ -188,10 +188,15 @@
 <span class="sd">        The size of the chunk, the chunk is square/cubic.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">pos</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">size</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+        <span class="n">pos</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">scale</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">scale</span></div>
 
 
 <span class="k">def</span> <span class="nf">_create_tiles</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -215,6 +220,8 @@
 
     <span class="n">tiles</span> <span class="o">=</span> <span class="p">[]</span>
 
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;_create_tiles array=</span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> tile_size=</span><span class="si">{</span><span class="n">tile_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
     <span class="n">row</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">while</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="n">rows</span><span class="p">:</span>
         <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
@@ -229,221 +236,266 @@
     <span class="k">return</span> <span class="n">tiles</span>
 
 
-<span class="k">def</span> <span class="nf">_create_downsampled_tile</span><span class="p">(</span>
-    <span class="n">ul</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ur</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ll</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_none</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Combine 1-4 tiles into a single tile.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tiles</span>
+<span class="sd">        The 4 child tiles, some might be None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have 4 values&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Position 0 cannot be None&quot;</span><span class="p">)</span>
+
+    <span class="c1"># The layout of the children is:</span>
+    <span class="c1"># 0 1</span>
+    <span class="c1"># 2 3</span>
+    <span class="k">if</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
+        <span class="c1"># 0 X</span>
+        <span class="c1"># X X</span>
+        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
+        <span class="c1"># 0 1</span>
+        <span class="c1"># X X</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="n">_none</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">3</span><span class="p">])):</span>
+        <span class="c1"># 0 X</span>
+        <span class="c1"># 2 X</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 0 1</span>
+        <span class="c1"># 2 3</span>
+        <span class="n">row1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">row2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">row1</span><span class="p">,</span> <span class="n">row2</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Create one parent tile from four child tiles.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    ul : np.ndarray</span>
-<span class="sd">        Upper left child tile.</span>
-<span class="sd">    ur : np.ndarray</span>
-<span class="sd">        Upper right child tile.</span>
-<span class="sd">    ll : np.ndarray</span>
-<span class="sd">        Lower left child tile.</span>
-<span class="sd">    lr : np.ndarray</span>
-<span class="sd">        Lower right child tile.</span>
+<span class="sd">    tiles</span>
+<span class="sd">        The 4 child tiles, some could be None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">row1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">ul</span><span class="p">,</span> <span class="n">ur</span><span class="p">))</span>
-    <span class="n">row2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">ll</span><span class="p">,</span> <span class="n">lr</span><span class="p">))</span>
-    <span class="n">combined_tile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">row1</span><span class="p">,</span> <span class="n">row2</span><span class="p">))</span>
+    <span class="c1"># Combine 1-4 tiles together.</span>
+    <span class="n">combined_tile</span> <span class="o">=</span> <span class="n">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">)</span>
 
     <span class="c1"># Down sample by half.</span>
     <span class="k">return</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">combined_tile</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
 
 
 <span class="k">def</span> <span class="nf">_create_coarser_level</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TileArray</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Return the next coarser level of tiles.</span>
+    <span class="sd">&quot;&quot;&quot;Return a level that is one level coarser.</span>
 
 <span class="sd">    Combine each 2x2 group of tiles into one downsampled tile.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
 <span class="sd">    tiles : TileArray</span>
 <span class="sd">        The tiles to combine.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TileArray</span>
+<span class="sd">        The coarser level of tiles.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">new_tiles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">level</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">),</span> <span class="mi">2</span><span class="p">):</span>
         <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">]),</span> <span class="mi">2</span><span class="p">):</span>
-            <span class="n">tile</span> <span class="o">=</span> <span class="n">_create_downsampled_tile</span><span class="p">(</span>
-                <span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">],</span>
-                <span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
-                <span class="n">tiles</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="n">col</span><span class="p">],</span>
-                <span class="n">tiles</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="c1"># The layout of the children is:</span>
+            <span class="c1"># 0 1</span>
+            <span class="c1"># 2 3</span>
+            <span class="n">group</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
             <span class="p">)</span>
+            <span class="n">tile</span> <span class="o">=</span> <span class="n">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">group</span><span class="p">)</span>
             <span class="n">row_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
-        <span class="n">new_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_tiles</span><span class="p">)</span>
+        <span class="n">level</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_tiles</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">new_tiles</span>
-
-
-<span class="k">def</span> <span class="nf">_print_level_tiles</span><span class="p">(</span><span class="n">tiles</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Print information about these tiles.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">num_rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span>
-
-    <span class="n">num_cols</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">tiles</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">num_cols</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">num_cols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">num_cols</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_rows</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">num_cols</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">num_rows</span> <span class="o">*</span> <span class="n">num_cols</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">tiles</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">tile</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
-            <span class="k">pass</span>  <span class="c1"># print(tile.shape)</span>
+    <span class="k">return</span> <span class="n">level</span>
 
 
-<span class="k">def</span> <span class="nf">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Return an Octree node and its child nodes recursively.</span>
+<div class="viewcode-block" id="OctreeInfo"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeInfo">[docs]</a><span class="k">class</span> <span class="nc">OctreeInfo</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_shape</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_shape</span> <span class="o">=</span> <span class="n">base_shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tile_size</span> <span class="o">=</span> <span class="n">tile_size</span></div>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    levels : Levels</span>
-<span class="sd">        The tiles in each level of the octree.</span>
-<span class="sd">    level_index : int</span>
-<span class="sd">        Create a node at this level.</span>
-<span class="sd">    row : int</span>
-<span class="sd">        Create a node at this ro.</span>
-<span class="sd">    col : int</span>
-<span class="sd">        Create a node at this col.</span>
+
+<div class="viewcode-block" id="OctreeLevel"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel">[docs]</a><span class="k">class</span> <span class="nc">OctreeLevel</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;One level of the octree.</span>
+
+<span class="sd">    A level contains a 2D or 3D array of tiles.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">if</span> <span class="n">level_index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info</span><span class="p">:</span> <span class="n">OctreeInfo</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span> <span class="o">=</span> <span class="n">level_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span> <span class="o">=</span> <span class="n">tiles</span>
 
-    <span class="c1"># print(f&quot;Building level = {level_index}&quot;)</span>
-    <span class="n">level</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="n">level_index</span><span class="p">]</span>
-    <span class="n">next_index</span> <span class="o">=</span> <span class="n">level_index</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_cols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
-    <span class="n">nrow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">*</span> <span class="mi">2</span>
-    <span class="n">ncol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">*</span> <span class="mi">2</span>
+<div class="viewcode-block" id="OctreeLevel.print_info"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.print_info">[docs]</a>    <span class="k">def</span> <span class="nf">print_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print information about this level.&quot;&quot;&quot;</span>
+        <span class="n">nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">)</span>
+        <span class="n">ncols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;level=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="si">}</span><span class="s2"> dim=</span><span class="si">{</span><span class="n">nrows</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">ncols</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
-    <span class="n">node</span> <span class="o">=</span> <span class="n">OctreeNode</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">level</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">])</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">next_index</span><span class="p">,</span> <span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span><span class="p">),</span>
-        <span class="n">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">next_index</span><span class="p">,</span> <span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
-        <span class="n">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">next_index</span><span class="p">,</span> <span class="n">nrow</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ncol</span><span class="p">),</span>
-        <span class="n">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">next_index</span><span class="p">,</span> <span class="n">nrow</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ncol</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
-    <span class="p">]</span>
+<div class="viewcode-block" id="OctreeLevel.draw_mini_map"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.draw_mini_map">[docs]</a>    <span class="k">def</span> <span class="nf">draw_mini_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row_range</span><span class="p">:</span> <span class="nb">range</span><span class="p">,</span> <span class="n">col_range</span><span class="p">:</span> <span class="nb">range</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Draw mini-map with X&#39;s for which tiles we are drawing.&quot;&quot;&quot;</span>
 
-    <span class="k">return</span> <span class="n">node</span>
+        <span class="k">def</span> <span class="nf">_within</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_range</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="n">value_range</span><span class="o">.</span><span class="n">start</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">value_range</span><span class="o">.</span><span class="n">stop</span>
 
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_rows</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cols</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">row_range</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_within</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">col_range</span><span class="p">):</span>
+                    <span class="n">marker</span> <span class="o">=</span> <span class="s2">&quot;X&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">marker</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">_print_levels</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Print information about the levels.</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    levels : Levels</span>
-<span class="sd">        Print information about these levels.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2"> levels:&quot;</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
-        <span class="n">_print_level_tiles</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_print_tiles</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-    <span class="k">assert</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">print_info</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">child</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">_print_tiles</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-
-
-<div class="viewcode-block" id="OctreeNode"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeNode">[docs]</a><span class="k">class</span> <span class="nc">OctreeNode</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Octree Node.</span>
-
-<span class="sd">    Child indexes</span>
-<span class="sd">    -------------</span>
-<span class="sd">    OCTREE_TODO: This order was picked arbitrarily. If there is another</span>
-<span class="sd">    ordering which makes more sense, we should switch to it.</span>
-
-<span class="sd">    -Z [0..3]</span>
-<span class="sd">    +Z [4..7]</span>
-
-<span class="sd">        -X X+</span>
-<span class="sd">    -Y 0 1</span>
-<span class="sd">    +Y 3 2</span>
-
-<span class="sd">        -X X+</span>
-<span class="sd">    -Y 4 5</span>
-<span class="sd">    +Y 7 6</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    row : int</span>
-<span class="sd">        The row of this octree node in its level.</span>
-<span class="sd">    col : int</span>
-<span class="sd">        The col of this octree node in its level.</span>
-<span class="sd">    data : np.ndarray</span>
-<span class="sd">        The image data for this octree node.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="k">assert</span> <span class="n">row</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-        <span class="k">assert</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">row</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">col</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="kc">None</span>
-
-<div class="viewcode-block" id="OctreeNode.print_info"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeNode.print_info">[docs]</a>    <span class="k">def</span> <span class="nf">print_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Print information about this octree node.</span>
-
-<span class="sd">        level : int</span>
-<span class="sd">            The level of this node in the tree.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">indent</span> <span class="o">=</span> <span class="s2">&quot;    &quot;</span> <span class="o">*</span> <span class="n">level</span>
-        <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">indent</span><span class="si">}</span><span class="s2">level=</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2"> row=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="si">:</span><span class="s2">&gt;3</span><span class="si">}</span><span class="s2">, col=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="si">:</span><span class="s2">&gt;3</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;shape=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tile</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span></div></div>
-
-
-<div class="viewcode-block" id="Octree"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree">[docs]</a><span class="k">class</span> <span class="nc">Octree</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;An octree.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    root : OctreeNode</span>
-<span class="sd">        The root of the tree.</span>
-<span class="sd">    levels : Levels</span>
-<span class="sd">        All the levels of the tree</span>
-
-<span class="sd">    TODO_OCTREE: Do we need/want to store self.levels?</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">OctreeNode</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">root</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="n">levels</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
-
-<div class="viewcode-block" id="Octree.print_tiles"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.print_tiles">[docs]</a>    <span class="k">def</span> <span class="nf">print_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Print information about our tiles.&quot;&quot;&quot;</span>
-        <span class="n">_print_tiles</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Octree.from_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.from_levels">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_levels</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a tree from the given levels.</span>
+<div class="viewcode-block" id="OctreeLevel.get_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.get_chunks">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_corners</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ChunkData</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return chunks that are within this rectangular region of the data.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        levels : Levels</span>
-<span class="sd">            All the tiles to include in the tree.</span>
+<span class="sd">        data_corners</span>
+<span class="sd">            Return chunks within this rectangular region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">root_level</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="n">root</span> <span class="o">=</span> <span class="n">_create_node</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">root_level</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">levels</span><span class="p">)</span></div>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># TODO_OCTREE: generalize with data_corner indices we need to use.</span>
+        <span class="n">data_rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_corners</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">data_corners</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">data_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_corners</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">data_corners</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]]</span>
+
+        <span class="n">row_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_range</span><span class="p">(</span><span class="n">data_rows</span><span class="p">)</span>
+        <span class="n">col_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_range</span><span class="p">(</span><span class="n">data_cols</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_mini_map</span><span class="p">(</span><span class="n">row_range</span><span class="p">,</span> <span class="n">col_range</span><span class="p">)</span>
+
+        <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
+        <span class="n">scale_vec</span> <span class="o">=</span> <span class="p">[</span><span class="n">scale</span><span class="p">,</span> <span class="n">scale</span><span class="p">]</span>
+
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">tile_size</span>
+
+        <span class="c1"># Iterate over every tile in the rectangular region.</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">row_range</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="n">tile_size</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">row_range</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">col_range</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="n">tile_size</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">col_range</span><span class="p">:</span>
+
+                <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="mi">0</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                    <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ChunkData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">scale_vec</span><span class="p">))</span>
+
+                <span class="n">x</span> <span class="o">+=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span>
+            <span class="n">y</span> <span class="o">+=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span>
+
+        <span class="k">return</span> <span class="n">chunks</span></div>
+
+<div class="viewcode-block" id="OctreeLevel.tile_range"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.tile_range">[docs]</a>    <span class="k">def</span> <span class="nf">tile_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">num_tiles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return tiles indices needed to draw the span.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_clamp</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">),</span> <span class="n">min_val</span><span class="p">)</span>
+
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">tile_size</span>
+
+        <span class="n">tiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">tile_size</span><span class="p">]</span>
+        <span class="n">new_min</span> <span class="o">=</span> <span class="n">_clamp</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">num_tiles</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">new_max</span> <span class="o">=</span> <span class="n">_clamp</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">num_tiles</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">clamped</span> <span class="o">=</span> <span class="p">[</span><span class="n">new_min</span><span class="p">,</span> <span class="n">new_max</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">span_int</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">clamped</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">range</span><span class="p">(</span><span class="o">*</span><span class="n">span_int</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OctreeLevel.row_range"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.row_range">[docs]</a>    <span class="k">def</span> <span class="nf">row_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">span</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return row indices which span image coordinates [y0..y1].&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_range</span><span class="p">(</span><span class="n">span</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_rows</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OctreeLevel.column_range"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.OctreeLevel.column_range">[docs]</a>    <span class="k">def</span> <span class="nf">column_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">span</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return column indices which span image coordinates [x0..x1].&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_range</span><span class="p">(</span><span class="n">span</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cols</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_one_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span>
+
+
+<div class="viewcode-block" id="Octree"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree">[docs]</a><span class="k">class</span> <span class="nc">Octree</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A region octree that holds hold 2D or 3D images.</span>
+
+<span class="sd">    Today the octree is full/complete meaning every node has 4 or 8</span>
+<span class="sd">    children, and every leaf node is at the same level of the tree. This</span>
+<span class="sd">    makes sense for region/image trees, because the image exists</span>
+<span class="sd">    everywhere.</span>
+
+<span class="sd">    Since we are a complete tree we don&#39;t need actual nodes with references</span>
+<span class="sd">    to the node&#39;s children. Instead, every level is just an array, and</span>
+<span class="sd">    going from parent to child or child to parent is trivial, you just</span>
+<span class="sd">    need to double or half the indexes.</span>
+
+<span class="sd">    Future Work: Geometry</span>
+<span class="sd">    ---------------------</span>
+<span class="sd">    Eventually we want our octree to hold geometry, not just images.</span>
+<span class="sd">    Geometry such as points and meshes. For geometry a sparse octree might</span>
+<span class="sd">    make more sense than this full/complete region octree.</span>
+
+<span class="sd">    With geometry there might be lots of empty space in between small dense</span>
+<span class="sd">    pockets of geometry. Some parts of tree might need to be very deep, but</span>
+<span class="sd">    it would be a waste for the tree to be that deep everywhere.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    base_shape : Tuple[int, int]</span>
+<span class="sd">        The shape of the full base image.</span>
+<span class="sd">    levels : Levels</span>
+<span class="sd">        All the levels of the tree.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_shape</span> <span class="o">=</span> <span class="n">base_shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">base_shape</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Octree.print_info"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.print_info">[docs]</a>    <span class="k">def</span> <span class="nf">print_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print information about our tiles.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
+            <span class="n">level</span><span class="o">.</span><span class="n">print_info</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Octree.from_image"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.from_image">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_image</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">from_image</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create octree from given single image.</span>
 
 <span class="sd">        Parameters</span>
@@ -451,18 +503,18 @@
 <span class="sd">        image : ndarray</span>
 <span class="sd">            Create the octree for this single image.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>
-        <span class="n">tiles</span> <span class="o">=</span> <span class="n">_create_tiles</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">TILE_SIZE</span><span class="p">)</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">OctreeInfo</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">)</span>
+        <span class="n">tiles</span> <span class="o">=</span> <span class="n">_create_tiles</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">tile_size</span><span class="p">)</span>
         <span class="n">levels</span> <span class="o">=</span> <span class="p">[</span><span class="n">tiles</span><span class="p">]</span>
 
         <span class="c1"># Keep combining tiles until there is one root tile.</span>
-        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">_one_tile</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
             <span class="n">next_level</span> <span class="o">=</span> <span class="n">_create_coarser_level</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_level</span><span class="p">)</span>
 
         <span class="c1"># _print_levels(levels)</span>
 
-        <span class="k">return</span> <span class="n">Octree</span><span class="o">.</span><span class="n">from_levels</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">Octree</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">levels</span><span class="p">)</span></div></div>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

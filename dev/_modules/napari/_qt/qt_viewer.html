@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev71+g2bd86f8 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev72+g520ad57 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev71+g2bd86f8
+                0.3.9.dev72+g520ad57
               </div>
             
           
@@ -202,6 +202,7 @@
     <span class="n">VispyAxesVisual</span><span class="p">,</span>
     <span class="n">VispyCamera</span><span class="p">,</span>
     <span class="n">VispyScaleBarVisual</span><span class="p">,</span>
+    <span class="n">VispyWelcomeVisual</span><span class="p">,</span>
     <span class="n">create_vispy_visual</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -222,6 +223,9 @@
 <span class="sd">    ----------</span>
 <span class="sd">    viewer : napari.components.ViewerModel</span>
 <span class="sd">        Napari viewer containing the rendered scene, layers, and controls.</span>
+<span class="sd">    welcome : bool</span>
+<span class="sd">        Flag to show a welcome message when no layers are present in the</span>
+<span class="sd">        canvas.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -257,7 +261,7 @@
 
     <span class="n">raw_stylesheet</span> <span class="o">=</span> <span class="n">get_stylesheet</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">,</span> <span class="n">welcome</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="c1"># Avoid circular import.</span>
         <span class="kn">from</span> <span class="nn">.layer_controls</span> <span class="kn">import</span> <span class="n">QtLayerControlsContainer</span>
 
@@ -368,6 +372,17 @@
             <span class="n">order</span><span class="o">=</span><span class="mf">1e6</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">resize</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_bar</span><span class="o">.</span><span class="n">_on_position_change</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_show_welcome</span> <span class="o">=</span> <span class="n">welcome</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_welcome</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">welcome</span> <span class="o">=</span> <span class="n">VispyWelcomeVisual</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">,</span> <span class="n">order</span><span class="o">=-</span><span class="mi">100</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">layers_change</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">welcome</span><span class="o">.</span><span class="n">_on_visible_change</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">palette</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">welcome</span><span class="o">.</span><span class="n">_on_palette_change</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">resize</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">welcome</span><span class="o">.</span><span class="n">_on_canvas_change</span><span class="p">)</span>
 
         <span class="n">main_widget</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">()</span>
         <span class="n">main_layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>

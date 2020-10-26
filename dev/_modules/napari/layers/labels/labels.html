@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.labels.labels &mdash; napari 0.3.9.dev72+g520ad57 documentation</title>
+  <title>napari.layers.labels.labels &mdash; napari 0.3.9.dev73+gb30196b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev72+g520ad57
+                0.3.9.dev73+gb30196b
               </div>
             
           
@@ -270,7 +270,7 @@
 <span class="sd">    n_dimensional : bool</span>
 <span class="sd">        If `True`, paint and fill edit labels across all dimensions.</span>
 <span class="sd">    brush_size : float</span>
-<span class="sd">        Size of the paint brush.</span>
+<span class="sd">        Size of the paint brush in world coordinates.</span>
 <span class="sd">    selected_label : int</span>
 <span class="sd">        Index of selected label. Can be greater than the current maximum label.</span>
 <span class="sd">    mode : str</span>
@@ -429,18 +429,13 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">brush_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;float: Size of the paint brush.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;float: Size of the paint in world coordinates.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_brush_size</span>
 
     <span class="nd">@brush_size</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">brush_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">brush_size</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_brush_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">brush_size</span><span class="p">)</span>
-        <span class="n">data2world_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
-            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_brush_size</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor</span> <span class="o">*</span> <span class="n">data2world_scale</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_brush_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">brush_size</span><span class="p">()</span>
 
@@ -674,9 +669,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="s1">&#39;hold &lt;space&gt; to pan/zoom, click to pick a label&#39;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pick</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">:</span>
-            <span class="c1"># Note we have to reset the brush size to tigger an event</span>
-            <span class="c1"># This will be fixed in an upcomming PR</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">brush_shape</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="p">(</span>
@@ -693,9 +685,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="s1">&#39;hold &lt;space&gt; to pan/zoom, click to fill a label&#39;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">:</span>
-            <span class="c1"># Note we have to reset the brush size to tigger an event</span>
-            <span class="c1"># This will be fixed in an upcomming PR</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">brush_shape</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="s1">&#39;hold &lt;space&gt; to pan/zoom, drag to erase a label&#39;</span>
@@ -917,6 +906,9 @@
         <span class="k">if</span> <span class="n">refresh</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">()</span>
         <span class="n">brush_size_dims</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="c1"># Scale the brush size from world coorinates to data coordinates</span>
+        <span class="n">brush_size_dims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">brush_size_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dimensional</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">not_displayed</span><span class="p">:</span>
                 <span class="n">brush_size_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
@@ -946,7 +938,16 @@
             <span class="n">sphere_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
             <span class="c1"># Ensure circle doesn&#39;t have spurious point</span>
             <span class="c1"># on edge by keeping radius as ##.5</span>
-            <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span>
+            <span class="c1"># Note we use the scaled brush size now in data coordinates</span>
+            <span class="c1"># We don&#39;t support elliptical brushes yet, so for non-isotropic</span>
+            <span class="c1"># scaling in the displayed dimensions we approximate with a mean</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">brush_size_dims</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">])</span>
+                    <span class="o">/</span> <span class="mi">2</span>
+                <span class="p">)</span>
+                <span class="o">+</span> <span class="mf">0.5</span>
+            <span class="p">)</span>
             <span class="n">mask_indices</span> <span class="o">=</span> <span class="n">sphere_indices</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">sphere_dims</span><span class="p">)</span>
 
             <span class="n">mask_indices</span> <span class="o">=</span> <span class="n">mask_indices</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>

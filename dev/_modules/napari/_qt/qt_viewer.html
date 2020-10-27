@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev74+gbb89415 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.3.9.dev75+g4c94e51 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.3.9.dev74+gbb89415
+                0.3.9.dev75+g4c94e51
               </div>
             
           
@@ -161,19 +161,14 @@
             
   <h1>Source code for napari._qt.qt_viewer</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QCoreApplication</span><span class="p">,</span> <span class="n">QSize</span><span class="p">,</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QCursor</span><span class="p">,</span> <span class="n">QGuiApplication</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">QFileDialog</span><span class="p">,</span>
-    <span class="n">QMessageBox</span><span class="p">,</span>
-    <span class="n">QSplitter</span><span class="p">,</span>
-    <span class="n">QVBoxLayout</span><span class="p">,</span>
-    <span class="n">QWidget</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QFileDialog</span><span class="p">,</span> <span class="n">QSplitter</span><span class="p">,</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QWidget</span>
 <span class="kn">from</span> <span class="nn">vispy.scene</span> <span class="kn">import</span> <span class="n">SceneCanvas</span>
 <span class="kn">from</span> <span class="nn">vispy.visuals.transforms</span> <span class="kn">import</span> <span class="n">ChainTransform</span>
 
@@ -539,16 +534,24 @@
                 <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">or use &quot;Save all layers...&quot;&#39;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
-            <span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;Nothing to save&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
-            <span class="k">return</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Nothing to save&quot;</span><span class="p">)</span>
 
         <span class="n">filename</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span>
             <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
             <span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Save </span><span class="si">{</span><span class="s2">&quot;selected&quot;</span> <span class="k">if</span> <span class="n">selected</span> <span class="k">else</span> <span class="s2">&quot;all&quot;</span><span class="si">}</span><span class="s1"> layers&#39;</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_visited_dir</span><span class="p">,</span>  <span class="c1"># home dir by default</span>
         <span class="p">)</span>
+
         <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">selected</span><span class="o">=</span><span class="n">selected</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">(</span><span class="n">record</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">wa</span><span class="p">:</span>
+                <span class="n">saved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">selected</span><span class="o">=</span><span class="n">selected</span><span class="p">)</span>
+                <span class="n">error_messages</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">wa</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">saved</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> save failed.</span><span class="se">\n</span><span class="si">{</span><span class="n">error_messages</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
 
 <div class="viewcode-block" id="QtViewer.screenshot"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.screenshot">[docs]</a>    <span class="k">def</span> <span class="nf">screenshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Take currently displayed screen and convert to an image array.</span>

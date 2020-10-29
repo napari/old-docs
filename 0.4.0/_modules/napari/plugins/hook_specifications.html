@@ -1,0 +1,523 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.plugins.hook_specifications &mdash; napari 0.4.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.plugins.hook_specifications</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.plugins.hook_specifications</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">All napari hook specifications for pluggable functionality are defined here.</span>
+
+<span class="sd">A *hook specification* is a function signature (with documentation) that</span>
+<span class="sd">declares an API that plugin developers must adhere to when providing hook</span>
+<span class="sd">implementations.  *Hook implementations* provided by plugins (and internally by</span>
+<span class="sd">napari) will then be invoked in various places throughout the code base.</span>
+
+<span class="sd">When implementing a hook specification, pay particular attention to the number</span>
+<span class="sd">and types of the arguments in the specification signature, as well as the</span>
+<span class="sd">expected return type.</span>
+
+<span class="sd">To allow for hook specifications to evolve over the lifetime of napari,</span>
+<span class="sd">hook implementations may accept *fewer* arguments than defined in the</span>
+<span class="sd">specification. (This allows for extending existing hook arguments without</span>
+<span class="sd">breaking existing implementations). However, implementations must not require</span>
+<span class="sd">*more* arguments than defined in the spec.</span>
+
+<span class="sd">For more general background on the plugin hook calling mechanism, see the</span>
+<span class="sd">`napari-plugin-manager documentation</span>
+<span class="sd">&lt;https://napari-plugin-engine.readthedocs.io/en/latest/&gt;`_.</span>
+
+<span class="sd">.. NOTE::</span>
+<span class="sd">    Hook specifications are a feature borrowed from `pluggy</span>
+<span class="sd">    &lt;https://pluggy.readthedocs.io/en/latest/#specs&gt;`_. In the `pluggy</span>
+<span class="sd">    documentation &lt;https://pluggy.readthedocs.io/en/latest/&gt;`_, hook</span>
+<span class="sd">    specification marker instances are named ``hookspec`` by convention, and</span>
+<span class="sd">    hook implementation marker instances are named ``hookimpl``.  The</span>
+<span class="sd">    convention in napari is to name them more explicitly:</span>
+<span class="sd">    ``napari_hook_specification`` and ``napari_hook_implementation``,</span>
+<span class="sd">    respectively.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># These hook specifications also serve as the API reference for plugin</span>
+<span class="c1"># developers, so comprehensive documentation with complete type annotations is</span>
+<span class="c1"># imperative!</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">napari_hook_specification</span>
+
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">ReaderFunction</span><span class="p">,</span> <span class="n">WriterFunction</span>
+
+<span class="c1"># -------------------------------------------------------------------------- #</span>
+<span class="c1">#                                 IO Hooks                                   #</span>
+<span class="c1"># -------------------------------------------------------------------------- #</span>
+
+
+<div class="viewcode-block" id="napari_get_reader"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_get_reader">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_get_reader</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ReaderFunction</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return a function capable of loading ``path`` into napari, or ``None``.</span>
+
+<span class="sd">    This is the primary &quot;**reader plugin**&quot; function.  It accepts a path or</span>
+<span class="sd">    list of paths, and returns a list of data to be added to the ``Viewer``.</span>
+
+<span class="sd">    The main place this hook is used is in :func:`Viewer.open()</span>
+<span class="sd">    &lt;napari.components.add_layers_mixin.AddLayersMixin.open&gt;`, via the</span>
+<span class="sd">    :func:`~napari.plugins.io.read_data_with_plugins` function.</span>
+
+<span class="sd">    It will also be called on ``File -&gt; Open...`` or when a user drops a file</span>
+<span class="sd">    or folder onto the viewer. This function must execute **quickly**, and</span>
+<span class="sd">    should return ``None`` if the filepath is of an unrecognized format for</span>
+<span class="sd">    this reader plugin.  If ``path`` is determined to be recognized format,</span>
+<span class="sd">    this function should return a *new* function that accepts the same filepath</span>
+<span class="sd">    (or list of paths), and returns a list of ``LayerData`` tuples, where each</span>
+<span class="sd">    tuple is a 1-, 2-, or 3-tuple of ``(data,)``, ``(data, meta)``, or ``(data,</span>
+<span class="sd">    meta, layer_type)``.</span>
+
+<span class="sd">    ``napari`` will then use each tuple in the returned list to generate a new</span>
+<span class="sd">    layer in the viewer using the :func:`Viewer._add_layer_from_data()</span>
+<span class="sd">    &lt;napari.components.add_layers_mixin.AddLayersMixin._add_layer_from_data&gt;`</span>
+<span class="sd">    method.  The first, (optional) second, and (optional) third items in each</span>
+<span class="sd">    tuple in the returned layer_data list, therefore correspond to the</span>
+<span class="sd">    ``data``, ``meta``, and ``layer_type`` arguments of the</span>
+<span class="sd">    :func:`Viewer._add_layer_from_data()</span>
+<span class="sd">    &lt;napari.components.add_layers_mixin.AddLayersMixin._add_layer_from_data&gt;`</span>
+<span class="sd">    method, respectively.</span>
+
+<span class="sd">    .. important::</span>
+
+<span class="sd">       ``path`` may be either a ``str`` or a ``list`` of ``str``.  If a</span>
+<span class="sd">       ``list``, then each path in the list can be assumed to be one part of a</span>
+<span class="sd">       larger multi-dimensional stack (for instance: a list of 2D image files</span>
+<span class="sd">       that should be stacked along a third axis). Implementations should do</span>
+<span class="sd">       their own checking for ``list`` or ``str``, and handle each case as</span>
+<span class="sd">       desired.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str or list of str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL), or a list of paths.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Callable or None</span>
+<span class="sd">        A function that accepts the path, and returns a list of ``layer_data``,</span>
+<span class="sd">        where ``layer_data`` is one of ``(data,)``, ``(data, meta)``, or</span>
+<span class="sd">        ``(data, meta, layer_type)``.</span>
+<span class="sd">        If unable to read the path, must return ``None`` (not ``False``!).</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_get_writer"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_get_writer">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_get_writer</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">layer_types</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">WriterFunction</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return function capable of writing napari layer data to ``path``.</span>
+
+<span class="sd">    This function will be called whenever the user attempts to save multiple</span>
+<span class="sd">    layers (e.g. via ``File -&gt; Save Layers``, or</span>
+<span class="sd">    :func:`~napari.plugins.io.save_layers`).</span>
+<span class="sd">    This function must execute **quickly**, and should return ``None`` if</span>
+<span class="sd">    ``path`` has an unrecognized extension for the reader plugin or the list of</span>
+<span class="sd">    layer types are incompatible with what the plugin can write. If ``path`` is</span>
+<span class="sd">    a recognized format, this function should return a *function* that accepts</span>
+<span class="sd">    the same ``path``, and a list of tuples containing the data for each layer</span>
+<span class="sd">    being saved in the form of ``(Layer.data, Layer._get_state(),</span>
+<span class="sd">    Layer._type_string)``. The writer function should return a list of strings</span>
+<span class="sd">    (the actual filepath(s) that were written).</span>
+
+<span class="sd">    .. important::</span>
+
+<span class="sd">        It is up to plugins to inspect and obey any extension in ``path``</span>
+<span class="sd">        (and return ``None`` if it is an unsupported extension).</span>
+
+<span class="sd">    An example function signature for a ``WriterFunction`` that might be</span>
+<span class="sd">    returned by this hook specification is as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        def writer_function(</span>
+<span class="sd">            path: str, layer_data: List[Tuple[Any, Dict, str]]</span>
+<span class="sd">        ) -&gt; List[str]:</span>
+<span class="sd">            ...</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).  Any extensions in</span>
+<span class="sd">        the path should be examined and obeyed.  (i.e. if the plugin is</span>
+<span class="sd">        incapable of returning a requested extension, it should return</span>
+<span class="sd">        ``None``).</span>
+<span class="sd">    layer_types : list of str</span>
+<span class="sd">        List of layer types (e.g. &quot;image&quot;, &quot;labels&quot;) that will be provided to</span>
+<span class="sd">        the writer function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Callable or None</span>
+<span class="sd">        A function that accepts the path, a list of layer_data (where</span>
+<span class="sd">        layer_data is ``(data, meta, layer_type)``). If unable to write to the</span>
+<span class="sd">        path or write the layer_data, must return ``None`` (not ``False``).</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_image"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_image">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_image</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write image data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : array or list of array</span>
+<span class="sd">        Image data. Can be N dimensional. If meta[&#39;rgb&#39;] is ``True`` then the</span>
+<span class="sd">        data should be interpreted as RGB or RGBA. If meta[&#39;multiscale&#39;] is</span>
+<span class="sd">        True, then the data should be interpreted as a multiscale image.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Image metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_labels"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_labels">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_labels</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write labels data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : array or list of array</span>
+<span class="sd">        Integer valued label data. Can be N dimensional. Every pixel contains</span>
+<span class="sd">        an integer ID corresponding to the region it belongs to. The label 0 is</span>
+<span class="sd">        rendered as transparent. If a list and arrays are decreasing in shape</span>
+<span class="sd">        then the data is from a multiscale image.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Labels metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_points"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_points">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_points</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write points data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : array (N, D)</span>
+<span class="sd">        Coordinates for N points in D dimensions.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Points metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_shapes"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_shapes">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_shapes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write shapes data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : list</span>
+<span class="sd">        List of shape data, where each element is an (N, D) array of the</span>
+<span class="sd">        N vertices of a shape in D dimensions.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Shapes metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_surface"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_surface">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_surface</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write surface data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : 3-tuple of array</span>
+<span class="sd">        The first element of the tuple is an (N, D) array of vertices of</span>
+<span class="sd">        mesh triangles. The second is an (M, 3) array of int of indices</span>
+<span class="sd">        of the mesh triangles. The third element is the (K0, ..., KL, N)</span>
+<span class="sd">        array of values used to color vertices where the additional L</span>
+<span class="sd">        dimensions are used to color the same mesh with different values.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Surface metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="napari_write_vectors"><a class="viewcode-back" href="../../../plugins/hook_specifications.html#napari.plugins.hook_specifications.napari_write_vectors">[docs]</a><span class="nd">@napari_hook_specification</span><span class="p">(</span><span class="n">firstresult</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">napari_write_vectors</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Write vectors data and metadata into a path.</span>
+
+<span class="sd">    It is the responsibility of the implementation to check any extension on</span>
+<span class="sd">    ``path`` and return ``None`` if it is an unsupported extension.  If</span>
+<span class="sd">    ``path`` has no extension, implementations may append their preferred</span>
+<span class="sd">    extension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file, directory, or resource (like a URL).</span>
+<span class="sd">    data : (N, 2, D) array</span>
+<span class="sd">        The start point and projections of N vectors in D dimensions.</span>
+<span class="sd">    meta : dict</span>
+<span class="sd">        Vectors metadata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    path : str or None</span>
+<span class="sd">        If data is successfully written, return the ``path`` that was written.</span>
+<span class="sd">        Otherwise, if nothing was done, return ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

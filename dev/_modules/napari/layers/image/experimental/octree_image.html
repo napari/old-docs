@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1.dev3+g1a0dad4 documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1.dev4+g2e0ec7d documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1.dev3+g1a0dad4
+                0.4.1.dev4+g2e0ec7d
               </div>
             
           
@@ -162,14 +162,16 @@
   <h1>Source code for napari.layers.image.experimental.octree_image</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;OctreeImage class.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
 <span class="kn">from</span> <span class="nn">....utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..image</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
 <span class="kn">from</span> <span class="nn">._octree_image_slice</span> <span class="kn">import</span> <span class="n">OctreeImageSlice</span>
 <span class="kn">from</span> <span class="nn">.octree_intersection</span> <span class="kn">import</span> <span class="n">OctreeIntersection</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeInfo</span><span class="p">,</span> <span class="n">OctreeLevelInfo</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ChunkData</span><span class="p">,</span> <span class="n">OctreeInfo</span><span class="p">,</span> <span class="n">OctreeLevelInfo</span>
 
-<span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">256</span>
+<span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>
 
 
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
@@ -184,9 +186,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">DEFAULT_TILE_SIZE</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_level</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_level</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">auto_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">track_view</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span>
+
+    <span class="nd">@track_view</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">track_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -264,14 +275,19 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">intersection</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">view_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">visible_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ChunkData</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Chunks in the current slice which in currently in view.&quot;&quot;&quot;</span>
         <span class="c1"># This will be None if we have not been drawn yet.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
 
+        <span class="n">auto_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_level</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_view</span>
+
         <span class="n">corners_2d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_corners</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_view_chunks</span><span class="p">(</span><span class="n">corners_2d</span><span class="p">)</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_visible_chunks</span><span class="p">(</span><span class="n">corners_2d</span><span class="p">,</span> <span class="n">auto_level</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">_octree_level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">chunks</span>
 
     <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ChunkedSliceData</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;The given data a was loaded, use it now.&quot;&quot;&quot;</span>
@@ -306,7 +322,7 @@
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="n">corners_2d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span><span class="p">(</span><span class="n">data_corners</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_intersection</span><span class="p">(</span><span class="n">corners_2d</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_intersection</span><span class="p">(</span><span class="n">corners_2d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_level</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_corners_2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_corners</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>

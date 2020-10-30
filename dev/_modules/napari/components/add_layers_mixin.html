@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.add_layers_mixin &mdash; napari 0.4.1.dev3+g1a0dad4 documentation</title>
+  <title>napari.components.add_layers_mixin &mdash; napari 0.4.1.dev4+g2e0ec7d documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1.dev3+g1a0dad4
+                0.4.1.dev4+g2e0ec7d
               </div>
             
           
@@ -180,25 +180,14 @@
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_get_async_image_class</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;Return layer.Image or OctreeImage.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_octree</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_get_image_class</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Return Image or OctreeImage based config settings.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_octree</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">create_octree_images</span><span class="p">:</span>
         <span class="kn">from</span> <span class="nn">..layers.image.experimental.octree_image</span> <span class="kn">import</span> <span class="n">OctreeImage</span>
 
         <span class="k">return</span> <span class="n">OctreeImage</span>
 
     <span class="k">return</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span>
-
-
-<span class="k">def</span> <span class="nf">_get_image_class</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;Return layer.Image or OctreeImage.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_get_async_image_class</span><span class="p">()</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span>
-
-
-<span class="n">_image_class</span> <span class="o">=</span> <span class="n">_get_image_class</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="AddLayersMixin"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.add_layers_mixin.AddLayersMixin">[docs]</a><span class="k">class</span> <span class="nc">AddLayersMixin</span><span class="p">:</span>
@@ -418,6 +407,9 @@
             <span class="s1">&#39;metadata&#39;</span><span class="p">,</span>
         <span class="p">}</span>
 
+        <span class="c1"># Image or OctreeImage.</span>
+        <span class="n">image_class</span> <span class="o">=</span> <span class="n">_get_image_class</span><span class="p">()</span>
+
         <span class="k">if</span> <span class="n">channel_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;colormap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;colormap&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;gray&#39;</span>
             <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;blending&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;blending&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;translucent&#39;</span>
@@ -430,13 +422,13 @@
                         <span class="s2">&quot;did you mean to specify a &#39;channel_axis&#39;? &quot;</span>
                     <span class="p">)</span>
 
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">_image_class</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">image_class</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">layerdata_list</span> <span class="o">=</span> <span class="n">split_channels</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">channel_axis</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="n">layer_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">i_kwargs</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">layerdata_list</span><span class="p">:</span>
-                <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">_image_class</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="o">**</span><span class="n">i_kwargs</span><span class="p">))</span>
+                <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_layer</span><span class="p">(</span><span class="n">image_class</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="o">**</span><span class="n">i_kwargs</span><span class="p">))</span>
                 <span class="n">layer_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">layer_list</span></div>

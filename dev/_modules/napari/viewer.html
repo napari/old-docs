@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.viewer &mdash; napari 0.4.1.dev9+g5f72742 documentation</title>
+  <title>napari.viewer &mdash; napari 0.4.1.dev10+g1fc4b2b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1.dev9+g5f72742
+                0.4.1.dev10+g1fc4b2b
               </div>
             
           
@@ -160,20 +160,9 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.viewer</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">platform</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
-
-<span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QIcon</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QApplication</span>
-
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">__version__</span>
-<span class="kn">from</span> <span class="nn">._qt.qt_main_window</span> <span class="kn">import</span> <span class="n">Window</span>
-<span class="kn">from</span> <span class="nn">._qt.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
-<span class="kn">from</span> <span class="nn">._qt.qthreading</span> <span class="kn">import</span> <span class="n">create_worker</span><span class="p">,</span> <span class="n">wait_for_workers_to_quit</span>
+<span></span><span class="kn">from</span> <span class="nn">._qt</span> <span class="kn">import</span> <span class="n">Window</span>
 <span class="kn">from</span> <span class="nn">.components</span> <span class="kn">import</span> <span class="n">ViewerModel</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">config</span>
-<span class="kn">from</span> <span class="nn">.utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
 
 
 <div class="viewcode-block" id="Viewer"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer">[docs]</a><span class="k">class</span> <span class="nc">Viewer</span><span class="p">(</span><span class="n">ViewerModel</span><span class="p">):</span>
@@ -195,10 +184,6 @@
 <span class="sd">        Whether to show the viewer after instantiation. by default True.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="c1"># set _napari_app_id to False to avoid overwriting dock icon on windows</span>
-    <span class="c1"># set _napari_app_id to custom string to prevent grouping different base viewer</span>
-    <span class="n">_napari_app_id</span> <span class="o">=</span> <span class="s1">&#39;napari.napari.viewer.&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">__version__</span><span class="p">)</span>
-
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
@@ -208,67 +193,13 @@
         <span class="n">axis_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="c1"># instance() returns the singleton instance if it exists, or None</span>
-        <span class="n">app</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
-        <span class="c1"># if None, raise a RuntimeError with the appropriate message</span>
-        <span class="k">if</span> <span class="n">app</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="s2">&quot;napari requires a Qt event loop to run. To create one, &quot;</span>
-                <span class="s2">&quot;try one of the following: </span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="s2">&quot;  - use the `napari.gui_qt()` context manager. See &quot;</span>
-                <span class="s2">&quot;https://github.com/napari/napari/tree/master/examples for&quot;</span>
-                <span class="s2">&quot; usage examples.</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="s2">&quot;  - In IPython or a local Jupyter instance, use the &quot;</span>
-                <span class="s2">&quot;`</span><span class="si">%g</span><span class="s2">ui qt` magic command.</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="s2">&quot;  - Launch IPython with the option `--gui=qt`.</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="s2">&quot;  - (recommended) in your IPython configuration file, add&quot;</span>
-                <span class="s2">&quot; or uncomment the line `c.TerminalIPythonApp.gui = &#39;qt&#39;`.&quot;</span>
-                <span class="s2">&quot; Then, restart IPython.&quot;</span>
-            <span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">perf_config</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">perf_config</span><span class="o">.</span><span class="n">trace_qt_events</span><span class="p">:</span>
-                <span class="kn">from</span> <span class="nn">._qt.tracing.qt_event_tracing</span> <span class="kn">import</span> <span class="p">(</span>
-                    <span class="n">convert_app_for_tracing</span><span class="p">,</span>
-                <span class="p">)</span>
-
-                <span class="c1"># For tracing Qt events we need a special QApplication. If</span>
-                <span class="c1"># using `gui_qt` we already have the special one, and no</span>
-                <span class="c1"># conversion is done here. However when running inside</span>
-                <span class="c1"># IPython or Jupyter this is where we switch out the</span>
-                <span class="c1"># QApplication.</span>
-                <span class="n">app</span> <span class="o">=</span> <span class="n">convert_app_for_tracing</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
-
-            <span class="c1"># Will patch based on config file.</span>
-            <span class="n">perf_config</span><span class="o">.</span><span class="n">patch_callables</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span>
-            <span class="ow">and</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s1">&#39;frozen&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_napari_app_id</span>
-        <span class="p">):</span>
-            <span class="kn">import</span> <span class="nn">ctypes</span>
-
-            <span class="n">ctypes</span><span class="o">.</span><span class="n">windll</span><span class="o">.</span><span class="n">shell32</span><span class="o">.</span><span class="n">SetCurrentProcessExplicitAppUserModelID</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_napari_app_id</span>
-            <span class="p">)</span>
-
-        <span class="n">logopath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;resources&#39;</span><span class="p">,</span> <span class="s1">&#39;logo.png&#39;</span><span class="p">)</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="n">logopath</span><span class="p">))</span>
-
-        <span class="c1"># see docstring of `wait_for_workers_to_quit` for caveats on killing</span>
-        <span class="c1"># workers at shutdown.</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">aboutToQuit</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">wait_for_workers_to_quit</span><span class="p">)</span>
-
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
             <span class="n">ndisplay</span><span class="o">=</span><span class="n">ndisplay</span><span class="p">,</span>
             <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
             <span class="n">axis_labels</span><span class="o">=</span><span class="n">axis_labels</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">qt_viewer</span> <span class="o">=</span> <span class="n">QtViewer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">Window</span><span class="p">(</span><span class="n">qt_viewer</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">Window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Viewer.update_console"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer.update_console">[docs]</a>    <span class="k">def</span> <span class="nf">update_console</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Update console&#39;s namespace with desired variables.</span>
@@ -312,16 +243,6 @@
             <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">image</span></div>
 
-<div class="viewcode-block" id="Viewer.update"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="kn">import</span> <span class="nn">warnings</span>
-
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;Viewer.update() is deprecated, use &quot;</span>
-            <span class="s2">&quot;create_worker(func, *args, **kwargs) instead&quot;</span><span class="p">,</span>
-            <span class="ne">DeprecationWarning</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">create_worker</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">_start_thread</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
-
 <div class="viewcode-block" id="Viewer.show"><a class="viewcode-back" href="../../api/napari.html#napari.viewer.Viewer.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Resize, show, and raise the viewer window.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
@@ -336,11 +257,7 @@
             <span class="c1"># TODO_ASYNC: Find a cleaner way to do this? Fixes some tests.</span>
             <span class="c1"># https://github.com/napari/napari/issues/1500</span>
             <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
-                <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div>
-
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Simple string representation&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;napari.Viewer: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s1">&#39;</span></div>
+                <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

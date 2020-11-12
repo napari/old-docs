@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.layerlist &mdash; napari 0.4.1a2.dev1+g4c632d6 documentation</title>
+  <title>napari.components.layerlist &mdash; napari 0.4.1a2.dev2+gbf0c7d0 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev1+g4c632d6
+                0.4.1a2.dev2+gbf0c7d0
               </div>
             
           
@@ -168,49 +168,28 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">..utils.list</span> <span class="kn">import</span> <span class="n">ListModel</span>
+<span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EventedList</span>
 <span class="kn">from</span> <span class="nn">..utils.naming</span> <span class="kn">import</span> <span class="n">inc_name_count</span>
 
 <span class="n">Extent</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Extent&#39;</span><span class="p">,</span> <span class="s1">&#39;data world step&#39;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_add</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;When a layer is added, set its name.&quot;&quot;&quot;</span>
-    <span class="n">layers</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">source</span>
-    <span class="n">layer</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">item</span>
-    <span class="n">layer</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">layers</span><span class="o">.</span><span class="n">_coerce_name</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span>
-    <span class="n">layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">layers</span><span class="o">.</span><span class="n">_update_name</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
-    <span class="n">layers</span><span class="o">.</span><span class="n">unselect_all</span><span class="p">(</span><span class="n">ignore</span><span class="o">=</span><span class="n">layer</span><span class="p">)</span>
-
-
-<div class="viewcode-block" id="LayerList"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.layerlist.LayerList">[docs]</a><span class="k">class</span> <span class="nc">LayerList</span><span class="p">(</span><span class="n">ListModel</span><span class="p">):</span>
+<div class="viewcode-block" id="LayerList"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.layerlist.LayerList">[docs]</a><span class="k">class</span> <span class="nc">LayerList</span><span class="p">(</span><span class="n">EventedList</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;List-like layer collection with built-in reordering and callback hooks.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    iterable : iterable</span>
+<span class="sd">    data : iterable</span>
 <span class="sd">        Iterable of napari.layer.Layer</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    events : vispy.util.event.EmitterGroup</span>
-<span class="sd">        Event hooks:</span>
-<span class="sd">            * added(item, index): whenever an item is added</span>
-<span class="sd">            * removed(item): whenever an item is removed</span>
-<span class="sd">            * reordered(): whenever the list is reordered</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iterable</span><span class="o">=</span><span class="p">()):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">()):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">basetype</span><span class="o">=</span><span class="n">Layer</span><span class="p">,</span>
-            <span class="n">iterable</span><span class="o">=</span><span class="n">iterable</span><span class="p">,</span>
-            <span class="n">lookup</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">q</span> <span class="o">==</span> <span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">},</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">basetype</span><span class="o">=</span><span class="n">Layer</span><span class="p">,</span> <span class="n">lookup</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">},</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">added</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">_add</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">__newlike__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iterable</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">ListModel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_basetype</span><span class="p">,</span> <span class="n">iterable</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__newlike__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LayerList</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_coerce_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Coerce a name into a unique equivalent.</span>
@@ -262,23 +241,14 @@
 <span class="sd">        insert : int</span>
 <span class="sd">            Index that item(s) will be inserted at</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">total</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">selected</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">unselect_all</span><span class="p">()</span>
             <span class="bp">self</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">selected</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="n">selected</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">total</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">selected</span><span class="p">]</span>
-
-        <span class="c1"># remove all indices to be moved</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected</span><span class="p">:</span>
-            <span class="n">indices</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-        <span class="c1"># adjust offset based on selected indices to move</span>
-        <span class="n">offset</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">insert</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">index</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected</span><span class="p">])</span>
-        <span class="c1"># insert indices to be moved at correct start</span>
-        <span class="k">for</span> <span class="n">insert_idx</span><span class="p">,</span> <span class="n">elem_idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">selected</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">insert</span> <span class="o">-</span> <span class="n">offset</span><span class="p">):</span>
-            <span class="n">indices</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">insert_idx</span><span class="p">,</span> <span class="n">elem_idx</span><span class="p">)</span>
-        <span class="c1"># reorder list</span>
-        <span class="bp">self</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span></div>
+            <span class="n">moving</span> <span class="o">=</span> <span class="p">(</span><span class="n">index</span><span class="p">,)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">moving</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">selected</span><span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">insert</span> <span class="o">&gt;=</span> <span class="n">index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_multiple</span><span class="p">(</span><span class="n">moving</span><span class="p">,</span> <span class="n">insert</span> <span class="o">+</span> <span class="n">offset</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="LayerList.unselect_all"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.layerlist.LayerList.unselect_all">[docs]</a>    <span class="k">def</span> <span class="nf">unselect_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Unselects all layers expect any specified in ignore.</span>

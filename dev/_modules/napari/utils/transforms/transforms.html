@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.transforms.transforms &mdash; napari 0.4.1a2.dev14+g53b54e0 documentation</title>
+  <title>napari.utils.transforms.transforms &mdash; napari 0.4.1a2.dev15+g27ed631 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev14+g53b54e0
+                0.4.1a2.dev15+g27ed631
               </div>
             
           
@@ -160,8 +160,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.utils.transforms.transforms</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Sequence</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Sequence</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">toolz</span> <span class="k">as</span> <span class="nn">tz</span>
@@ -171,6 +170,8 @@
     <span class="n">compose_linear_matrix</span><span class="p">,</span>
     <span class="n">decompose_linear_matrix</span><span class="p">,</span>
     <span class="n">embed_in_identity_matrix</span><span class="p">,</span>
+    <span class="n">is_matrix_triangular</span><span class="p">,</span>
+    <span class="n">is_matrix_upper_triangular</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -468,6 +469,7 @@
         <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="k">if</span> <span class="n">affine_matrix</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">linear_matrix</span> <span class="o">=</span> <span class="n">affine_matrix</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -479,6 +481,18 @@
                 <span class="n">rotate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">scale</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">shear</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">shear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">scale</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shear</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">is_matrix_triangular</span><span class="p">(</span><span class="n">shear</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span> <span class="o">=</span> <span class="n">is_matrix_upper_triangular</span><span class="p">(</span>
+                            <span class="n">shear</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s1">&#39;Only upper triangular or lower triangular matrices are &#39;</span>
+                            <span class="sa">f</span><span class="s1">&#39;accepted for shear, got </span><span class="si">{</span><span class="n">shear</span><span class="si">}</span><span class="s1">. For other matrices, set the &#39;</span>
+                            <span class="sa">f</span><span class="s1">&#39;affine_matrix or linear_matrix directly.&#39;</span>
+                        <span class="p">)</span>
             <span class="n">linear_matrix</span> <span class="o">=</span> <span class="n">compose_linear_matrix</span><span class="p">(</span><span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span><span class="p">)</span>
 
         <span class="n">ndim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">linear_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">translate</span><span class="p">))</span>
@@ -509,40 +523,57 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return the scale of the transform.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
 
     <span class="nd">@scale</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set the scale of the transform.&quot;&quot;&quot;</span>
-        <span class="n">rotate</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">shear</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)</span>
+        <span class="n">rotate</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">shear</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span> <span class="o">=</span> <span class="n">compose_linear_matrix</span><span class="p">(</span><span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return the rotation of the transform.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@rotate</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rotate</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set the rotation of the transform.&quot;&quot;&quot;</span>
-        <span class="n">_</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span> <span class="o">=</span> <span class="n">compose_linear_matrix</span><span class="p">(</span><span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">shear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return the shear of the transform.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
 
     <span class="nd">@shear</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">shear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shear</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Set the shear of the transform.&quot;&quot;&quot;</span>
-        <span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shear</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="s1">&#39;Non upper diagonal shear matrix passed so &#39;</span>
-                <span class="s1">&#39;reseting rotate to the identity.&#39;</span>
-            <span class="p">)</span>
-            <span class="n">rotate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">rotate</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">is_matrix_triangular</span><span class="p">(</span><span class="n">shear</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span> <span class="o">=</span> <span class="n">is_matrix_upper_triangular</span><span class="p">(</span><span class="n">shear</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Only upper triangular or lower triangular matrices are &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;accepted for shear, got </span><span class="si">{</span><span class="n">shear</span><span class="si">}</span><span class="s1">. For other matrices, set the &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;affine_matrix or linear_matrix directly.&#39;</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">decompose_linear_matrix</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span><span class="p">,</span> <span class="n">upper_triangular</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_upper_triangular</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">linear_matrix</span> <span class="o">=</span> <span class="n">compose_linear_matrix</span><span class="p">(</span><span class="n">rotate</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">shear</span><span class="p">)</span>
 
     <span class="nd">@property</span>

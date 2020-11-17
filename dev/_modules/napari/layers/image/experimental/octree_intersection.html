@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_intersection &mdash; napari 0.4.1a2.dev18+g794b14f documentation</title>
+  <title>napari.layers.image.experimental.octree_intersection &mdash; napari 0.4.1a2.dev19+g99e834a documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev18+g794b14f
+                0.4.1a2.dev19+g99e834a
               </div>
             
           
@@ -167,7 +167,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevel</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ChunkData</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkGeom</span><span class="p">,</span> <span class="n">OctreeLocation</span>
 
 <span class="c1"># TODO_OCTREE: These types might be a horrible idea but trying it for now.</span>
 <span class="n">Float2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>  <span class="c1"># [x, y] dtype=float64 (default type)</span>
@@ -198,7 +198,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">rows</span><span class="p">:</span> <span class="n">Float2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">corners_2d</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cols</span><span class="p">:</span> <span class="n">Float2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">corners_2d</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
 
-        <span class="n">base</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">octree_info</span><span class="o">.</span><span class="n">base_shape</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">image_config</span><span class="o">.</span><span class="n">base_shape</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">normalized_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
             <span class="p">[</span>
@@ -219,7 +219,7 @@
         <span class="k">def</span> <span class="nf">_clamp</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">):</span>
             <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">),</span> <span class="n">min_val</span><span class="p">)</span>
 
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">octree_info</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">image_config</span><span class="o">.</span><span class="n">tile_size</span>
 
         <span class="n">span_tiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">tile_size</span><span class="p">]</span>
         <span class="n">clamped</span> <span class="o">=</span> <span class="p">[</span>
@@ -255,7 +255,7 @@
 
         <span class="k">return</span> <span class="n">_inside</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_range</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_inside</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_range</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OctreeIntersection.get_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_intersection.OctreeIntersection.get_chunks">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ChunkData</span><span class="p">]:</span>
+<div class="viewcode-block" id="OctreeIntersection.get_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_intersection.OctreeIntersection.get_chunks">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Return chunks inside this intersection.</span>
 
 <span class="sd">        Parameters</span>
@@ -271,24 +271,45 @@
         <span class="n">scale</span> <span class="o">=</span> <span class="n">level_info</span><span class="o">.</span><span class="n">scale</span>
         <span class="n">scale_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">scale</span><span class="p">,</span> <span class="n">scale</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="n">level_info</span><span class="o">.</span><span class="n">octree_info</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="n">level_info</span><span class="o">.</span><span class="n">image_config</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">scaled_size</span> <span class="o">=</span> <span class="n">tile_size</span> <span class="o">*</span> <span class="n">scale</span>
 
-        <span class="c1"># Iterate over every tile in the rectangular region.</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># Get every chunk that is within the rectangular region. These are</span>
+        <span class="c1"># all the chunks we might possible draw, because they are within</span>
+        <span class="c1"># the current view.</span>
+        <span class="c1">#</span>
+        <span class="c1"># Chunks will either contain the original data, or they will</span>
+        <span class="c1"># contain an OctreeChunk. This implies the chunk was viewed before.</span>
+        <span class="c1">#</span>
+        <span class="c1"># If the chunk is not yet an OctreeChunk we turn it into one. The</span>
+        <span class="c1"># main reason we have OctreeChunks is so that have service as the</span>
+        <span class="c1"># home for a pending chunk, a chunk in the process of being loaded.</span>
+        <span class="c1">#</span>
+        <span class="c1"># We will draw the chunk only when that load has finished. But here</span>
+        <span class="c1"># we just return all the chunks that are within the intersection.</span>
         <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_range</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="n">scaled_size</span>
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_range</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_range</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="n">scaled_size</span>
             <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_range</span><span class="p">:</span>
 
                 <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
-                <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
-                <span class="c1"># Only include chunks that have non-zero area. Not sure why</span>
-                <span class="c1"># some chunks are zero sized. But this will be a harmless</span>
-                <span class="c1"># check if we get rid of them.</span>
-                <span class="k">if</span> <span class="mi">0</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-                    <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ChunkData</span><span class="p">(</span><span class="n">level_index</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">scale_vec</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">OctreeChunk</span><span class="p">):</span>
+                    <span class="c1"># Location is already an OctreeChunk, so return it.</span>
+                    <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Location is not an OctreeChunk yet, turn it into one now.</span>
+                    <span class="n">location</span> <span class="o">=</span> <span class="n">OctreeLocation</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">level_index</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+
+                    <span class="c1"># Geom is used by the visual for rendering.</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+                    <span class="n">geom</span> <span class="o">=</span> <span class="n">OctreeChunkGeom</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">scale_vec</span><span class="p">)</span>
+
+                    <span class="c1"># Replace the location with the newly created chunk.</span>
+                    <span class="n">chunk</span> <span class="o">=</span> <span class="n">OctreeChunk</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">geom</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk</span>
+
+                    <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
 
                 <span class="n">x</span> <span class="o">+=</span> <span class="n">scaled_size</span>
             <span class="n">y</span> <span class="o">+=</span> <span class="n">scaled_size</span>

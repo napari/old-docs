@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1a2.dev18+g794b14f documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1a2.dev19+g99e834a documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev18+g794b14f
+                0.4.1a2.dev19+g99e834a
               </div>
             
           
@@ -162,17 +162,23 @@
   <h1>Source code for napari.layers.image.experimental.octree_image</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;OctreeImage class.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkRequest</span><span class="p">,</span> <span class="n">chunk_loader</span>
 <span class="kn">from</span> <span class="nn">....utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..image</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
-<span class="kn">from</span> <span class="nn">._octree_image_slice</span> <span class="kn">import</span> <span class="n">OctreeImageSlice</span>
+<span class="kn">from</span> <span class="nn">._octree_multiscale_slice</span> <span class="kn">import</span> <span class="n">OctreeMultiscaleSlice</span>
 <span class="kn">from</span> <span class="nn">.octree_intersection</span> <span class="kn">import</span> <span class="n">OctreeIntersection</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevelInfo</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ChunkData</span><span class="p">,</span> <span class="n">OctreeInfo</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkKey</span>
 
-<span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>  <span class="c1"># TODO_OCTREE: get from somewhere else</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.async.octree&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
@@ -185,15 +191,50 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">DEFAULT_TILE_SIZE</span>
+
+        <span class="c1"># Is this the same as Image._data_level? Which should we use?</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auto_level</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">show_grid</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Get/set directly.</span>
 
+        <span class="c1"># Temporary to implement a disabled cache.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="c1"># For logging only</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_count</span> <span class="o">=</span> <span class="mi">0</span>
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">auto_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Override Image._get_value().&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># Fake for now until have octree version.</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Has the data for this layer been loaded yet.&quot;&quot;&quot;</span>
+        <span class="c1"># TODO_OCTREE: what here?</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_empty</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># TODO_OCTREE: what here?</span>
+
+    <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO_OCTREE: replace Image._update_thumbnail with nothing for</span>
+        <span class="c1"># the moment until we decide how to do thumbnail.</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_data_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Viewable image for the current slice. (compatibility)&quot;&quot;&quot;</span>
+        <span class="c1"># Override Image._data_view</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># fake: does octree need this?</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">track_view</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -260,17 +301,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">octree_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeInfo</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">image_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImageConfig</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return information about the current octree.</span>
 
 <span class="sd">        Return</span>
 <span class="sd">        ------</span>
-<span class="sd">        OctreeInfo</span>
-<span class="sd">            Information about the current octree.</span>
+<span class="sd">        ImageConfig</span>
+<span class="sd">            Basic image configuration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_info</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">image_config</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">octree_level_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeLevelInfo</span><span class="p">:</span>
@@ -333,47 +374,125 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">num_octree_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return the total number of octree levels.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">num_octree_levels</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># Multiscale</span>
 
-    <span class="k">def</span> <span class="nf">_new_empty_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_new_empty_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Initialize the current slice to an empty image.</span>
+
+<span class="sd">        Overides Image._new_empty_slice() and does nothing because we don&#39;t</span>
+<span class="sd">        need an empty slice. We create self._slice when</span>
+<span class="sd">        self._set_view_slice() is called.</span>
+
+<span class="sd">        The empty slice was needed to satisfy the old VispyImageLayer that</span>
+<span class="sd">        used a single ImageVisual. But OctreeImage is drawn with</span>
+<span class="sd">        VispyTiledImageVisual. It does not need an empty image. It gets</span>
+<span class="sd">        chunks from our self.visible_chunks property, and it will just draw</span>
+<span class="sd">        nothing if that returns an empty list.</span>
+
+<span class="sd">        When OctreeImage become the only image class, this can go away.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeImageSlice</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_image</span><span class="p">(),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_empty</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">visible_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ChunkData</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">visible_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Chunks in the current slice which in currently in view.&quot;&quot;&quot;</span>
+        <span class="c1"># OCTREE_TODO: simplify this method...</span>
         <span class="c1"># This will be None if we have not been drawn yet.</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
 
         <span class="n">auto_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_level</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_view</span>
 
         <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_visible_chunks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_corners_2d</span><span class="p">,</span> <span class="n">auto_level</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">chunks</span>
+
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;OctreeImage.visible_chunks: frame=</span><span class="si">%d</span><span class="s2"> num_chunks=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frame_count</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">visible_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span> <span class="k">for</span> <span class="n">octree_chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">)</span>
+
+        <span class="c1"># Remove any chunks from our self._last_visible set which are no</span>
+        <span class="c1"># longer in view.</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visible_set</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="c1"># If we switched to a new octree level, update our currently shown level.</span>
+        <span class="n">slice_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">!=</span> <span class="n">slice_level</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">slice_level</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">chunk</span><span class="p">):</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;Visible Chunk: </span><span class="si">%d</span><span class="s2"> of </span><span class="si">%d</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">chunk</span>
+            <span class="p">)</span>
+
+        <span class="n">visible_chunks</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># TODO_OCTREE combine list/set</span>
+        <span class="n">visible_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">octree_chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chunks</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk_loader</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+                <span class="n">new_in_view</span> <span class="o">=</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span>
+                <span class="k">if</span> <span class="n">new_in_view</span> <span class="ow">and</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">in_memory</span><span class="p">:</span>
+                    <span class="c1"># Not using cache, so if this chunk just came into view</span>
+                    <span class="c1"># clear it out, so it gets reloaded.</span>
+                    <span class="n">octree_chunk</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">in_memory</span><span class="p">:</span>
+                <span class="c1"># The chunk is fully in memory, we can view it right away.</span>
+                <span class="n">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="s2">&quot;ALREADY LOADED&quot;</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">)</span>
+                <span class="n">visible_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">)</span>
+                <span class="n">visible_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">loading</span><span class="p">:</span>
+                <span class="c1"># The chunk is being loaded, do not view it yet.</span>
+                <span class="n">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="s2">&quot;LOADING:&quot;</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># The chunk is not in memory and is not being loaded, so</span>
+                <span class="c1"># we are going to load it.</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_chunk</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">):</span>
+                    <span class="c1"># The chunk was loaded synchronously. Either it hit the</span>
+                    <span class="c1"># cache, or it&#39;s fast-loading data. We can draw it now.</span>
+                    <span class="n">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="s2">&quot;SYNC LOAD&quot;</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">)</span>
+                    <span class="n">visible_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">)</span>
+                    <span class="n">visible_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># An async load was initiated, sometime later our</span>
+                    <span class="c1"># self._on_chunk_loaded method will be called.</span>
+                    <span class="n">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="s2">&quot;ASYNC LOAD&quot;</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">)</span>
+
+        <span class="c1"># Update our _last_visible_set with what is in view.</span>
+        <span class="k">for</span> <span class="n">octree_chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">visible_chunks</span>
+
+    <span class="k">def</span> <span class="nf">_load_chunk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">:</span> <span class="n">OctreeChunk</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">OctreeChunkKey</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">location</span><span class="p">)</span>
+
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+
+        <span class="n">octree_chunk</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Create the ChunkRequest and load it with the ChunkLoader.</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">chunk_loader</span><span class="o">.</span><span class="n">create_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">chunks</span><span class="p">)</span>
+
+        <span class="n">satisfied_request</span> <span class="o">=</span> <span class="n">chunk_loader</span><span class="o">.</span><span class="n">load_chunk</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">satisfied_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># Load was async.</span>
+
+        <span class="c1"># Load was sync so we can insert the data into the octree</span>
+        <span class="c1"># and we will draw it this frame.</span>
+        <span class="n">octree_chunk</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">satisfied_request</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ChunkedSliceData</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;The given data a was loaded, use it now.&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_on_data_loaded</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sync</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
-
-        <span class="c1"># TODO_OCTREE: The first time _on_data_loaded() is called it&#39;s from</span>
-        <span class="c1"># super().__init__() and the octree_level event has not been added</span>
-        <span class="c1"># yet. So we check here. This will go away when fold OctreeImage</span>
-        <span class="c1"># back into Image.</span>
-        <span class="n">has_event</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="s1">&#39;octree_level&#39;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">has_event</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
 
@@ -409,7 +528,69 @@
         <span class="c1"># TODO_OCTREE: This is placeholder. Need to handle dims correctly.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">data_corners</span>
-        <span class="k">return</span> <span class="n">data_corners</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span></div>
+        <span class="k">return</span> <span class="n">data_corners</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_outside_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return True if requested slice is outside of data range.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if requested slice is outside data range.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
+        <span class="n">not_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">not_displayed</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">not_disp</span><span class="p">],</span>
+                <span class="p">[</span><span class="n">extent</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">ax</span><span class="p">]</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">not_disp</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">not_disp</span><span class="p">],</span>
+                <span class="p">[</span><span class="n">extent</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">ax</span><span class="p">]</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">not_disp</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the view given the indices to slice with.</span>
+
+<span class="sd">        This replaces Image._set_view_slice() entirely. The hope is eventually</span>
+<span class="sd">        this class OctreeImage becomes Image. And the non-tiled multiscale</span>
+<span class="sd">        logic in Image._set_view_slice goes away entirely.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># bail as a test</span>
+            <span class="k">return</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_data_range</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+            <span class="k">return</span>
+
+        <span class="n">rand_loc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">rand_scale</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">image_config</span> <span class="o">=</span> <span class="n">ImageConfig</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">image_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="OctreeImage.on_chunk_loaded"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.on_chunk_loaded">[docs]</a>    <span class="k">def</span> <span class="nf">on_chunk_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">ChunkRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;An asynchronous ChunkRequest was loaded.</span>
+
+<span class="sd">        Override Image.on_chunk_loaded() fully.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        request : ChunkRequest</span>
+<span class="sd">            This request was loaded.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+            <span class="c1"># Tell the visual to redraw with this new chunk.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span></div></div>
 </pre></div>
 
            </div>

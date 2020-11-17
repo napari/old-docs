@@ -1,0 +1,475 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.layers.image.experimental.octree_tile_builder &mdash; napari 0.4.1a2.dev19+g99e834a documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+        <script src="../../../../../_static/jquery.js"></script>
+        <script src="../../../../../_static/underscore.js"></script>
+        <script src="../../../../../_static/doctools.js"></script>
+        <script src="../../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.1a2.dev19+g99e834a
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.layers.image.experimental.octree_tile_builder</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.layers.image.experimental.octree_tile_builder</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Functions to downsample images and create multi-scale images.</span>
+
+<span class="sd">This file is early/placeholder. In normal useage we might never create</span>
+<span class="sd">tiles, because downsampling images is very slow. But for debugging and</span>
+<span class="sd">development we do make tiles on the fly, for test images and other reasons.</span>
+
+<span class="sd">Long term we might possible make tiles in the background at some point. So</span>
+<span class="sd">as you browse a large image that doesn&#39;t have tiles, they are created in</span>
+<span class="sd">the background. But that&#39;s pretty speculative and far out.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">dask</span>
+<span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
+
+<span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">....utils.perf</span> <span class="kn">import</span> <span class="n">block_timer</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">TileArray</span>
+
+
+<span class="k">def</span> <span class="nf">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_none</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_one_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span>
+
+
+<span class="k">def</span> <span class="nf">_add_delay</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="nd">@dask</span><span class="o">.</span><span class="n">delayed</span>
+    <span class="k">def</span> <span class="nf">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">):</span>
+        <span class="n">sleep_ms</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">))</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">array</span>
+
+    <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span><span class="n">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">),</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="create_tiles"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_tiles">[docs]</a><span class="k">def</span> <span class="nf">create_tiles</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return an NxM array of (tile_size, tile_size) ndarrays except the edge</span>
+<span class="sd">    tiles might be smaller if the array did not divide evenly.</span>
+
+<span class="sd">    TODO_OCTREE: Could we use slices_from_chunks() from dask.array.core to</span>
+<span class="sd">    do this without loops, faster? Right now this is just used for</span>
+<span class="sd">    testing/development, but if we do this in production, maybe upgrade it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    array : np.ndarray</span>
+<span class="sd">        The array to create tiles out of.</span>
+<span class="sd">    tiles_size : int</span>
+<span class="sd">        Edge length of the square tiles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected array dimension </span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">tiles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">tile_size</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">tile_size</span>
+    <span class="n">rand_loc</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">rand_loc</span>
+    <span class="n">rand_scale</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">rand_scale</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;create_tiles array=</span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> tile_size=</span><span class="si">{</span><span class="n">tile_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">row</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="n">cols</span><span class="p">:</span>
+            <span class="n">tile</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">row</span> <span class="p">:</span> <span class="n">row</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">col</span> <span class="p">:</span> <span class="n">col</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">,</span> <span class="p">:]</span>
+
+            <span class="k">if</span> <span class="n">rand_loc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">tile</span> <span class="o">=</span> <span class="n">_add_delay</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">)</span>
+
+            <span class="n">row_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+            <span class="n">col</span> <span class="o">+=</span> <span class="n">tile_size</span>
+        <span class="n">tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_tiles</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">+=</span> <span class="n">tile_size</span>
+
+    <span class="k">return</span> <span class="n">tiles</span></div>
+
+
+<span class="k">def</span> <span class="nf">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Combine between one and four tiles into a single tile.</span>
+
+<span class="sd">    The single resulting tile is not downsampled, so its size is the size</span>
+<span class="sd">    of the four tiles combined together. However, typically the result will</span>
+<span class="sd">    be downsampled by half in the following steps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tiles</span>
+<span class="sd">        The 4 child tiles, some might be None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have 4 values&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Position 0 cannot be None&quot;</span><span class="p">)</span>
+
+    <span class="c1"># The layout of the children is:</span>
+    <span class="c1"># 0 1</span>
+    <span class="c1"># 2 3</span>
+    <span class="k">if</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
+        <span class="c1"># We only have one tile:</span>
+        <span class="c1"># 0 X</span>
+        <span class="c1"># X X</span>
+        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
+        <span class="c1"># We only have the top two tiles:</span>
+        <span class="c1"># 0 1</span>
+        <span class="c1"># X X</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">_none</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">3</span><span class="p">])):</span>
+        <span class="c1"># We only have the left two tiles:</span>
+        <span class="c1"># 0 X</span>
+        <span class="c1"># 2 X</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># We have all four tiles:</span>
+    <span class="c1"># 0 1</span>
+    <span class="c1"># 2 3</span>
+    <span class="n">row1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">row2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">row1</span><span class="p">,</span> <span class="n">row2</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Create one parent tile from four child tiles.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tiles</span>
+<span class="sd">        The 4 child tiles, some could be None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Combine 1-4 tiles together.</span>
+    <span class="n">combined_tile</span> <span class="o">=</span> <span class="n">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">)</span>
+
+    <span class="c1"># Down sample by half.</span>
+    <span class="k">return</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span>
+        <span class="n">combined_tile</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_create_coarser_level</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TileArray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Return a level that is one level coarser.</span>
+
+<span class="sd">    Combine each 2x2 group of tiles into one downsampled tile. This is slow</span>
+<span class="sd">    so currently it&#39;s only used for testing. Most multi-scale data will</span>
+<span class="sd">    be provided pre-downsampled into multiple levels.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tiles : TileArray</span>
+<span class="sd">        The tiles to combine.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TileArray</span>
+<span class="sd">        The coarser level of tiles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">level</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">),</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">]),</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="c1"># The layout of the children is:</span>
+            <span class="c1"># 0 1</span>
+            <span class="c1"># 2 3</span>
+            <span class="n">group</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
+                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">tile</span> <span class="o">=</span> <span class="n">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">row_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+        <span class="n">level</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_tiles</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">level</span>
+
+
+<div class="viewcode-block" id="create_downsampled_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_downsampled_levels">[docs]</a><span class="k">def</span> <span class="nf">create_downsampled_levels</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Turn an image into a multi-scale image with levels.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    image : np.darray</span>
+<span class="sd">        The full image to create levels from.</span>
+<span class="sd">    tile_size : int</span>
+<span class="sd">        The edge length for the square tiles we should use, like 256.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">block_timer</span><span class="p">(</span><span class="s2">&quot;create_tiles&quot;</span><span class="p">,</span> <span class="n">print_time</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">tiles</span> <span class="o">=</span> <span class="n">create_tiles</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">)</span>
+
+    <span class="c1"># This is the full resolution level zero.</span>
+    <span class="n">levels</span> <span class="o">=</span> <span class="p">[</span><span class="n">tiles</span><span class="p">]</span>
+
+    <span class="c1"># Create the high levels by combining tiles. With each higher level four</span>
+    <span class="c1"># tiles from the lower level combine into one tile at the higher level.</span>
+    <span class="c1"># All the tiles are the same size in pixels, so the four tiles are combined</span>
+    <span class="c1"># and then sized down by half.</span>
+    <span class="c1">#</span>
+    <span class="c1"># We keep creating new levels by combining tiles until we create a level</span>
+    <span class="c1"># that on has a single tile. This is the root level.</span>
+
+    <span class="c1"># Keep going as long as the last level we created as more than one tile.</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">_one_tile</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">with</span> <span class="n">block_timer</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Create coarser level </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">,</span> <span class="n">print_time</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">):</span>
+            <span class="n">next_level</span> <span class="o">=</span> <span class="n">_create_coarser_level</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_level</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">levels</span></div>
+
+
+<div class="viewcode-block" id="create_multi_scale_from_image"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_multi_scale_from_image">[docs]</a><span class="k">def</span> <span class="nf">create_multi_scale_from_image</span><span class="p">(</span>
+    <span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Turn an image into a multi-scale image with levels.</span>
+
+<span class="sd">    The given image is level 0, the full resolution image. Each additional</span>
+<span class="sd">    level is downsized by half. The final root level is small enough to</span>
+<span class="sd">    fit in one tile.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    image : np.darray</span>
+<span class="sd">        The full image to create levels from.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">levels</span> <span class="o">=</span> <span class="p">[</span><span class="n">image</span><span class="p">]</span>
+
+    <span class="c1"># Repeat until we have level that will fit in a single tile, that will</span>
+    <span class="c1"># be come the root/highest level.</span>
+    <span class="k">while</span> <span class="nb">max</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">tile_size</span><span class="p">:</span>
+        <span class="n">next_level</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span>
+            <span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="n">levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_level</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">levels</span></div>
+
+
+<div class="viewcode-block" id="create_levels_from_multiscale_data"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_levels_from_multiscale_data">[docs]</a><span class="k">def</span> <span class="nf">create_levels_from_multiscale_data</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create octree levels from multiscale data.</span>
+
+<span class="sd">    The data is already a list of ArrayLike levels, each own downsampled</span>
+<span class="sd">    by half. We are just creating the TileArray list of lists format</span>
+<span class="sd">    that the octree code expects today.</span>
+
+<span class="sd">    We&#39;ll almost certainly replace this lists of lists format with Dask or</span>
+<span class="sd">    some nicer chunked format. But this is what we&#39;ve done since day one</span>
+<span class="sd">    until we upgrade it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">create_tiles</span><span class="p">(</span><span class="n">level_data</span><span class="p">,</span> <span class="n">image_config</span><span class="p">)</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

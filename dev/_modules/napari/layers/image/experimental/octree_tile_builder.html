@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_tile_builder &mdash; napari 0.4.1a2.dev21+g0e435ca documentation</title>
+  <title>napari.layers.image.experimental.octree_tile_builder &mdash; napari 0.4.1a2.dev22+g3126e53 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev21+g0e435ca
+                0.4.1a2.dev22+g3126e53
               </div>
             
           
@@ -171,7 +171,7 @@
 <span class="sd">the background. But that&#39;s pretty speculative and far out.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">import</span> <span class="nn">dask</span>
 <span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
@@ -179,7 +179,7 @@
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
 
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">TileArray</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">NormalNoise</span><span class="p">,</span> <span class="n">TileArray</span>
 
 
 <span class="k">def</span> <span class="nf">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
@@ -197,17 +197,27 @@
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span>
 
 
-<span class="k">def</span> <span class="nf">_add_delay</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_add_delay</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add a random delay when this array is first accessed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    noise : NormalNoise</span>
+<span class="sd">        The amount of the random delay in milliseconds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="nd">@dask</span><span class="o">.</span><span class="n">delayed</span>
     <span class="k">def</span> <span class="nf">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">):</span>
-        <span class="n">sleep_ms</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">))</span>
+        <span class="n">sleep_ms</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">delay_ms</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">delay_ms</span><span class="o">.</span><span class="n">std_dev</span><span class="p">))</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">array</span>
 
     <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span><span class="n">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">),</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="create_tiles"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_tiles">[docs]</a><span class="k">def</span> <span class="nf">create_tiles</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="create_tiles"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_tiles">[docs]</a><span class="k">def</span> <span class="nf">create_tiles</span><span class="p">(</span>
+    <span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NormalNoise</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return an NxM array of (tile_size, tile_size) ndarrays except the edge</span>
 <span class="sd">    tiles might be smaller if the array did not divide evenly.</span>
@@ -223,14 +233,12 @@
 <span class="sd">    tiles_size : int</span>
 <span class="sd">        Edge length of the square tiles.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+    <span class="c1"># Array is either ndim==2 (grayscale) or ndim==3 (RGB).</span>
+    <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected array dimension </span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
 
     <span class="n">tiles</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">tile_size</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">tile_size</span>
-    <span class="n">rand_loc</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">rand_loc</span>
-    <span class="n">rand_scale</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">rand_scale</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;create_tiles array=</span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> tile_size=</span><span class="si">{</span><span class="n">tile_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -239,10 +247,17 @@
         <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">col</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">while</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="n">cols</span><span class="p">:</span>
-            <span class="n">tile</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">row</span> <span class="p">:</span> <span class="n">row</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">col</span> <span class="p">:</span> <span class="n">col</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">array_slice</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">slice</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">),</span>
+                <span class="nb">slice</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="n">tile_size</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">array_slice</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),)</span>  <span class="c1"># Add the colors.</span>
 
-            <span class="k">if</span> <span class="n">rand_loc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">tile</span> <span class="o">=</span> <span class="n">_add_delay</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span><span class="p">)</span>
+            <span class="n">tile</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">array_slice</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">delay_ms</span><span class="o">.</span><span class="n">is_zero</span><span class="p">:</span>
+                <span class="n">tile</span> <span class="o">=</span> <span class="n">_add_delay</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">)</span>
 
             <span class="n">row_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
             <span class="n">col</span> <span class="o">+=</span> <span class="n">tile_size</span>
@@ -381,7 +396,7 @@
 
 
 <div class="viewcode-block" id="create_levels_from_multiscale_data"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_levels_from_multiscale_data">[docs]</a><span class="k">def</span> <span class="nf">create_levels_from_multiscale_data</span><span class="p">(</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Create octree levels from multiscale data.</span>
 
@@ -394,7 +409,9 @@
 <span class="sd">    until we upgrade it.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">create_tiles</span><span class="p">(</span><span class="n">level_data</span><span class="p">,</span> <span class="n">image_config</span><span class="p">)</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">create_tiles</span><span class="p">(</span><span class="n">level_data</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">)</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="n">data</span>
+    <span class="p">]</span></div>
 </pre></div>
 
            </div>

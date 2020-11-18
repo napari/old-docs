@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1a2.dev21+g0e435ca documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.1a2.dev22+g3126e53 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev21+g0e435ca
+                0.4.1a2.dev22+g3126e53
               </div>
             
           
@@ -174,7 +174,7 @@
 <span class="kn">from</span> <span class="nn">._octree_multiscale_slice</span> <span class="kn">import</span> <span class="n">OctreeMultiscaleSlice</span>
 <span class="kn">from</span> <span class="nn">.octree_intersection</span> <span class="kn">import</span> <span class="n">OctreeIntersection</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevelInfo</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkKey</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">NormalNoise</span><span class="p">,</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkKey</span>
 
 <span class="n">DEFAULT_TILE_SIZE</span> <span class="o">=</span> <span class="mi">64</span>  <span class="c1"># TODO_OCTREE: get from somewhere else</span>
 
@@ -207,6 +207,11 @@
 
         <span class="c1"># For logging only</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># For debugging and demos, inject a random delay in from of every</span>
+        <span class="c1"># octree chunk that we access. To simulate latency from IO or</span>
+        <span class="c1"># computation.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span> <span class="o">=</span> <span class="n">NormalNoise</span><span class="p">()</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">auto_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
@@ -297,8 +302,8 @@
     <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">tile_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">tile_size</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># For now must explicitly delete it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>  <span class="c1"># Create a new slice.</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">image_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImageConfig</span><span class="p">:</span>
@@ -369,12 +374,14 @@
         <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">level</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_octree_levels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">level</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>  <span class="c1"># Create new slice with this level.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># redraw</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">num_octree_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return the total number of octree levels.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># Multiscale</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># Multiscale</span>
 
     <span class="k">def</span> <span class="nf">_new_empty_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Initialize the current slice to an empty image.</span>
@@ -443,7 +450,7 @@
 
             <span class="k">if</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">in_memory</span><span class="p">:</span>
                 <span class="c1"># The chunk is fully in memory, we can view it right away.</span>
-                <span class="n">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="s2">&quot;ALREADY LOADED&quot;</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">)</span>
+                <span class="c1"># _log(i, len(chunks), &quot;ALREADY LOADED&quot;, octree_chunk)</span>
                 <span class="n">visible_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">)</span>
                 <span class="n">visible_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_chunk</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">loading</span><span class="p">:</span>
@@ -561,22 +568,39 @@
 <span class="sd">        this class OctreeImage becomes Image. And the non-tiled multiscale</span>
 <span class="sd">        logic in Image._set_view_slice goes away entirely.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># bail as a test</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># For now bail out so we don&#39;t nuke an existing slice which</span>
+            <span class="c1"># contains an existing octree. Soon we&#39;ll need to figure out</span>
+            <span class="c1"># if we are really changing slices (and need a new octree).</span>
             <span class="k">return</span>
+
         <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_data_range</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
             <span class="k">return</span>
 
-        <span class="n">rand_loc</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">rand_scale</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">image_config</span> <span class="o">=</span> <span class="n">ImageConfig</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span> <span class="n">rand_loc</span><span class="p">,</span> <span class="n">rand_scale</span>
+        <span class="n">image_config</span> <span class="o">=</span> <span class="n">ImageConfig</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span>
         <span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">image_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span>
-            <span class="p">)</span>
+        <span class="c1"># Indices to get at the data we are currently viewing.</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_indices</span><span class="p">()</span>
+
+        <span class="c1"># OctreeMultiscaleSlice wants all the levels, but only the dimensions</span>
+        <span class="c1"># of each level that we are currently viewing.</span>
+        <span class="n">slice_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">level_data</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">(</span>
+            <span class="n">slice_data</span><span class="p">,</span> <span class="n">image_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_slice_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the slice indices including possible depth for RGB.&quot;&quot;&quot;</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),)</span>
+
+        <span class="k">return</span> <span class="n">indices</span>
 
 <div class="viewcode-block" id="OctreeImage.on_chunk_loaded"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.on_chunk_loaded">[docs]</a>    <span class="k">def</span> <span class="nf">on_chunk_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">ChunkRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;An asynchronous ChunkRequest was loaded.</span>
@@ -590,7 +614,33 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
             <span class="c1"># Tell the visual to redraw with this new chunk.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">delay_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NormalNoise</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the currently configured artificial load delay.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        NormalNoise</span>
+<span class="sd">            The current configured delay.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span>
+
+    <span class="nd">@delay_ms</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">delay_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the new artificial load delay.</span>
+
+<span class="sd">        We sometimes want to simulate latency for debugging or demos.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        delay_ms : NormalNoise</span>
+<span class="sd">            Optional delay to simulate latency.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span> <span class="o">=</span> <span class="n">delay_ms</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># For now must explicitly delete it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>  <span class="c1"># Create a new slice.</span></div>
 </pre></div>
 
            </div>

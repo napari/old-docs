@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_util &mdash; napari 0.4.1a2.dev27+ge88e27f documentation</title>
+  <title>napari.layers.image.experimental.octree_util &mdash; napari 0.4.1a2.dev28+g6ecc514 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev27+ge88e27f
+                0.4.1a2.dev28+g6ecc514
               </div>
             
           
@@ -162,15 +162,9 @@
   <h1>Source code for napari.layers.image.experimental.octree_util</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Octree utility classes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
-<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkKey</span>
-<span class="kn">from</span> <span class="nn">....layers</span> <span class="kn">import</span> <span class="n">Layer</span>
-<span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
-
-<span class="n">TileArray</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span>
 
 
 <div class="viewcode-block" id="TestImageSettings"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.TestImageSettings">[docs]</a><span class="k">class</span> <span class="nc">TestImageSettings</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
@@ -181,75 +175,68 @@
 
 
 <div class="viewcode-block" id="NormalNoise"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.NormalNoise">[docs]</a><span class="k">class</span> <span class="nc">NormalNoise</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Noise with a normal distribution.&quot;&quot;&quot;</span>
+
     <span class="n">mean</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">std_dev</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">is_zero</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return true if there is no noise at all.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_dev</span> <span class="o">==</span> <span class="mi">0</span></div>
+        <span class="sd">&quot;&quot;&quot;Return True if there is no noise at all.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if there is no noise at all.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_dev</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get a random value.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        float</span>
+<span class="sd">            The random value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std_dev</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="OctreeChunkGeom"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeChunkGeom">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkGeom</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Position and scale of the chunk, for rendering.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SliceConfig"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.SliceConfig">[docs]</a><span class="k">class</span> <span class="nc">SliceConfig</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Configuration for a tiled image.</span>
 
-    <span class="n">pos</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-    <span class="n">scale</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></div>
-
-
-<div class="viewcode-block" id="OctreeLocation"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeLocation">[docs]</a><span class="k">class</span> <span class="nc">OctreeLocation</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Location of one chunk within the octree.&quot;&quot;&quot;</span>
-
-    <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">row</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">col</span><span class="p">:</span> <span class="nb">int</span>
-
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;location=(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="si">}</span><span class="s2">) &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;slice=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="si">}</span><span class="s2"> id=</span><span class="si">{</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
-
-<div class="viewcode-block" id="OctreeLocation.create_null"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeLocation.create_null">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create_null</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create null location that points to nothing.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span></div></div>
-
-
-<div class="viewcode-block" id="OctreeChunkKey"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeChunkKey">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkKey</span><span class="p">(</span><span class="n">ChunkKey</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Add octree specific identity information to the generic ChunkKey.</span>
-
-<span class="sd">    Parameters</span>
+<span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    layer : Layer</span>
-<span class="sd">        The OctreeImage layer.</span>
-<span class="sd">    indices : Tuple[Optional[slice], ...]</span>
-<span class="sd">        The indices of the image we are viewing.</span>
-<span class="sd">    location : OctreeLocation</span>
-<span class="sd">        The location of the chunk within the octree we are loading.</span>
+<span class="sd">    base_shape : np.ndarray</span>
+<span class="sd">        The base [height, width] shape of the entire full resolution image.</span>
+<span class="sd">    num_levels : int</span>
+<span class="sd">        The number of octree levels in the image.</span>
+<span class="sd">    tile_size : int</span>
+<span class="sd">        The default tile size. However each OctreeLevel has its own tile size</span>
+<span class="sd">        which can override this.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This SliceConfig.tile_size will be used by the OctreeLevels in the tree</span>
+<span class="sd">    in general. But the highest level OctreeLevel might use a larger size</span>
+<span class="sd">    so that it can consist of a single chunk.</span>
+
+<span class="sd">    For example we might be using 256x256 tiles in general. For best</span>
+<span class="sd">    performance it might make sense to have octree levels such that the</span>
+<span class="sd">    highest level fits inside a single 256x256 tiles.</span>
+
+<span class="sd">    But if we are displaying user provided data, they did not know our tile</span>
+<span class="sd">    size. Instead their root level might be something pretty big, like</span>
+<span class="sd">    6000x6000. In that case we use 6000x6000 as the tile size in our root,</span>
+<span class="sd">    so the root level consists of a single tile.</span>
+
+<span class="sd">    TODO_OCTREE: we don&#39;t actually support larger size tiles yet! However</span>
+<span class="sd">    it&#39;s still a good idea to assume that each OctreeLevel could have its</span>
+<span class="sd">    own tile size.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
-        <span class="n">indices</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">slice</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span>
-        <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_get_hash_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># TODO_OCTREE: can&#39;t we just has with parent&#39;s hashed key instead</span>
-        <span class="c1"># of creating a single big has value? Probably.</span>
-        <span class="n">parent</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_hash_values</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">parent</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,)</span></div>
-
-
-<div class="viewcode-block" id="ImageConfig"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.ImageConfig">[docs]</a><span class="k">class</span> <span class="nc">ImageConfig</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Configuration for a tiled image.&quot;&quot;&quot;</span>
-
-    <span class="n">base_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">base_shape</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">num_levels</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span> <span class="o">=</span> <span class="n">NormalNoise</span><span class="p">()</span>
@@ -261,92 +248,6 @@
 <span class="sd">        For example HDTV resolution is 16:9 which is 1.77.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
-
-
-<div class="viewcode-block" id="OctreeChunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeChunk">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunk</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;One chunk of the full 2D or 3D image in the octree.</span>
-
-<span class="sd">    A chunk is a 2D tile or a 3D sub-volume.</span>
-
-<span class="sd">    We include level_index because id(data) is sometimes duplicated in #</span>
-<span class="sd">    adjacent levels, somehow. But it makes sense to include it anyway,</span>
-<span class="sd">    it&#39;s an important aspect of the chunk.</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    level_index : int</span>
-<span class="sd">        The octree level where this chunk is from.</span>
-<span class="sd">    data : ArrayLike</span>
-<span class="sd">        The data to draw for this chunk.</span>
-<span class="sd">    pos : np.ndarray</span>
-<span class="sd">        The x, y coordinates of the chunk.</span>
-<span class="sd">    scale : np.ndarray</span>
-<span class="sd">        The (x, y) scale of this chunk. Should be square/cubic.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span> <span class="n">geom</span><span class="p">:</span> <span class="n">OctreeChunkGeom</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_orig_data</span> <span class="o">=</span> <span class="n">data</span>  <span class="c1"># For now hold on to implement clear()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">geom</span> <span class="o">=</span> <span class="n">geom</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayLike</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return the data associated with this chunk.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span>
-
-    <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_memory</span>  <span class="c1"># Should not set twice.</span>
-        <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;set_data </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;The unique key for this chunk.</span>
-
-<span class="sd">        Switch to __hash__? Didn&#39;t immediately work.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span>
-        <span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">in_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return True if the data is fully in memory.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">needs_load</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return true if this chunk needs to loaded.</span>
-
-<span class="sd">        An unloaded chunk&#39;s data might be a Dask or similar deferred array.</span>
-<span class="sd">        A loaded chunk&#39;s data is always ndarray, It&#39;s always real binary</span>
-<span class="sd">        data in memory.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_memory</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">loading</span>
-
-<div class="viewcode-block" id="OctreeChunk.clear"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeChunk.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Clear out our loaded data, return to the original.</span>
-
-<span class="sd">        This is only done when running without the cache, so that we reload</span>
-<span class="sd">        the data again. With computation the loaded data might be different</span>
-<span class="sd">        each time.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orig_data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span></div></div>
 </pre></div>
 
            </div>

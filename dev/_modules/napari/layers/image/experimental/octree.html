@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.1a2.dev27+ge88e27f documentation</title>
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.1a2.dev28+g6ecc514 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.1a2.dev27+ge88e27f
+                0.4.1a2.dev28+g6ecc514
               </div>
             
           
@@ -164,17 +164,26 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
-<span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">...._vendor.experimental.humanize.src.humanize</span> <span class="kn">import</span> <span class="n">intword</span>
+<span class="kn">from</span> <span class="nn">....utils.perf</span> <span class="kn">import</span> <span class="n">block_timer</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevel</span>
-<span class="kn">from</span> <span class="nn">.octree_tile_builder</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">create_levels_from_multiscale_data</span><span class="p">,</span>
-    <span class="n">create_multi_scale_from_image</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">TileArray</span>
+<span class="kn">from</span> <span class="nn">.octree_tile_builder</span> <span class="kn">import</span> <span class="n">create_downsampled_levels</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">SliceConfig</span>
 
-<span class="n">Levels</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="n">TileArray</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_dim_str</span><span class="p">(</span><span class="n">dim</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">intword</span><span class="p">(</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_print_levels</span><span class="p">(</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">],</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2"> levels:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">levels</span><span class="p">):</span>
+        <span class="n">image_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">image_shape</span><span class="p">)</span>
+        <span class="n">tiles_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span><span class="p">)</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Level </span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">image_str</span><span class="si">}</span><span class="s2"> pixels -&gt; </span><span class="si">{</span><span class="n">tiles_str</span><span class="si">}</span><span class="s2"> tiles&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Octree"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree">[docs]</a><span class="k">class</span> <span class="nc">Octree</span><span class="p">:</span>
@@ -202,56 +211,133 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
+<span class="sd">    slice_id : int:</span>
+<span class="sd">        The id of the slice this octree is in.</span>
 <span class="sd">    base_shape : Tuple[int, int]</span>
 <span class="sd">        The shape of the full base image.</span>
 <span class="sd">    levels : Levels</span>
 <span class="sd">        All the levels of the tree.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="n">Levels</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">image_config</span> <span class="o">=</span> <span class="n">image_config</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">slice_config</span><span class="p">:</span> <span class="n">SliceConfig</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span> <span class="o">=</span> <span class="n">slice_config</span>
 
-        <span class="c1"># One OctreeLevel per level.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">image_config</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
-            <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">slice_config</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
         <span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
+            <span class="c1"># Probably we will allow empty trees, but for now raise:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Data of shape </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> resulted &quot;</span> <span class="s2">&quot;no octree levels?&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">_print_levels</span><span class="p">(</span><span class="s2">&quot;Octree input data has&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+        <span class="n">original_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+
+        <span class="c1"># If root level contains more than one tile, add more levels</span>
+        <span class="c1"># until the root does consist of a single tile.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">block_timer</span><span class="p">(</span><span class="s2">&quot;_create_additional_levels&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+                <span class="n">more_levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_additional_levels</span><span class="p">(</span><span class="n">slice_id</span><span class="p">)</span>
+
+            <span class="n">_print_levels</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;In </span><span class="si">{</span><span class="n">timer</span><span class="o">.</span><span class="n">duration_ms</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">ms created&quot;</span><span class="p">,</span>
+                <span class="n">more_levels</span><span class="p">,</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">original_levels</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">more_levels</span><span class="p">)</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tree now has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2"> total levels.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Now the root should definitely contain only a single tile.</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="c1"># This now the total number of levels.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_additional_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Add additional levels to the octree.</span>
+
+<span class="sd">        Keep adding levels until we each a root level where the image</span>
+<span class="sd">        data fits inside a single tile.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        slice_id : int</span>
+<span class="sd">            The id of the slice this octree is in.</span>
+<span class="sd">        tile_size : int</span>
+<span class="sd">            Keep creating levels until one fits with a tile of this size.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        List[OctreeLevels]</span>
+<span class="sd">            The new downsampled levels we created.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        If we created this octree data, the root/highest level would</span>
+<span class="sd">        consist of a single tile. However, if we are reading someone</span>
+<span class="sd">        else&#39;s multiscale data, they did not know our tile size. Or they</span>
+<span class="sd">        might not have imagined someone using tiled rendering at all.</span>
+<span class="sd">        So their root level might be pretty large. We&#39;ve seen root</span>
+<span class="sd">        levels larger than 8000x8000 pixels.</span>
+
+<span class="sd">        It would be nice in this case if our root level could use a</span>
+<span class="sd">        really large tile size as a special case. So small tiles for most</span>
+<span class="sd">        levels, but then one big tile as the root.</span>
+
+<span class="sd">        However, today our TiledImageVisual can&#39;t handle that. It can&#39;t</span>
+<span class="sd">        handle a mix of tile sizes, and TextureAtlas2D can&#39;t even</span>
+<span class="sd">        allocate multiple textures!</span>
+
+<span class="sd">        So for now, we compute/downsample additional levels ourselves and</span>
+<span class="sd">        add them to the data. We do this until we reach a level that does</span>
+<span class="sd">        fit within a single tile.</span>
+
+<span class="sd">        For example for that 8000x8000 pixel root level, if we are using</span>
+<span class="sd">        256x256 tiles we&#39;ll keep adding levels until we get to a level</span>
+<span class="sd">        that fits within 256x256.</span>
+
+<span class="sd">        Unfortunately, we can&#39;t be sure our downsampling approach will</span>
+<span class="sd">        match the rest of the data. The levels we add might be more/less</span>
+<span class="sd">        blurry than the original ones, or have different downsampling</span>
+<span class="sd">        artifacts. That&#39;s probably okay because these are low-resolution</span>
+<span class="sd">        levels, but still it would be better to show their root level</span>
+<span class="sd">        verbatim on a single large tiles.</span>
+
+<span class="sd">        Also, this is slow due to the downsampling, but also slow due to</span>
+<span class="sd">        having to load the full root level into memory. If we had a root</span>
+<span class="sd">        level that was tile sized, then we could load that very quickly.</span>
+<span class="sd">        That issue does not go away even if we have a special large-size</span>
+<span class="sd">        root tile. For best performance multiscale data should be built</span>
+<span class="sd">        down to a very small root tile, the extra storage is negligible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create additional data levels so that the root level</span>
+        <span class="c1"># consists of only a single tile, using our standard/only</span>
+        <span class="c1"># tile size.</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">new_levels</span> <span class="o">=</span> <span class="n">create_downsampled_levels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tile_size</span><span class="p">)</span>
+
+        <span class="c1"># Add the data.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new_levels</span><span class="p">)</span>
+
+        <span class="c1"># Return an OctreeLevel for each new data level.</span>
+        <span class="n">num_current</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span>
+                <span class="n">slice_id</span><span class="p">,</span> <span class="n">new_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="p">,</span> <span class="n">num_current</span> <span class="o">+</span> <span class="n">index</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">new_data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_levels</span><span class="p">)</span>
+        <span class="p">]</span>
 
 <div class="viewcode-block" id="Octree.print_info"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.print_info">[docs]</a>    <span class="k">def</span> <span class="nf">print_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Print information about our tiles.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
-            <span class="n">level</span><span class="o">.</span><span class="n">print_info</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="Octree.from_image"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.from_image">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_image</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create octree from given single image.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        image : ndarray</span>
-<span class="sd">            Create the octree for this single image.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">levels</span> <span class="o">=</span> <span class="n">create_multi_scale_from_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">)</span>
-
-        <span class="n">info</span> <span class="o">=</span> <span class="n">ImageConfig</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Octree</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">levels</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Octree.from_multiscale_data"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.from_multiscale_data">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_multiscale_data</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span> <span class="n">image_config</span><span class="p">:</span> <span class="n">ImageConfig</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create octree from multiscale data.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        data : List[ArrayLike]</span>
-<span class="sd">            Create the octree from this multi-scale data.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">tile_size</span>
-        <span class="n">delay_ms</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">delay_ms</span>
-        <span class="n">levels</span> <span class="o">=</span> <span class="n">create_levels_from_multiscale_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Octree</span><span class="p">(</span><span class="n">image_config</span><span class="p">,</span> <span class="n">levels</span><span class="p">)</span></div></div>
+            <span class="n">level</span><span class="o">.</span><span class="n">print_info</span><span class="p">()</span></div></div>
 </pre></div>
 
            </div>

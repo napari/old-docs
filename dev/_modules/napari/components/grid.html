@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.grid &mdash; napari 0.4.2.dev11+g6301664 documentation</title>
+  <title>napari.components.grid &mdash; napari 0.4.2.dev12+g6483c4c documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev11+g6301664
+                0.4.2.dev12+g6483c4c
               </div>
             
           
@@ -160,12 +160,15 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.components.grid</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
 
-<span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">..utils.events.dataclass</span> <span class="kn">import</span> <span class="n">Property</span><span class="p">,</span> <span class="n">dataclass</span>
 
 
-<div class="viewcode-block" id="GridCanvas"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.grid.GridCanvas">[docs]</a><span class="k">class</span> <span class="nc">GridCanvas</span><span class="p">:</span>
+<div class="viewcode-block" id="GridCanvas"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.grid.GridCanvas">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">GridCanvas</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Grid for canvas.</span>
 
 <span class="sd">    Right now the only grid mode that is still inside one canvas with one</span>
@@ -173,67 +176,24 @@
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    events : EmitterGroup</span>
-<span class="sd">        Event emitter group</span>
 <span class="sd">    enabled : bool</span>
 <span class="sd">        If grid is enabled or not.</span>
-<span class="sd">    shape : 2-tuple of int</span>
-<span class="sd">        Number of rows and columns in the grid. A value of -1 for either or</span>
-<span class="sd">        both of will be used the row and column numbers will trigger an</span>
-<span class="sd">        auto calculation of the necessary grid shape to appropriately fill</span>
-<span class="sd">        all the layers at the appropriate stride.</span>
 <span class="sd">    stride : int</span>
 <span class="sd">        Number of layers to place in each grid square before moving on to</span>
 <span class="sd">        the next square. The default ordering is to place the most visible</span>
 <span class="sd">        layer in the top left corner of the grid. A negative stride will</span>
 <span class="sd">        cause the order in which the layers are placed in the grid to be</span>
 <span class="sd">        reversed.</span>
+<span class="sd">    shape : 2-tuple of int</span>
+<span class="sd">        Number of rows and columns in the grid. A value of -1 for either or</span>
+<span class="sd">        both of will be used the row and column numbers will trigger an</span>
+<span class="sd">        auto calculation of the necessary grid shape to appropriately fill</span>
+<span class="sd">        all the layers at the appropriate stride.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-
-        <span class="c1"># Events:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
-            <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">enabled</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">stride</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_enabled</span> <span class="o">=</span> <span class="n">enabled</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span> <span class="o">=</span> <span class="n">stride</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">shape</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;bool: If grid is enabled or not.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enabled</span>
-
-    <span class="nd">@enabled</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enabled</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_enabled</span> <span class="o">=</span> <span class="n">enabled</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">enabled</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;2-tuple of int: Number of rows and columns in the grid.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span>
-
-    <span class="nd">@shape</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;int: Number of layers in each grid square.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
-
-    <span class="nd">@stride</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stride</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span> <span class="o">=</span> <span class="n">stride</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">stride</span><span class="p">()</span>
+    <span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">shape</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
 <div class="viewcode-block" id="GridCanvas.actual_shape"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.grid.GridCanvas.actual_shape">[docs]</a>    <span class="k">def</span> <span class="nf">actual_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nlayers</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return the actual shape of the grid.</span>

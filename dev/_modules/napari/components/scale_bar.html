@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.scale_bar &mdash; napari 0.4.2.dev9+g2c1e09f documentation</title>
+  <title>napari.components.scale_bar &mdash; napari 0.4.2.dev10+g0a75b4d documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev9+g2c1e09f
+                0.4.2.dev10+g0a75b4d
               </div>
             
           
@@ -162,112 +162,42 @@
   <h1>Source code for napari.components.scale_bar</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">..utils.colormaps.standardize_color</span> <span class="kn">import</span> <span class="n">transform_color</span>
-<span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span>
+<span class="kn">from</span> <span class="nn">..utils.colormaps.standardize_color</span> <span class="kn">import</span> <span class="n">transform_single_color</span>
+<span class="kn">from</span> <span class="nn">..utils.events.dataclass</span> <span class="kn">import</span> <span class="n">Property</span><span class="p">,</span> <span class="n">dataclass</span>
 <span class="kn">from</span> <span class="nn">._viewer_constants</span> <span class="kn">import</span> <span class="n">Position</span>
 
 
-<div class="viewcode-block" id="ScaleBar"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.scale_bar.ScaleBar">[docs]</a><span class="k">class</span> <span class="nc">ScaleBar</span><span class="p">:</span>
+<div class="viewcode-block" id="ScaleBar"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.scale_bar.ScaleBar">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">ScaleBar</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Scale bar indicating size in world coordinates.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    background_color : np.ndarray</span>
-<span class="sd">        Background color of canvas. If scale bar is not colored</span>
-<span class="sd">        then it has the color opposite of this color.</span>
+<span class="sd">    visible : bool</span>
+<span class="sd">        If scale bar is visible or not.</span>
 <span class="sd">    colored : bool</span>
 <span class="sd">        If scale bar are colored or not. If colored then</span>
 <span class="sd">        default color is magenta. If not colored than</span>
 <span class="sd">        scale bar color is the opposite of the canvas</span>
 <span class="sd">        background.</span>
-<span class="sd">    events : EmitterGroup</span>
-<span class="sd">        Event emitter group</span>
+<span class="sd">    ticks : bool</span>
+<span class="sd">        If scale bar has ticks at ends or not.</span>
 <span class="sd">    position : str</span>
 <span class="sd">        Position of the scale bar in the canvas. Must be one of</span>
 <span class="sd">        &#39;top left&#39;, &#39;top right&#39;, &#39;bottom right&#39;, &#39;bottom left&#39;.</span>
 <span class="sd">        Default value is &#39;bottom right&#39;.</span>
-<span class="sd">    ticks : bool</span>
-<span class="sd">        If scale bar has ticks at ends or not.</span>
-<span class="sd">    visible : bool</span>
-<span class="sd">        If scale bar is visible or not.</span>
+<span class="sd">    background_color : np.ndarray</span>
+<span class="sd">        Background color of canvas. If scale bar is not colored</span>
+<span class="sd">        then it has the color opposite of this color.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="c1"># Events:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
-            <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">visible</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">colored</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">ticks</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_colored</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_background_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ticks</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="n">Position</span><span class="p">(</span><span class="s1">&#39;bottom_right&#39;</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">visible</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;bool: If scale bar is visible or not.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span>
-
-    <span class="nd">@visible</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">visible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">visible</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span> <span class="o">=</span> <span class="n">visible</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">visible</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">colored</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;bool: If scale bar is colored or not.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colored</span>
-
-    <span class="nd">@colored</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">colored</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">colored</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_colored</span> <span class="o">=</span> <span class="n">colored</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colored</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;np.ndarray: RGBA color.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_background_color</span>
-
-    <span class="nd">@background_color</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">background_color</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_background_color</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">background_color</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">colored</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;bool: If scale bar has ticks or not.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ticks</span>
-
-    <span class="nd">@ticks</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ticks</span> <span class="o">=</span> <span class="n">ticks</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ticks</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Position: Location of scale bar in canvas.</span>
-
-<span class="sd">        Postion.TOP_LEFT</span>
-<span class="sd">             Top left of the canvas.</span>
-<span class="sd">        Postion.TOP_RIGHT</span>
-<span class="sd">             Top right of the canvas.</span>
-<span class="sd">        Postion.BOTTOM_RIGHT</span>
-<span class="sd">             Bottom right of the canvas.</span>
-<span class="sd">        Postion.BOTTOM_LEFT</span>
-<span class="sd">             Bottom left of the canvas.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">)</span>
-
-    <span class="nd">@position</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="n">Position</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">position</span><span class="p">()</span></div>
+    <span class="n">visible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">colored</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">ticks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">position</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">Position</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Position</span><span class="p">]</span> <span class="o">=</span> <span class="n">Position</span><span class="o">.</span><span class="n">BOTTOM_RIGHT</span>
+    <span class="n">background_color</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">transform_single_color</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span></div>
 </pre></div>
 
            </div>

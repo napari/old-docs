@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.cursor &mdash; napari 0.4.2.dev10+g0a75b4d documentation</title>
+  <title>napari.components.cursor &mdash; napari 0.4.2.dev11+g6301664 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev10+g0a75b4d
+                0.4.2.dev11+g6301664
               </div>
             
           
@@ -160,11 +160,14 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.components.cursor</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">..utils.events.dataclass</span> <span class="kn">import</span> <span class="n">Property</span><span class="p">,</span> <span class="n">dataclass</span>
 <span class="kn">from</span> <span class="nn">._viewer_constants</span> <span class="kn">import</span> <span class="n">CursorStyle</span>
 
 
-<div class="viewcode-block" id="Cursor"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.cursor.Cursor">[docs]</a><span class="k">class</span> <span class="nc">Cursor</span><span class="p">:</span>
+<div class="viewcode-block" id="Cursor"><a class="viewcode-back" href="../../../api/napari.components.html#napari.components.cursor.Cursor">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Cursor</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Cursor object with position and properties of the cursor.</span>
 
 <span class="sd">    Attributes</span>
@@ -176,6 +179,9 @@
 <span class="sd">        Flag to indicate whether cursor size should be scaled to zoom.</span>
 <span class="sd">        Only relevant for circle and square cursors which are drawn</span>
 <span class="sd">        with a particular size.</span>
+<span class="sd">    size : float</span>
+<span class="sd">        Size of the cursor in canvas pixels.Only relevant for circle</span>
+<span class="sd">        and square cursors which are drawn with a particular size.</span>
 <span class="sd">    style : str</span>
 <span class="sd">        Style of the cursor. Must be one of</span>
 <span class="sd">            * square: A square</span>
@@ -184,61 +190,12 @@
 <span class="sd">            * forbidden: A forbidden symbol</span>
 <span class="sd">            * pointing: A finger for pointing</span>
 <span class="sd">            * standard: The standard cursor</span>
-<span class="sd">    size : float</span>
-<span class="sd">        Size of the cursor in canvas pixels.Only relevant for circle</span>
-<span class="sd">        and square cursors which are drawn with a particular size.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">scaled</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_style</span> <span class="o">=</span> <span class="n">CursorStyle</span><span class="p">(</span><span class="s1">&#39;standard&#39;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
-            <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">style</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;tuple: Position of the cursor in world coordinates.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span>
-
-    <span class="nd">@position</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position</span><span class="p">):</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">position</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;int: Size of the cursor in canvas pixels.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
-
-    <span class="nd">@size</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">==</span> <span class="n">size</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">size</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;str: Style of the cursor.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_style</span><span class="p">)</span>
-
-    <span class="nd">@style</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_style</span> <span class="o">==</span> <span class="n">CursorStyle</span><span class="p">(</span><span class="n">style</span><span class="p">):</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_style</span> <span class="o">=</span> <span class="n">CursorStyle</span><span class="p">(</span><span class="n">style</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">style</span><span class="p">()</span></div>
+    <span class="n">position</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">scaled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">style</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">CursorStyle</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">CursorStyle</span><span class="p">]</span> <span class="o">=</span> <span class="n">CursorStyle</span><span class="o">.</span><span class="n">STANDARD</span></div>
 </pre></div>
 
            </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.colormaps.colormap &mdash; napari 0.4.2.dev19+gabdaef5 documentation</title>
+  <title>napari.utils.colormaps.colormap &mdash; napari 0.4.2.dev20+g704f6c5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev19+gabdaef5
+                0.4.2.dev20+g704f6c5
               </div>
             
           
@@ -164,7 +164,8 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">StringEnum</span>
+<span class="kn">from</span> <span class="nn">..events.dataclass</span> <span class="kn">import</span> <span class="n">Property</span><span class="p">,</span> <span class="n">evented_dataclass</span>
+<span class="kn">from</span> <span class="nn">..misc</span> <span class="kn">import</span> <span class="n">StringEnum</span>
 <span class="kn">from</span> <span class="nn">.colorbars</span> <span class="kn">import</span> <span class="n">make_colorbar</span>
 <span class="kn">from</span> <span class="nn">.standardize_color</span> <span class="kn">import</span> <span class="n">transform_color</span>
 
@@ -183,13 +184,16 @@
     <span class="n">ZERO</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="Colormap"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.colormap.Colormap">[docs]</a><span class="k">class</span> <span class="nc">Colormap</span><span class="p">:</span>
+<div class="viewcode-block" id="Colormap"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.colormap.Colormap">[docs]</a><span class="nd">@evented_dataclass</span>
+<span class="k">class</span> <span class="nc">Colormap</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Colormap that relates intensity values to colors.</span>
 
-<span class="sd">    Parameters</span>
+<span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    colors : array, shape (N, 4)</span>
 <span class="sd">        Data used in the colormap.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of the colormap.</span>
 <span class="sd">    controls : array, shape (N,) or (N+1,)</span>
 <span class="sd">        Control points of the colormap.</span>
 <span class="sd">    interpolation : str</span>
@@ -197,27 +201,24 @@
 <span class="sd">        &#39;zero&#39;. If &#39;linear&#39;, ncontrols = ncolors (one</span>
 <span class="sd">        color per control point). If &#39;zero&#39;, ncontrols</span>
 <span class="sd">        = ncolors+1 (one color per bin).</span>
-<span class="sd">    name : str</span>
-<span class="sd">        Name of the colormap.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">colors</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">controls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;custom&#39;</span>
-    <span class="p">):</span>
+    <span class="n">colors</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">transform_color</span><span class="p">]</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;custom&#39;</span>
+    <span class="n">controls</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">interpolation</span><span class="p">:</span> <span class="n">Property</span><span class="p">[</span>
+        <span class="n">ColormapInterpolationMode</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ColormapInterpolationMode</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="n">ColormapInterpolationMode</span><span class="o">.</span><span class="n">LINEAR</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">colors</span> <span class="o">=</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span> <span class="o">=</span> <span class="n">ColormapInterpolationMode</span><span class="p">(</span><span class="n">interpolation</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">controls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">n_controls</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="p">)</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span> <span class="o">==</span> <span class="n">ColormapInterpolationMode</span><span class="o">.</span><span class="n">ZERO</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">controls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_controls</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">controls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">controls</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">yield from</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span><span class="p">))</span>
+        <span class="k">yield from</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Colormap.map"><a class="viewcode-back" href="../../../../api/napari.utils.colormaps.html#napari.utils.colormaps.colormap.Colormap.map">[docs]</a>    <span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
         <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
@@ -241,11 +242,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">colorbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">make_colorbar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">interpolation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interpolation</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">make_colorbar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

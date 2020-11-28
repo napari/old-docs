@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_intersection &mdash; napari 0.4.2.dev15+g6f28b00 documentation</title>
+  <title>napari.layers.image.experimental.octree_intersection &mdash; napari 0.4.2.dev16+g3b68007 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev15+g6f28b00
+                0.4.2.dev16+g3b68007
               </div>
             
           
@@ -225,6 +225,7 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="n">OctreeLevel</span><span class="p">,</span> <span class="n">view</span><span class="p">:</span> <span class="n">OctreeView</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">corners</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">corners</span>
 
         <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span>
 
@@ -316,7 +317,56 @@
                 <span class="k">if</span> <span class="n">chunk</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">chunks</span></div></div>
+        <span class="k">return</span> <span class="n">chunks</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tile_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return tile state.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The tile state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_row_range</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_range</span><span class="p">]</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;tile_state&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="c1"># A list of (row, col) pairs of visible tiles.</span>
+                <span class="s2">&quot;seen&quot;</span><span class="p">:</span> <span class="n">seen</span><span class="p">,</span>
+                <span class="c1"># The two corners of the view in data coordinates ((x0, y0), (x1, y1)).</span>
+                <span class="s2">&quot;corners&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">corners</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tile_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return tile config</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The file config.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO_OCTREE: Need to cleanup and re-name and organize</span>
+        <span class="c1"># OctreeLevelInfo and SliceConfig attrbiutes. Messy.</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span>
+        <span class="n">image_shape</span> <span class="o">=</span> <span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">image_shape</span>
+        <span class="n">shape_in_tiles</span> <span class="o">=</span> <span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span>
+
+        <span class="n">slice_config</span> <span class="o">=</span> <span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">slice_config</span>
+        <span class="n">base_shape</span> <span class="o">=</span> <span class="n">slice_config</span><span class="o">.</span><span class="n">base_shape</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;tile_config&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;base_shape&quot;</span><span class="p">:</span> <span class="n">base_shape</span><span class="p">,</span>
+                <span class="s2">&quot;image_shape&quot;</span><span class="p">:</span> <span class="n">image_shape</span><span class="p">,</span>
+                <span class="s2">&quot;shape_in_tiles&quot;</span><span class="p">:</span> <span class="n">shape_in_tiles</span><span class="p">,</span>
+                <span class="s2">&quot;tile_size&quot;</span><span class="p">:</span> <span class="n">tile_size</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">}</span></div>
 </pre></div>
 
            </div>

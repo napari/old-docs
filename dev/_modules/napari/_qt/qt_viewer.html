@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.4.2.dev15+g6f28b00 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.4.2.dev16+g3b68007 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.2.dev15+g6f28b00
+                0.4.2.dev16+g3b68007
               </div>
             
           
@@ -164,13 +164,15 @@
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QCoreApplication</span><span class="p">,</span> <span class="n">QSize</span><span class="p">,</span> <span class="n">Qt</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QCoreApplication</span><span class="p">,</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">QSize</span><span class="p">,</span> <span class="n">Qt</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QCursor</span><span class="p">,</span> <span class="n">QGuiApplication</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QFileDialog</span><span class="p">,</span> <span class="n">QSplitter</span><span class="p">,</span> <span class="n">QVBoxLayout</span><span class="p">,</span> <span class="n">QWidget</span>
 <span class="kn">from</span> <span class="nn">vispy.visuals.transforms</span> <span class="kn">import</span> <span class="n">ChainTransform</span>
 
+<span class="kn">from</span> <span class="nn">..components.camera</span> <span class="kn">import</span> <span class="n">Camera</span>
 <span class="kn">from</span> <span class="nn">..resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.interactions</span> <span class="kn">import</span> <span class="p">(</span>
@@ -367,6 +369,9 @@
 
         <span class="c1"># Add axes, scale bar and welcome visuals.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_visuals</span><span class="p">(</span><span class="n">welcome</span><span class="p">)</span>
+
+        <span class="c1"># Optional experimental monitor service.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_monitor</span> <span class="o">=</span> <span class="n">_create_qt_monitor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_create_canvas</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Create the canvas and hook up events.&quot;&quot;&quot;</span>
@@ -963,6 +968,37 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">console</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dockConsole</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
         <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span></div></div>
+
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.experimental.qt_monitor</span> <span class="kn">import</span> <span class="n">QtMonitor</span>
+
+
+<span class="k">def</span> <span class="nf">_create_qt_monitor</span><span class="p">(</span>
+    <span class="n">parent</span><span class="p">:</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">camera</span><span class="p">:</span> <span class="n">Camera</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Optional[QtMonitor]&#39;</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Create and return a QtMonitor instance.</span>
+
+<span class="sd">    A monitor instance is only created if NAPARI_MON is set.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    parent : QObject</span>
+<span class="sd">        Parent for the qtMonitor.</span>
+<span class="sd">    camera : VispyCamera</span>
+<span class="sd">        Camera that the monitor will tie into.</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    Optional[QtMonitor]</span>
+<span class="sd">        The new monitor instance, if any</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAPARI_MON&quot;</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">.experimental.qt_monitor</span> <span class="kn">import</span> <span class="n">QtMonitor</span>
+
+        <span class="k">return</span> <span class="n">QtMonitor</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
 </pre></div>
 
            </div>

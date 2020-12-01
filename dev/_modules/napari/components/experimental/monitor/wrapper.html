@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.components.experimental.monitor.wrapper &mdash; napari 0.4.3.dev1+g16a72f0 documentation</title>
+  <title>napari.components.experimental.monitor.wrapper &mdash; napari 0.4.3.dev2+g79ff7b8 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev1+g16a72f0
+                0.4.3.dev2+g79ff7b8
               </div>
             
           
@@ -175,8 +175,6 @@
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 
-<span class="kn">from</span> <span class="nn">...layerlist</span> <span class="kn">import</span> <span class="n">LayerList</span>
-
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.monitor&quot;</span><span class="p">)</span>
 
 <span class="c1"># If False monitor is disabled even if we meet all other requirements.</span>
@@ -237,7 +235,7 @@
         <span class="k">return</span>  <span class="c1"># No log file.</span>
 
     <span class="c1"># Nuke/reset log for now.</span>
-    <span class="n">Path</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+    <span class="c1"># Path(log_path).unlink()</span>
 
     <span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span>
     <span class="n">LOGGER</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
@@ -298,7 +296,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="kc">False</span>
 
-    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return True if the service is running.</span>
 
 <span class="sd">        So that callers can do:</span>
@@ -308,7 +306,13 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span>
 
-<div class="viewcode-block" id="Monitor.start"><a class="viewcode-back" href="../../../../../api/napari.components.experimental.monitor.html#napari.components.experimental.monitor.wrapper.Monitor.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layers</span><span class="p">:</span> <span class="n">LayerList</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_command_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The MonitorAPI fires this event for commands from clients.&quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">run_command</span>
+
+<div class="viewcode-block" id="Monitor.start"><a class="viewcode-back" href="../../../../../api/napari.components.experimental.monitor.html#napari.components.experimental.monitor.wrapper.Monitor.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Start the monitor service, if it hasn&#39;t been started already.</span>
 
 <span class="sd">        Return</span>
@@ -333,7 +337,7 @@
 
         <span class="c1"># Create the API first. It will register our callbacks, then</span>
         <span class="c1"># we start the manager that will serve those callbacks.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="o">=</span> <span class="n">MonitorApi</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_api</span> <span class="o">=</span> <span class="n">MonitorApi</span><span class="p">()</span>
 
         <span class="c1"># Now we can start our service.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_service</span> <span class="o">=</span> <span class="n">MonitorService</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">manager</span><span class="p">)</span>
@@ -366,11 +370,22 @@
 <span class="sd">            if monitor:</span>
 <span class="sd">                monitor.add(...)</span>
 
-<span class="sd">        So they do not waste time putting the data together if the</span>
-<span class="sd">        monitor is not running.</span>
+<span class="sd">        So they do not waste time putting creating their dict if the</span>
+<span class="sd">        monitor is not even running.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Monitor.send"><a class="viewcode-back" href="../../../../../api/napari.components.experimental.monitor.html#napari.components.experimental.monitor.wrapper.Monitor.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Send a message to shared memory clients.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        message : dict</span>
+<span class="sd">            Post this message to clients.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div></div>
 
 
 <span class="n">monitor</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">()</span>

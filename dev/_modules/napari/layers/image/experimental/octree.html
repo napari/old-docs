@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev3+gbfda422 documentation</title>
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev4+g973b941 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev3+gbfda422
+                0.4.3.dev4+g973b941
               </div>
             
           
@@ -162,6 +162,7 @@
   <h1>Source code for napari.layers.image.experimental.octree</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Octree class.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
 <span class="kn">from</span> <span class="nn">....utils.perf</span> <span class="kn">import</span> <span class="n">block_timer</span>
@@ -208,6 +209,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span> <span class="o">=</span> <span class="n">slice_config</span>
 
+        <span class="n">_check_downscale_ratio</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># We expect a ratio of 2.</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">slice_config</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
@@ -231,7 +234,7 @@
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">==</span> <span class="mi">1</span>
 
         <span class="c1"># This now the total number of levels.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_extra_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Compute the extra levels and return them.</span>
@@ -333,6 +336,31 @@
         <span class="sd">&quot;&quot;&quot;Print information about our tiles.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
             <span class="n">level</span><span class="o">.</span><span class="n">print_info</span><span class="p">()</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_check_downscale_ratio</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Raise exception if downscale ratio is not 2.</span>
+
+<span class="sd">    For now we only support downscale ratios of 2. We could support other</span>
+<span class="sd">    ratios, but the assumption that each octree level is half the size of</span>
+<span class="sd">    the previous one is baked in pretty deeply right now.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If downscale ratio is not 2.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span>  <span class="c1"># There aren&#39;t even two levels.</span>
+
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="c1"># Really should be exact, but it will most likely be off by a ton</span>
+    <span class="c1"># if its off, so allow a small fudge factor.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">rel_tol</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Multiscale data has downsampling ratio of </span><span class="si">{</span><span class="n">ratio</span><span class="si">}</span><span class="s2">, expected 2.&quot;</span>
+        <span class="p">)</span>
 </pre></div>
 
            </div>

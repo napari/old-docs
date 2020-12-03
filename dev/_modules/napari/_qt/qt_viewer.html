@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev4+g973b941 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev5+g6aa523f documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev4+g973b941
+                0.4.3.dev5+g6aa523f
               </div>
             
           
@@ -373,6 +373,9 @@
         <span class="c1"># Optional experimental monitor service.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_monitor</span> <span class="o">=</span> <span class="n">_create_qt_monitor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
 
+        <span class="c1"># Experimental QtPool for Octree visuals.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span> <span class="o">=</span> <span class="n">_create_qt_poll</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">_create_canvas</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Create the canvas and hook up events.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span> <span class="o">=</span> <span class="n">VispyCanvas</span><span class="p">(</span>
@@ -510,7 +513,11 @@
 <span class="sd">            Layer to be added.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="n">create_vispy_visual</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">center</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">_on_camera_move</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Visuals might need to be polled when the camera moves and during</span>
+            <span class="c1"># a short period after the movement stops.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">poll</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">_on_poll</span><span class="p">)</span>
 
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">scene</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -972,6 +979,7 @@
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">.experimental.qt_monitor</span> <span class="kn">import</span> <span class="n">QtMonitor</span>
+    <span class="kn">from</span> <span class="nn">.experimental.qt_poll</span> <span class="kn">import</span> <span class="n">QtPoll</span>
 
 
 <span class="k">def</span> <span class="nf">_create_qt_monitor</span><span class="p">(</span>
@@ -996,7 +1004,34 @@
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">monitor</span><span class="p">:</span>
         <span class="kn">from</span> <span class="nn">.experimental.qt_monitor</span> <span class="kn">import</span> <span class="n">QtMonitor</span>
 
+        <span class="c1"># We can probably get rid of QtMonitor and use QtPoll instead,</span>
+        <span class="c1"># since it&#39;s the same idea but more general.</span>
         <span class="k">return</span> <span class="n">QtMonitor</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_create_qt_poll</span><span class="p">(</span><span class="n">parent</span><span class="p">:</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">camera</span><span class="p">:</span> <span class="n">Camera</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Optional[QtPoll]&#39;</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Create and return a QtPoll instance, if enabled.</span>
+
+<span class="sd">    A QtPoll instance is only created if using octree for now.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    parent : QObject</span>
+<span class="sd">        Parent for the qtMonitor.</span>
+<span class="sd">    camera : VispyCamera</span>
+<span class="sd">        Camera that the monitor will tie into.</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    Optional[QtMonitor]</span>
+<span class="sd">        The new monitor instance, if any</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_octree</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">.experimental.qt_poll</span> <span class="kn">import</span> <span class="n">QtPoll</span>
+
+        <span class="k">return</span> <span class="n">QtPoll</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="kc">None</span>
 </pre></div>

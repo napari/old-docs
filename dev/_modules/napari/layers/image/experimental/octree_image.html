@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev10+g9aa33e7 documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev12+gb4510bf documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev10+g9aa33e7
+                0.4.3.dev12+gb4510bf
               </div>
             
           
@@ -512,27 +512,37 @@
     <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ChunkedSliceData</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;The given data a was loaded, use it now.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Override Layer._update_draw completely.</span>
 
-        <span class="c1"># Need refresh if have not been draw at all yet.</span>
-        <span class="c1"># TODO_OCTREE: why? do we really?</span>
-        <span class="n">need_refresh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="sd">        The base Layer._update_draw does stuff for the legacy multi-scale</span>
+<span class="sd">        that we don&#39;t want. And it calls refresh() which we don&#39;t need.</span>
 
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_update_draw</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">)</span>
+<span class="sd">        We create our OctreeView() here which has the corners in it.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        scale_factor : float</span>
+<span class="sd">            Scale factor going from canvas to world coordinates.</span>
+<span class="sd">        corner_pixels : array</span>
+<span class="sd">            Coordinates of the top-left and bottom-right canvas pixels in the</span>
+<span class="sd">            world coordinates.</span>
+<span class="sd">        shape_threshold : tuple</span>
+<span class="sd">            Requested shape of field of view in data coordinates.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Compute our 2D corners from the incoming n-d corner_pixels</span>
         <span class="n">data_corners</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">corner_pixels</span><span class="p">)</span>
-        <span class="n">corners</span> <span class="o">=</span> <span class="n">data_corners</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+        <span class="n">corners</span> <span class="o">=</span> <span class="n">data_corners</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
 
-        <span class="c1"># Update our self._view to to catpure the state of things right</span>
+        <span class="c1"># Update our self._view to to capture the state of things right</span>
         <span class="c1"># before we are drawn. Our self._view will used by our</span>
         <span class="c1"># visible_chunks() method.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="o">=</span> <span class="n">OctreeView</span><span class="p">(</span>
             <span class="n">corners</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">freeze_level</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_view</span>
         <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">need_refresh</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
 <div class="viewcode-block" id="OctreeImage.get_intersection"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.get_intersection">[docs]</a>    <span class="k">def</span> <span class="nf">get_intersection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeIntersection</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;The the interesection between the current view and the octree.</span>
@@ -557,7 +567,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
-        <span class="n">not_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">not_displayed</span>
+        <span class="n">not_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_not_displayed</span>
 
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">(</span>
@@ -593,7 +603,7 @@
 
         <span class="c1"># TODO_OCTREE: easier way to do this?</span>
         <span class="n">base_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
-        <span class="n">base_shape_2d</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="o">.</span><span class="n">displayed</span><span class="p">]</span>
+        <span class="n">base_shape_2d</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
 
         <span class="n">slice_config</span> <span class="o">=</span> <span class="n">SliceConfig</span><span class="p">(</span>
             <span class="n">base_shape_2d</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span>

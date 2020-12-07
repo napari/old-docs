@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev14+g6409eb9 documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev15+g86f9649 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev14+g6409eb9
+                0.4.3.dev15+g86f9649
               </div>
             
           
@@ -167,19 +167,14 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">ChunkRequest</span><span class="p">,</span>
-    <span class="n">async_config</span><span class="p">,</span>
-    <span class="n">chunk_loader</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkRequest</span><span class="p">,</span> <span class="n">chunk_loader</span>
 <span class="kn">from</span> <span class="nn">....utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..image</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">from</span> <span class="nn">._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
 <span class="kn">from</span> <span class="nn">._octree_multiscale_slice</span> <span class="kn">import</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">,</span> <span class="n">OctreeView</span>
 <span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkKey</span>
 <span class="kn">from</span> <span class="nn">.octree_intersection</span> <span class="kn">import</span> <span class="n">OctreeIntersection</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevelInfo</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">NormalNoise</span><span class="p">,</span> <span class="n">SliceConfig</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeDisplayOptions</span><span class="p">,</span> <span class="n">SliceConfig</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.async.octree&quot;</span><span class="p">)</span>
 
@@ -187,24 +182,35 @@
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;OctreeImage layer.</span>
 
-<span class="sd">    Experimental variant of Image that renders using an Octree.</span>
+<span class="sd">    Experimental variant of Image that renders using an octree. For 2D</span>
+<span class="sd">    images the octree is really just a quadtree. For 3D volumes it will be</span>
+<span class="sd">    a real octree. This class is intended to eventually fully replace the</span>
+<span class="sd">    existing Image class.</span>
 
-<span class="sd">    Intended to eventually replace Image.</span>
+<span class="sd">    Background</span>
+<span class="sd">    ----------</span>
+<span class="sd">    OctreeImage is meant to eventually replace the existing Image class. The</span>
+<span class="sd">    original Image class handled single-scale and multi-scale images, but they</span>
+<span class="sd">    were handled quite differently. And its multi-scale did not use chunks or</span>
+<span class="sd">    tiles.</span>
+
+<span class="sd">    OctreeImage always uses chunk/tiles. Today those tiles are always</span>
+<span class="sd">    &quot;small&quot;. However, as a special case, if an image is smaller than the</span>
+<span class="sd">    max texture size, we could some day allow OctreeImage to set its tile</span>
+<span class="sd">    size equal to that image size.</span>
+
+<span class="sd">    At that point &quot;small&quot; images would be single-tile single-level</span>
+<span class="sd">    OctreeImages. Therefore they should be as as efficient as the original</span>
+<span class="sd">    Image&#39;s single-scale images. But larger images would have</span>
+<span class="sd">    multiple-tiles and multiple-levels. The goal is to have one class and</span>
+<span class="sd">    one code path for all types of images.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">async_config</span><span class="o">.</span><span class="n">octree</span><span class="o">.</span><span class="n">tile_size</span>
-
-        <span class="c1"># Is this the same as Image._data_level? Which should we use?</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="p">:</span> <span class="n">OctreeView</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_freeze_level</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="c1"># Temporary to implement a disabled cache.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -212,29 +218,39 @@
         <span class="c1"># For logging only</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame_count</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="c1"># For debugging and demos, inject a random delay in from of every</span>
-        <span class="c1"># octree chunk that we access. To simulate latency from IO or</span>
-        <span class="c1"># computation.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span> <span class="o">=</span> <span class="n">NormalNoise</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_display</span> <span class="o">=</span> <span class="n">OctreeDisplayOptions</span><span class="p">()</span>
 
+        <span class="c1"># super().__init__ will call our _set_view_slice() which is kind</span>
+        <span class="c1"># of annoying since we are aren&#39;t fully constructed yet.</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-            <span class="n">freeze_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span>
-        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
+
+        <span class="c1"># TODO_OCTREE: bad to have to set this after...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">loaded_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span>
 
     <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Override Image._get_value().&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># Fake for now until have octree version.</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># TODO_OCTREE: need to implement this.</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Has the data for this layer been loaded yet.&quot;&quot;&quot;</span>
-        <span class="c1"># TODO_OCTREE: what here?</span>
+    <span class="k">def</span> <span class="nf">loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Has the data for this layer been loaded yet.</span>
+
+<span class="sd">        As far as the visual system is concerned we are always &quot;loaded&quot; in</span>
+<span class="sd">        that we can always be drawn. Because our VispyTiledImageLayer can</span>
+<span class="sd">        always be drawn. Even if no chunk/tiles are loaded yet.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">True</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_empty</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># TODO_OCTREE: what here?</span>
+        <span class="sd">&quot;&quot;&quot;Is this layer completely empty so it can&#39;t be drawn.</span>
+
+<span class="sd">        As with self.loaded, we are never really empty. Our VispyTiledImageLayer</span>
+<span class="sd">        can always be drawn. Even if there is nothing to draw.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="nf">_update_thumbnail</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># TODO_OCTREE: replace Image._update_thumbnail with nothing for</span>
@@ -248,26 +264,9 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># fake: does octree need this?</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">track_view</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return True if we changing what&#39;s dispays as the view changes.</span>
-
-<span class="sd">        Return</span>
-<span class="sd">        ------</span>
-<span class="sd">        bool</span>
-<span class="sd">            True if we are tracking the current view.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span>
-
-    <span class="nd">@track_view</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">track_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Set whether we are tracking the current view.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        value : bool</span>
-<span class="sd">            True if we should track the current view.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_track_view</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeDisplayOptions</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The display options for this octree image layer.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -278,7 +277,7 @@
 <span class="sd">        int</span>
 <span class="sd">            The edge length of a single tile.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">tile_size</span>
 
     <span class="nd">@tile_size</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">tile_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -289,7 +288,7 @@
 <span class="sd">        tile_size : int</span>
 <span class="sd">            The new tile size.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span> <span class="o">=</span> <span class="n">tile_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">tile_size</span> <span class="o">=</span> <span class="n">tile_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">tile_size</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># For now must explicitly delete it</span>
@@ -346,38 +345,16 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level_info</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">freeze_level</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return True if we are forzen viewing a single octree level.</span>
+    <span class="k">def</span> <span class="nf">data_level</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Current level of multiscale.</span>
 
-<span class="sd">        When viewing the octree normally, freeze_level is always False, but</span>
-<span class="sd">        during debugging or other special situations it might be on.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            True if the view is currently frozen viewing on level.</span>
+<span class="sd">        The base full resolution image is level 0. The highest and coarsest</span>
+<span class="sd">        level usually contains only a single tile.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freeze_level</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span>
 
-    <span class="nd">@freeze_level</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">freeze_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freeze</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Set whether we are frozen viewing a single octree level.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        value : bool</span>
-<span class="sd">            True if we should determine the octree level automatically.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_freeze_level</span> <span class="o">=</span> <span class="n">freeze</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">freeze_level</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">octree_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return the currently displayed octree level.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span>
-
-    <span class="nd">@octree_level</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">octree_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nd">@data_level</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">data_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Set the octree level we should be displaying.</span>
 
 <span class="sd">        Parameters</span>
@@ -385,8 +362,10 @@
 <span class="sd">        level : int</span>
 <span class="sd">            Display this octree level.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">==</span> <span class="n">level</span><span class="p">:</span>
+            <span class="k">return</span>  <span class="c1"># It didn&#39;t change.</span>
         <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">level</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_octree_levels</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="n">level</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span> <span class="o">=</span> <span class="n">level</span>
@@ -436,11 +415,10 @@
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visible_set</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_last_visible_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-        <span class="c1"># If we switched to a new octree level, update our currently shown level.</span>
-        <span class="n">slice_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">!=</span> <span class="n">slice_level</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_octree_level</span> <span class="o">=</span> <span class="n">slice_level</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">octree_level</span><span class="p">()</span>
+        <span class="c1"># If calling _slice.get_visible_chunks() switched the slice to</span>
+        <span class="c1"># a new octree level, then update our data_level to match. This</span>
+        <span class="c1"># will do nothing if the level didn&#39;t change.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
 
         <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">chunk</span><span class="p">):</span>
             <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
@@ -509,9 +487,6 @@
         <span class="n">octree_chunk</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">satisfied_request</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">True</span>
 
-    <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ChunkedSliceData</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;The given data a was loaded, use it now.&quot;&quot;&quot;</span>
-
     <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -540,9 +515,7 @@
         <span class="c1"># Update our self._view to to capture the state of things right</span>
         <span class="c1"># before we are drawn. Our self._view will used by our</span>
         <span class="c1"># visible_chunks() method.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="o">=</span> <span class="n">OctreeView</span><span class="p">(</span>
-            <span class="n">corners</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">freeze_level</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_view</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="o">=</span> <span class="n">OctreeView</span><span class="p">(</span><span class="n">corners</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">display</span><span class="p">)</span>
 
 <div class="viewcode-block" id="OctreeImage.get_intersection"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.get_intersection">[docs]</a>    <span class="k">def</span> <span class="nf">get_intersection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeIntersection</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;The the interesection between the current view and the octree.</span>
@@ -606,7 +579,7 @@
         <span class="n">base_shape_2d</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
 
         <span class="n">slice_config</span> <span class="o">=</span> <span class="n">SliceConfig</span><span class="p">(</span>
-            <span class="n">base_shape_2d</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tile_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span>
+            <span class="n">base_shape_2d</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="p">)</span>
 
         <span class="c1"># OctreeMultiscaleSlice wants all the levels, but only the dimensions</span>
@@ -636,59 +609,10 @@
 <span class="sd">        request : ChunkRequest</span>
 <span class="sd">            This request was loaded.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Pass it to the slice, it will insert the newly loaded data into</span>
+        <span class="c1"># the OctreeChunk at the right location.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-            <span class="c1"># Tell the visual to redraw with this new chunk.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span></div>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">delay_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NormalNoise</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return the currently configured artificial load delay.</span>
-
-<span class="sd">        Return</span>
-<span class="sd">        ------</span>
-<span class="sd">        NormalNoise</span>
-<span class="sd">            The current configured delay.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span>
-
-    <span class="nd">@delay_ms</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">delay_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the new artificial load delay.</span>
-
-<span class="sd">        We sometimes want to simulate latency for debugging or demos.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        delay_ms : NormalNoise</span>
-<span class="sd">            Optional delay to simulate latency.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_delay_ms</span> <span class="o">=</span> <span class="n">delay_ms</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># For now must explicitly delete it</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>  <span class="c1"># Create a new slice.</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">show_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;True if we are drawing a grid on top of the tiles.</span>
-
-<span class="sd">        Return</span>
-<span class="sd">        ------</span>
-<span class="sd">        bool</span>
-<span class="sd">            True if we are drawing a grid on top of the tiles.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span>
-
-    <span class="nd">@show_grid</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">show_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Set whether we should draw a grid on top of the tiles.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        show : bool</span>
-<span class="sd">            True if we should draw a grid on top of the tiles.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">!=</span> <span class="n">show</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">=</span> <span class="n">show</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># redraw</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># Redraw with teh new chunk.</span></div></div>
 </pre></div>
 
            </div>

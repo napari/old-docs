@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev14+g6409eb9 documentation</title>
+  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev15+g86f9649 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev14+g6409eb9
+                0.4.3.dev15+g86f9649
               </div>
             
           
@@ -170,8 +170,6 @@
 <span class="kn">from</span> <span class="nn">....layers</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 
-<span class="n">OctreeChunkKey</span> <span class="o">=</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-
 
 <div class="viewcode-block" id="OctreeChunkGeom"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunkGeom">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkGeom</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Position and scale of the chunk, for rendering.</span>
@@ -207,6 +205,39 @@
     <span class="k">def</span> <span class="nf">create_null</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create null location that points to nothing.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="OctreeChunkKey"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunkKey">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkKey</span><span class="p">(</span><span class="n">ChunkKey</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A ChunkKey that adds some octree specific fields.</span>
+
+<span class="sd">    The ChunkLoader uses ChunkKey to identify chunks. So that it can cache</span>
+<span class="sd">    chunks if they have the same key. And so it can identify after they</span>
+<span class="sd">    have been loaded.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layer : Layer</span>
+<span class="sd">        The OctreeImage layer.</span>
+<span class="sd">    indices : Tuple[Optional[slice], ...]</span>
+<span class="sd">        The indices of the image we are viewing.</span>
+<span class="sd">    location : OctreeLocation</span>
+<span class="sd">        The location of the chunk within the octree.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
+        <span class="n">indices</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">slice</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span>
+        <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_hash_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO_OCTREE: can&#39;t we just has with parent&#39;s hashed key instead</span>
+        <span class="c1"># of creating a single big has value? Probably.</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_hash_values</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">parent</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,)</span></div>
 
 
 <div class="viewcode-block" id="OctreeChunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunk">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunk</span><span class="p">:</span>
@@ -329,35 +360,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orig_data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span></div></div>
-
-
-<div class="viewcode-block" id="OctreeChunkKey"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunkKey">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkKey</span><span class="p">(</span><span class="n">ChunkKey</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A ChunkKey with octree specific fields.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    layer : Layer</span>
-<span class="sd">        The OctreeImage layer.</span>
-<span class="sd">    indices : Tuple[Optional[slice], ...]</span>
-<span class="sd">        The indices of the image we are viewing.</span>
-<span class="sd">    location : OctreeLocation</span>
-<span class="sd">        The location of the chunk within the octree.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span>
-        <span class="n">indices</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">slice</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span>
-        <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_get_hash_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># TODO_OCTREE: can&#39;t we just has with parent&#39;s hashed key instead</span>
-        <span class="c1"># of creating a single big has value? Probably.</span>
-        <span class="n">parent</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_hash_values</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">parent</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,)</span></div>
 </pre></div>
 
            </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_util &mdash; napari 0.4.3.dev14+g6409eb9 documentation</title>
+  <title>napari.layers.image.experimental.octree_util &mdash; napari 0.4.3.dev15+g86f9649 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev14+g6409eb9
+                0.4.3.dev15+g86f9649
               </div>
             
           
@@ -162,9 +162,63 @@
   <h1>Source code for napari.layers.image.experimental.octree_util</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Octree utility classes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">async_config</span>
+
+
+<div class="viewcode-block" id="OctreeDisplayOptions"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.OctreeDisplayOptions">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">OctreeDisplayOptions</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Options for how to display the octree.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    -----------</span>
+<span class="sd">    tile_size : int</span>
+<span class="sd">        The size of the display tiles, for example 256.</span>
+<span class="sd">    freeze_level : bool</span>
+<span class="sd">        If True we do not automatically pick the right data level.</span>
+<span class="sd">    track_view : bool</span>
+<span class="sd">        If True the displayed tiles track the view, the normal mode.</span>
+<span class="sd">    show_grid : bool</span>
+<span class="sd">        If True draw a grid around the tiles for debugging or demos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># TODO_OCTREE we set this after __init__ which is messy.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loaded_event</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">show_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;True if we are drawing a grid on top of the tiles.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if we are drawing a grid on top of the tiles.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span>
+
+    <span class="nd">@show_grid</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">show_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Set whether we should draw a grid on top of the tiles.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        show : bool</span>
+<span class="sd">            True if we should draw a grid on top of the tiles.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">!=</span> <span class="n">show</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_show_grid</span> <span class="o">=</span> <span class="n">show</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loaded_event</span><span class="p">()</span>  <span class="c1"># redraw</span>
+
+    <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">async_config</span><span class="o">.</span><span class="n">octree</span><span class="o">.</span><span class="n">tile_size</span>
+    <span class="n">freeze_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">track_view</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 
 <div class="viewcode-block" id="TestImageSettings"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_util.TestImageSettings">[docs]</a><span class="k">class</span> <span class="nc">TestImageSettings</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
@@ -239,7 +293,6 @@
     <span class="n">base_shape</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">num_levels</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">tile_size</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span> <span class="o">=</span> <span class="n">NormalNoise</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">aspect_ratio</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

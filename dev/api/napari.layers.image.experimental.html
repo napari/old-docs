@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental package &mdash; napari 0.4.3.dev23+g3c75760 documentation</title>
+  <title>napari.layers.image.experimental package &mdash; napari 0.4.3.dev24+g2432b3e documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                0.4.3.dev23+g3c75760
+                0.4.3.dev24+g2432b3e
               </div>
             
           
@@ -132,6 +132,7 @@
 <li class="toctree-l2"><a class="reference internal" href="napari.components.experimental.html">napari.components.experimental package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="napari.components.experimental.chunk.html">napari.components.experimental.chunk package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="napari.components.experimental.monitor.html">napari.components.experimental.monitor package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="napari.components.experimental.remote.html">napari.components.experimental.remote package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="napari.experimental.html">napari.experimental package</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="napari.layers.html">napari.layers package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="napari.layers.html#subpackages">Subpackages</a><ul class="current">
@@ -660,6 +661,27 @@ level usually contains only a single tile.</p>
 <dt id="napari.layers.image.experimental.octree_image.OctreeImage.get_drawable_chunks">
 <code class="sig-name descname">get_drawable_chunks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">drawn_chunk_set</span><span class="p">:</span> <span class="n">Set<span class="p">[</span><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunkKey" title="napari.layers.image.experimental.octree_chunk.OctreeChunkKey">napari.layers.image.experimental.octree_chunk.OctreeChunkKey</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunk" title="napari.layers.image.experimental.octree_chunk.OctreeChunk">napari.layers.image.experimental.octree_chunk.OctreeChunk</a><span class="p">]</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_image.html#OctreeImage.get_drawable_chunks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage.get_drawable_chunks" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the chunks in the current slice which are drawable.</p>
+<p>The visual calls this and then draws what we send it.</p>
+<p>The call to get_intersection() will chose the appropriate level of
+the octree to intersect, and then return all the chunks within the
+intersection with that level.</p>
+<p>These are the “ideal” chunks because they are at the level whose
+resolution best matches the current screen resolution.</p>
+<p>Drawing chunks at a lower level than this will work fine, but it’s
+a waste in that those chunks will just be downsampled by the card.
+You won’t see any “extra” resolution at all. The card can do this
+super fast, so the issue not such much speed as it is RAM and VRAM.</p>
+<p>For example, suppose we want to draw 40 ideal chunks at level N,
+and the chunks are (256, 256, 3) with dtype uint8. That’s around
+8MB.</p>
+<p>If instead we draw lower levels than the ideal, the number of
+chunks and storage goes up quickly:</p>
+<p>Level (N - 1) is 160 chunks = 32M
+Level (N - 2) is 640 chunks = 126M
+Level (N - 3) is 2560 chunks = 503M</p>
+<p>In the opposite direction, drawing chunks from a higher, the number
+of chunks and storage goes down quickly. The only issue there is
+visual quality, the imagery might look blurry.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>drawn_chunk_set</strong> (<em>Set</em><em>[</em><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunkKey" title="napari.layers.image.experimental.octree_chunk.OctreeChunkKey"><em>OctreeChunkKey</em></a><em>]</em>) – The chunks that are currently being drawn by the visual.</p>
@@ -734,6 +756,12 @@ always be drawn. Even if no chunk/tiles are loaded yet.</p>
 <dd class="field-odd"><p><strong>request</strong> (<em>ChunkRequest</em>) – This request was loaded.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="napari.layers.image.experimental.octree_image.OctreeImage.remote_messages">
+<em class="property">property </em><code class="sig-name descname">remote_messages</code><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage.remote_messages" title="Permalink to this definition">¶</a></dt>
+<dd><p>Messages we should send to remote clients.</p>
 </dd></dl>
 
 <dl class="py method">

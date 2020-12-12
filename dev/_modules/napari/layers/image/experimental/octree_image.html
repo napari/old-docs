@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev23+g3c75760 documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev24+g2432b3e documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev23+g3c75760
+                0.4.3.dev24+g2432b3e
               </div>
             
           
@@ -234,6 +234,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="p">:</span> <span class="n">OctreeView</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="p">:</span> <span class="n">OctreeMultiscaleSlice</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="p">:</span> <span class="n">OctreeIntersection</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_display</span> <span class="o">=</span> <span class="n">OctreeDisplayOptions</span><span class="p">()</span>
 
         <span class="c1"># super().__init__ will call our _set_view_slice() which is kind</span>
@@ -246,10 +247,6 @@
         <span class="c1"># TODO_OCTREE: this is hack that we assign OctreeDisplayOptions</span>
         <span class="c1"># this event after super().__init__(). Will cleanup soon.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">loaded_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span>
-
-    <span class="k">def</span> <span class="nf">_get_layer_ref</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_indices</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">LayerRef</span><span class="o">.</span><span class="n">create_from_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Override Image._get_value().&quot;&quot;&quot;</span>
@@ -433,6 +430,35 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Get the chunks in the current slice which are drawable.</span>
 
+<span class="sd">        The visual calls this and then draws what we send it.</span>
+
+<span class="sd">        The call to get_intersection() will chose the appropriate level of</span>
+<span class="sd">        the octree to intersect, and then return all the chunks within the</span>
+<span class="sd">        intersection with that level.</span>
+
+<span class="sd">        These are the &quot;ideal&quot; chunks because they are at the level whose</span>
+<span class="sd">        resolution best matches the current screen resolution.</span>
+
+<span class="sd">        Drawing chunks at a lower level than this will work fine, but it&#39;s</span>
+<span class="sd">        a waste in that those chunks will just be downsampled by the card.</span>
+<span class="sd">        You won&#39;t see any &quot;extra&quot; resolution at all. The card can do this</span>
+<span class="sd">        super fast, so the issue not such much speed as it is RAM and VRAM.</span>
+
+<span class="sd">        For example, suppose we want to draw 40 ideal chunks at level N,</span>
+<span class="sd">        and the chunks are (256, 256, 3) with dtype uint8. That&#39;s around</span>
+<span class="sd">        8MB.</span>
+
+<span class="sd">        If instead we draw lower levels than the ideal, the number of</span>
+<span class="sd">        chunks and storage goes up quickly:</span>
+
+<span class="sd">        Level (N - 1) is 160 chunks = 32M</span>
+<span class="sd">        Level (N - 2) is 640 chunks = 126M</span>
+<span class="sd">        Level (N - 3) is 2560 chunks = 503M</span>
+
+<span class="sd">        In the opposite direction, drawing chunks from a higher, the number</span>
+<span class="sd">        of chunks and storage goes down quickly. The only issue there is</span>
+<span class="sd">        visual quality, the imagery might look blurry.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        -----------</span>
 <span class="sd">        drawn_chunk_set : Set[OctreeChunkKey]</span>
@@ -446,18 +472,32 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># There is nothing to draw.</span>
 
-        <span class="c1"># Get drawable chunks from the slice.</span>
-        <span class="n">drawable_chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_drawable_chunks</span><span class="p">(</span>
-            <span class="n">drawn_chunk_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span>
-        <span class="p">)</span>
+        <span class="c1"># Get the current intersection and save it off.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_intersection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="p">)</span>
 
-        <span class="c1"># Calling _slice.visible_chunks() above will select the appropriate</span>
-        <span class="c1"># octree level for the view. If the level changed, then update our</span>
-        <span class="c1"># data_level to match. This assignment will do nothing if the level</span>
-        <span class="c1"># didn&#39;t change.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">octree_level</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># No chunks to draw.</span>
 
-        <span class="k">return</span> <span class="n">drawable_chunks</span></div>
+        <span class="c1"># Get the ideal chunks. These are the chunks at the preferred</span>
+        <span class="c1"># resolution. The ones we ideally want to draw once they are in RAM</span>
+        <span class="c1"># and in VRAM. When all loading is done, we will draw all the ideal</span>
+        <span class="c1"># chunks.</span>
+        <span class="n">ideal_chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">get_chunks</span><span class="p">(</span><span class="n">create</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># If we are seting the data level level automatically, then update</span>
+        <span class="c1"># our level to match what was chosen for the intersection.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="o">.</span><span class="n">auto_level</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">level_index</span>
+
+        <span class="c1"># The loader will initiate loads on any ideal chunks which are not</span>
+        <span class="c1"># yet in memory. And it will return the chunks we should draw. The</span>
+        <span class="c1"># chunks might be ideal chunks, if they are in memory, but they</span>
+        <span class="c1"># might be chunks from higher or lower levels in the octree. In</span>
+        <span class="c1"># general we try to draw cover the view with the &quot;best available&quot;</span>
+        <span class="c1"># data.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">get_drawable_chunks</span><span class="p">(</span>
+            <span class="n">drawn_chunk_set</span><span class="p">,</span> <span class="n">ideal_chunks</span>
+        <span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span>
@@ -558,8 +598,11 @@
         <span class="c1"># of each level that we are currently viewing.</span>
         <span class="n">slice_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">level_data</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
 
-        <span class="n">layer_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_layer_ref</span><span class="p">()</span>
+        <span class="c1"># Create _layer_ref that matches the current indices and slice.</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_indices</span><span class="p">()</span>
+        <span class="n">layer_ref</span> <span class="o">=</span> <span class="n">LayerRef</span><span class="o">.</span><span class="n">create_from_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
+        <span class="c1"># Create the slice, it will create the actual Octree.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">(</span>
             <span class="n">slice_data</span><span class="p">,</span> <span class="n">layer_ref</span><span class="p">,</span> <span class="n">slice_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
         <span class="p">)</span>
@@ -586,7 +629,18 @@
         <span class="c1"># Pass it to the slice, it will insert the newly loaded data into</span>
         <span class="c1"># the OctreeChunk at the right location.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># Redraw with teh new chunk.</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># Redraw with teh new chunk.</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">remote_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Messages we should send to remote clients.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;tile_state&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">tile_state</span><span class="p">,</span>
+            <span class="s2">&quot;tile_config&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">tile_config</span><span class="p">,</span>
+        <span class="p">}</span></div>
 </pre></div>
 
            </div>

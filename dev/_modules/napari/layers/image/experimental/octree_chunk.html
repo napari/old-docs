@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev27+g28e67fe documentation</title>
+  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev28+gd8d2d30 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev27+g28e67fe
+                0.4.3.dev28+gd8d2d30
               </div>
             
           
@@ -162,12 +162,15 @@
   <h1>Source code for napari.layers.image.experimental.octree_chunk</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;OctreeChunk class</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">NamedTuple</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkKey</span><span class="p">,</span> <span class="n">LayerKey</span>
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="OctreeChunkGeom"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunkGeom">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkGeom</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
@@ -193,10 +196,18 @@
     <span class="n">col</span><span class="p">:</span> <span class="nb">int</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;location=(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="si">}</span><span class="s2">) &quot;</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;location =(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="si">}</span><span class="s2">) &quot;</span>
-            <span class="c1"># f&quot;slice={self.slice_id} id={id(self)}&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">slice_id</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">level_index</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">row</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span>
         <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">))</span>
 
 <div class="viewcode-block" id="OctreeLocation.create_null"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeLocation.create_null">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">create_null</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
@@ -223,8 +234,12 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">layer_key</span><span class="p">:</span> <span class="n">LayerKey</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_location</span> <span class="o">=</span> <span class="n">location</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer_key</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">location</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_location</span>
 
     <span class="k">def</span> <span class="nf">_get_hash_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># TODO_OCTREE: can&#39;t we just hash in the parent&#39;s hashed key with</span>
@@ -279,6 +294,9 @@
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayLike</span><span class="p">:</span>
@@ -361,6 +379,34 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orig_data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span></div></div>
+
+
+<div class="viewcode-block" id="log_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.log_chunks">[docs]</a><span class="k">def</span> <span class="nf">log_chunks</span><span class="p">(</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chunks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">],</span> <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Log the given chunks with an intro header message.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    label : str</span>
+<span class="sd">        Prefix the log message with this label.</span>
+<span class="sd">    chunk : List[OctreeChunk]</span>
+<span class="sd">        The chunks to log.</span>
+<span class="sd">    location : Optional[OctreeLocation]</span>
+<span class="sd">        Append the log message with this location.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> has </span><span class="si">%d</span><span class="s2"> chunks:&quot;</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> has </span><span class="si">%d</span><span class="s2"> chunks at </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="n">location</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chunks</span><span class="p">):</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Chunk </span><span class="si">%d</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> in_memory=</span><span class="si">%d</span><span class="s2"> loading=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">i</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">.</span><span class="n">in_memory</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">.</span><span class="n">loading</span><span class="p">,</span>
+        <span class="p">)</span></div>
 </pre></div>
 
            </div>

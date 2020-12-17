@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev27+g28e67fe documentation</title>
+  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev28+gd8d2d30 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev27+g28e67fe
+                0.4.3.dev28+gd8d2d30
               </div>
             
           
@@ -162,6 +162,7 @@
   <h1>Source code for napari.layers.image.experimental.octree_level</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;OctreeLevel and OctreeLevelInfo classes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
@@ -170,6 +171,8 @@
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkGeom</span><span class="p">,</span> <span class="n">OctreeLocation</span>
 <span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">SliceConfig</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="OctreeLevelInfo"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevelInfo">[docs]</a><span class="k">class</span> <span class="nc">OctreeLevelInfo</span><span class="p">:</span>
@@ -200,12 +203,11 @@
         <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">scaled_size</span> <span class="o">=</span> <span class="n">tile_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">shape_in_tiles</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">scaled_size</span><span class="p">),</span>
-            <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">scaled_size</span><span class="p">),</span>
-        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rows</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">scaled_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cols</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">scaled_size</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_in_tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_in_tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_in_tiles</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cols</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rows</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cols</span></div>
 
 
 <div class="viewcode-block" id="OctreeLevel"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevel">[docs]</a><span class="k">class</span> <span class="nc">OctreeLevel</span><span class="p">:</span>
@@ -270,6 +272,13 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">create</span><span class="p">:</span>
                 <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># It didn&#39;t exist so we&#39;re done.</span>
 
+        <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">row</span> <span class="o">&gt;=</span> <span class="n">rows</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="n">cols</span><span class="p">:</span>
+            <span class="c1"># Chunk coordinates not in the level. Not an exception because</span>
+            <span class="c1"># callers might be trying to get children just out of bounds,</span>
+            <span class="c1"># for non-power-of-two base images.</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
         <span class="c1"># Create a chunk at this location and return it.</span>
         <span class="n">octree_chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_chunk</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tiles</span><span class="p">[(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)]</span> <span class="o">=</span> <span class="n">octree_chunk</span>
@@ -328,32 +337,30 @@
         <span class="k">return</span> <span class="n">data</span></div>
 
 
-<div class="viewcode-block" id="print_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.print_levels">[docs]</a><span class="k">def</span> <span class="nf">print_levels</span><span class="p">(</span>
-    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">],</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Print the dimensions of each level nicely.</span>
+<div class="viewcode-block" id="log_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.log_levels">[docs]</a><span class="k">def</span> <span class="nf">log_levels</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">],</span> <span class="n">start_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Log the dimensions of each level nicely.</span>
+
+<span class="sd">    We take start_level so we can log the &quot;extra&quot; levels we created but</span>
+<span class="sd">    with their correct level numbers.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    label : str</span>
-<span class="sd">        Prepend this to the header line.</span>
 <span class="sd">    levels : List[OctreeLevel]</span>
 <span class="sd">        Print information about these levels.</span>
-<span class="sd">    start : int</span>
+<span class="sd">    start_level : int</span>
 <span class="sd">        Start the indexing at this number, shift the indexes up.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span> <span class="nn">...._vendor.experimental.humanize.src.humanize</span> <span class="kn">import</span> <span class="n">intword</span>
 
     <span class="k">def</span> <span class="nf">_dim_str</span><span class="p">(</span><span class="n">dim</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">intword</span><span class="p">(</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">) = </span><span class="si">{</span><span class="n">intword</span><span class="p">(</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2"> levels:&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">levels</span><span class="p">):</span>
-        <span class="n">level_index</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">index</span>
+        <span class="n">level_index</span> <span class="o">=</span> <span class="n">start_level</span> <span class="o">+</span> <span class="n">index</span>
         <span class="n">image_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">image_shape</span><span class="p">)</span>
         <span class="n">tiles_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;    Level </span><span class="si">{</span><span class="n">level_index</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">image_str</span><span class="si">}</span><span class="s2"> pixels -&gt; </span><span class="si">{</span><span class="n">tiles_str</span><span class="si">}</span><span class="s2"> tiles&quot;</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Level </span><span class="si">{</span><span class="n">level_index</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">image_str</span><span class="si">}</span><span class="s2"> pixels -&gt; </span><span class="si">{</span><span class="n">tiles_str</span><span class="si">}</span><span class="s2"> tiles&quot;</span>
         <span class="p">)</span></div>
 </pre></div>
 

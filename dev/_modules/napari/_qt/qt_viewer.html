@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev27+g28e67fe documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev28+gd8d2d30 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev27+g28e67fe
+                0.4.3.dev28+gd8d2d30
               </div>
             
           
@@ -494,11 +494,18 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vispy_layer</span> <span class="o">=</span> <span class="n">create_vispy_visual</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
 
-        <span class="c1"># If a QtPoll exists, connect the new layer visual to its poll</span>
-        <span class="c1"># event. So QtPoll will call VipyBaseImage._on_poll() when the</span>
-        <span class="c1"># camera moves or on a timer if needed.</span>
+        <span class="c1"># QtPoll is experimental.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># QtPoll will call VipyBaseImage._on_poll() when the camera</span>
+            <span class="c1"># moves or the timer goes off.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">poll</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">vispy_layer</span><span class="o">.</span><span class="n">_on_poll</span><span class="p">)</span>
+
+            <span class="c1"># In the other direction, some visuals need to tell</span>
+            <span class="c1"># QtPoll to start polling. When they receive new data</span>
+            <span class="c1"># and need to be polled to load it over some number</span>
+            <span class="c1"># of frames.</span>
+            <span class="k">if</span> <span class="n">vispy_layer</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">vispy_layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_poll</span><span class="o">.</span><span class="n">wake_up</span><span class="p">)</span>
 
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">scene</span>
         <span class="n">vispy_layer</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -1001,7 +1008,9 @@
 
     <span class="kn">from</span> <span class="nn">.experimental.qt_poll</span> <span class="kn">import</span> <span class="n">QtPoll</span>
 
-    <span class="k">return</span> <span class="n">QtPoll</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+    <span class="n">qt_poll</span> <span class="o">=</span> <span class="n">QtPoll</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+    <span class="n">camera</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">qt_poll</span><span class="o">.</span><span class="n">on_camera</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">qt_poll</span>
 
 
 <span class="k">def</span> <span class="nf">_create_remote_manager</span><span class="p">(</span>
@@ -1024,7 +1033,10 @@
 
     <span class="c1"># Start the monitor so we can access its events. The monitor has no</span>
     <span class="c1"># dependencies to napari except to utils.Event.</span>
-    <span class="n">monitor</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">started</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">started</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># Probably not &gt;= Python 3.9, so no manager is needed.</span>
 
     <span class="c1"># Create the remote manager and have monitor call its process_command()</span>
     <span class="c1"># method to execute commands from clients.</span>

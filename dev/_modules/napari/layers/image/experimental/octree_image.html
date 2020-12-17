@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev27+g28e67fe documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev28+gd8d2d30 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev27+g28e67fe
+                0.4.3.dev28+gd8d2d30
               </div>
             
           
@@ -179,7 +179,7 @@
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevelInfo</span>
 <span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeDisplayOptions</span><span class="p">,</span> <span class="n">SliceConfig</span>
 
-<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.async.octree&quot;</span><span class="p">)</span>
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree.image&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
@@ -426,14 +426,13 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="OctreeImage.get_drawable_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.get_drawable_chunks">[docs]</a>    <span class="k">def</span> <span class="nf">get_drawable_chunks</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">drawn_chunk_set</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">OctreeChunkKey</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">drawn_set</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">OctreeChunkKey</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Get the chunks in the current slice which are drawable.</span>
 
-<span class="sd">        The visual calls this and then draws what we send it.</span>
-
-<span class="sd">        The call to get_intersection() will chose the appropriate level of</span>
-<span class="sd">        the octree to intersect, and then return all the chunks within the</span>
+<span class="sd">        The visual calls this and then draws what we send it. The call to</span>
+<span class="sd">        get_intersection() will chose the appropriate level of the octree</span>
+<span class="sd">        to intersect, and then return all the chunks within the</span>
 <span class="sd">        intersection with that level.</span>
 
 <span class="sd">        These are the &quot;ideal&quot; chunks because they are at the level whose</span>
@@ -470,12 +469,19 @@
 <span class="sd">            The drawable chunks.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;get_drawable_chunks: No slice or view&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># There is nothing to draw.</span>
 
+        <span class="c1"># TODO_OCTREE: Make this a config option, maybe different</span>
+        <span class="c1"># expansion_factor each level above the ideal level?</span>
+        <span class="n">expansion_factor</span> <span class="o">=</span> <span class="mf">1.1</span>
+        <span class="n">view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">expansion_factor</span><span class="p">)</span>
+
         <span class="c1"># Get the current intersection and save it off.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_intersection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">get_intersection</span><span class="p">(</span><span class="n">view</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;get_drawable_chunks: Intersection is empty&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># No chunks to draw.</span>
 
         <span class="c1"># Get the ideal chunks. These are the chunks at the preferred</span>
@@ -483,21 +489,22 @@
         <span class="c1"># and in VRAM. When all loading is done, we will draw all the ideal</span>
         <span class="c1"># chunks.</span>
         <span class="n">ideal_chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">get_chunks</span><span class="p">(</span><span class="n">create</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">level_index</span>
+
+        <span class="c1"># log_chunks(&quot;ideal_chunks&quot;, ideal_chunks)</span>
 
         <span class="c1"># If we are seting the data level level automatically, then update</span>
         <span class="c1"># our level to match what was chosen for the intersection.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="o">.</span><span class="n">auto_level</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">level_index</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_level</span> <span class="o">=</span> <span class="n">level_index</span>
 
         <span class="c1"># The loader will initiate loads on any ideal chunks which are not</span>
         <span class="c1"># yet in memory. And it will return the chunks we should draw. The</span>
-        <span class="c1"># chunks might be ideal chunks, if they are in memory, but they</span>
-        <span class="c1"># might be chunks from higher or lower levels in the octree. In</span>
-        <span class="c1"># general we try to draw cover the view with the &quot;best available&quot;</span>
-        <span class="c1"># data.</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">get_drawable_chunks</span><span class="p">(</span>
-            <span class="n">drawn_chunk_set</span><span class="p">,</span> <span class="n">ideal_chunks</span>
-        <span class="p">)</span></div>
+        <span class="c1"># chunks we should draw might be ideal chunks, if they are in</span>
+        <span class="c1"># memory, but they also might be chunks from higher or lower levels</span>
+        <span class="c1"># in the octree. In general we try to draw &quot;cover the view&quot; with</span>
+        <span class="c1"># the &quot;best available&quot; data.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">get_drawable_chunks</span><span class="p">(</span><span class="n">drawn_set</span><span class="p">,</span> <span class="n">ideal_chunks</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span>
@@ -626,10 +633,21 @@
 <span class="sd">        request : ChunkRequest</span>
 <span class="sd">            This request was loaded.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;on_chunk_loaded: load=</span><span class="si">%.3f</span><span class="s2">ms elapsed=</span><span class="si">%.3f</span><span class="s2">ms location = </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">load_ms</span><span class="p">,</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">,</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+        <span class="p">)</span>
+
         <span class="c1"># Pass it to the slice, it will insert the newly loaded data into</span>
         <span class="c1"># the OctreeChunk at the right location.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">on_chunk_loaded</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>  <span class="c1"># Redraw with teh new chunk.</span></div>
+            <span class="c1"># Redraw with the new chunk.</span>
+            <span class="c1"># TODO_OCTREE: Call this at most once per frame? It&#39;s a bad</span>
+            <span class="c1"># idea to call it for every chunk?</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;on_chunk_loaded calling loaded()&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">remote_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>

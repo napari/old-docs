@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev34+g2cfa1da documentation</title>
+  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev35+g3216fc5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev34+g2cfa1da
+                0.4.3.dev35+g3216fc5
               </div>
             
           
@@ -170,7 +170,7 @@
 
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkGeom</span><span class="p">,</span> <span class="n">OctreeLocation</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">SliceConfig</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeMetadata</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
 
@@ -180,7 +180,7 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    slice_config : SliceConfig</span>
+<span class="sd">    meta : OctreeMetadata</span>
 <span class="sd">        Information about the entire octree.</span>
 <span class="sd">    level_index : int</span>
 <span class="sd">        The index of this level within the whole tree.</span>
@@ -188,19 +188,19 @@
 <span class="sd">        The (height, width) dimensions of this level in terms of tiles.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_config</span><span class="p">:</span> <span class="n">SliceConfig</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span> <span class="o">=</span> <span class="n">slice_config</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">OctreeMetadata</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">meta</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span> <span class="o">=</span> <span class="n">level_index</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span>
 
-        <span class="n">base</span> <span class="o">=</span> <span class="n">slice_config</span><span class="o">.</span><span class="n">base_shape</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">base_shape</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">image_shape</span> <span class="o">=</span> <span class="p">(</span>
             <span class="nb">int</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">),</span>
             <span class="nb">int</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">),</span>
         <span class="p">)</span>
 
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">scaled_size</span> <span class="o">=</span> <span class="n">tile_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">rows</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">scaled_size</span><span class="p">)</span>
@@ -220,10 +220,10 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    slice_id : int</span>
-<span class="sd">        The id of the OctreeMultiscaleSlice we are in.</span>
+<span class="sd">        The id of the OctreeSlice we are in.</span>
 <span class="sd">    data : ArrayLike</span>
 <span class="sd">        The data for this level.</span>
-<span class="sd">    slice_config : SliceConfig</span>
+<span class="sd">    meta : OctreeMetadata</span>
 <span class="sd">        The base image shape and other details.</span>
 <span class="sd">    level_index : int</span>
 <span class="sd">        Index of this specific level (0 is full resolution).</span>
@@ -233,15 +233,13 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
-        <span class="n">slice_config</span><span class="p">:</span> <span class="n">SliceConfig</span><span class="p">,</span>
+        <span class="n">meta</span><span class="p">:</span> <span class="n">OctreeMetadata</span><span class="p">,</span>
         <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span> <span class="o">=</span> <span class="n">slice_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
 
-        <span class="c1"># TODO_OCTREE: change from &quot;info&quot; to &quot;meta&quot;/&quot;metadata&quot;?</span>
-        <span class="c1"># info is kind of dumb sounding.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">OctreeLevelInfo</span><span class="p">(</span><span class="n">slice_config</span><span class="p">,</span> <span class="n">level_index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">OctreeLevelInfo</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">level_index</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tiles</span> <span class="o">=</span> <span class="p">{}</span>
 
 <div class="viewcode-block" id="OctreeLevel.get_chunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevel.get_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunk</span><span class="p">(</span>
@@ -300,12 +298,15 @@
 <span class="sd">            The newly created chunk.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">level_index</span>
-        <span class="n">location</span> <span class="o">=</span> <span class="n">OctreeLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">level_index</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+        <span class="n">layer_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">layer_ref</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">OctreeLocation</span><span class="p">(</span>
+            <span class="n">layer_ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">level_index</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span>
+        <span class="p">)</span>
 
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">scale</span>
         <span class="n">scale_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">scale</span><span class="p">,</span> <span class="n">scale</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">scaled_size</span> <span class="o">=</span> <span class="n">tile_size</span> <span class="o">*</span> <span class="n">scale</span>
 
         <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
@@ -322,7 +323,7 @@
 
     <span class="k">def</span> <span class="nf">_get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayLike</span><span class="p">:</span>
 
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
 
         <span class="n">array_slice</span> <span class="o">=</span> <span class="p">(</span>
             <span class="nb">slice</span><span class="p">(</span><span class="n">row</span> <span class="o">*</span> <span class="n">tile_size</span><span class="p">,</span> <span class="p">(</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">tile_size</span><span class="p">),</span>
@@ -359,8 +360,12 @@
         <span class="n">level_index</span> <span class="o">=</span> <span class="n">start_level</span> <span class="o">+</span> <span class="n">index</span>
         <span class="n">image_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">image_shape</span><span class="p">)</span>
         <span class="n">tiles_str</span> <span class="o">=</span> <span class="n">_dim_str</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span><span class="p">)</span>
+
         <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Level </span><span class="si">{</span><span class="n">level_index</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">image_str</span><span class="si">}</span><span class="s2"> pixels -&gt; </span><span class="si">{</span><span class="n">tiles_str</span><span class="si">}</span><span class="s2"> tiles&quot;</span>
+            <span class="s2">&quot;Level </span><span class="si">%d</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> pixels -&gt; </span><span class="si">%s</span><span class="s2"> tiles&quot;</span><span class="p">,</span>
+            <span class="n">level_index</span><span class="p">,</span>
+            <span class="n">image_str</span><span class="p">,</span>
+            <span class="n">tiles_str</span><span class="p">,</span>
         <span class="p">)</span></div>
 </pre></div>
 

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev34+g2cfa1da documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev35+g3216fc5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev34+g2cfa1da
+                0.4.3.dev35+g3216fc5
               </div>
             
           
@@ -173,11 +173,11 @@
 <span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkRequest</span><span class="p">,</span> <span class="n">LayerRef</span>
 <span class="kn">from</span> <span class="nn">....utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">..image</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">from</span> <span class="nn">._octree_multiscale_slice</span> <span class="kn">import</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">,</span> <span class="n">OctreeView</span>
-<span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeChunkKey</span>
+<span class="kn">from</span> <span class="nn">._octree_slice</span> <span class="kn">import</span> <span class="n">OctreeSlice</span><span class="p">,</span> <span class="n">OctreeView</span>
+<span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span>
 <span class="kn">from</span> <span class="nn">.octree_intersection</span> <span class="kn">import</span> <span class="n">OctreeIntersection</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevelInfo</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeDisplayOptions</span><span class="p">,</span> <span class="n">SliceConfig</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeDisplayOptions</span><span class="p">,</span> <span class="n">OctreeMetadata</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree.image&quot;</span><span class="p">)</span>
 
@@ -218,12 +218,12 @@
 <span class="sd">    _view : OctreeView</span>
 <span class="sd">        Describes a view frustum which implies what portion of the OctreeImage</span>
 <span class="sd">        needs to be draw.</span>
-<span class="sd">    _slice : OctreeMultiscaleSlice</span>
-<span class="sd">        When _set_view_slice() is called we create a OctreeMultiscaleSlice()</span>
+<span class="sd">    _slice : OctreeSlice</span>
+<span class="sd">        When _set_view_slice() is called we create a OctreeSlice()</span>
 <span class="sd">        that&#39;s looking at some specific slice of the data.</span>
 
 <span class="sd">        While the Image._slice was the data that was drawn on the screen,</span>
-<span class="sd">        an OctreeMultiscaleSlice contains a full Octree. The OctreeImage</span>
+<span class="sd">        an OctreeSlice contains a full Octree. The OctreeImage</span>
 <span class="sd">        visuals (VispyTiledImageLayer and TiledImageVisual) draw only</span>
 <span class="sd">        the portion for OctreeImage which is visible in the OctreeView.</span>
 <span class="sd">    _display : OctreeDisplayOptions</span>
@@ -233,7 +233,7 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_view</span><span class="p">:</span> <span class="n">OctreeView</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="p">:</span> <span class="n">OctreeMultiscaleSlice</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="p">:</span> <span class="n">OctreeSlice</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_intersection</span><span class="p">:</span> <span class="n">OctreeIntersection</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_display</span> <span class="o">=</span> <span class="n">OctreeDisplayOptions</span><span class="p">()</span>
 
@@ -338,17 +338,17 @@
         <span class="k">return</span> <span class="n">tile_shape</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">slice_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SliceConfig</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">meta</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeMetadata</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Return information about the current octree.</span>
 
 <span class="sd">        Return</span>
 <span class="sd">        ------</span>
-<span class="sd">        SliceConfig</span>
-<span class="sd">            Configuration information.</span>
+<span class="sd">        OctreeMetadata</span>
+<span class="sd">            Octree dimensions and other info.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">slice_config</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span><span class="o">.</span><span class="n">meta</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">octree_level_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeLevelInfo</span><span class="p">:</span>
@@ -426,7 +426,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="OctreeImage.get_drawable_chunks"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage.get_drawable_chunks">[docs]</a>    <span class="k">def</span> <span class="nf">get_drawable_chunks</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">drawn_set</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">OctreeChunkKey</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">drawn_set</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Get the chunks in the current slice which are drawable.</span>
 
@@ -460,7 +460,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        -----------</span>
-<span class="sd">        drawn_chunk_set : Set[OctreeChunkKey]</span>
+<span class="sd">        drawn_chunk_set : Set[OctreeChunk]</span>
 <span class="sd">            The chunks that are currently being drawn by the visual.</span>
 
 <span class="sd">        Return</span>
@@ -597,21 +597,20 @@
         <span class="n">base_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
         <span class="n">base_shape_2d</span> <span class="o">=</span> <span class="p">[</span><span class="n">base_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
 
-        <span class="n">slice_config</span> <span class="o">=</span> <span class="n">SliceConfig</span><span class="p">(</span>
-            <span class="n">base_shape_2d</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">layer_ref</span> <span class="o">=</span> <span class="n">LayerRef</span><span class="o">.</span><span class="n">from_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">OctreeMetadata</span><span class="p">(</span>
+            <span class="n">layer_ref</span><span class="p">,</span> <span class="n">base_shape_2d</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="p">)</span>
 
-        <span class="c1"># OctreeMultiscaleSlice wants all the levels, but only the dimensions</span>
+        <span class="c1"># OctreeSlice wants all the levels, but only the dimensions</span>
         <span class="c1"># of each level that we are currently viewing.</span>
         <span class="n">slice_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">level_data</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="k">for</span> <span class="n">level_data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
-
-        <span class="c1"># Create _layer_ref that matches the current indices and slice.</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_indices</span><span class="p">()</span>
-        <span class="n">layer_ref</span> <span class="o">=</span> <span class="n">LayerRef</span><span class="o">.</span><span class="n">create_from_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+        <span class="n">layer_ref</span> <span class="o">=</span> <span class="n">LayerRef</span><span class="o">.</span><span class="n">from_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="c1"># Create the slice, it will create the actual Octree.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeMultiscaleSlice</span><span class="p">(</span>
-            <span class="n">slice_data</span><span class="p">,</span> <span class="n">layer_ref</span><span class="p">,</span> <span class="n">slice_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_slice</span> <span class="o">=</span> <span class="n">OctreeSlice</span><span class="p">(</span>
+            <span class="n">slice_data</span><span class="p">,</span> <span class="n">layer_ref</span><span class="p">,</span> <span class="n">meta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_to_displayed</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_slice_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
@@ -637,7 +636,7 @@
             <span class="s2">&quot;on_chunk_loaded: load=</span><span class="si">%.3f</span><span class="s2">ms elapsed=</span><span class="si">%.3f</span><span class="s2">ms location = </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="n">request</span><span class="o">.</span><span class="n">load_ms</span><span class="p">,</span>
             <span class="n">request</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">,</span>
-            <span class="n">request</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">location</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="c1"># Pass it to the slice, it will insert the newly loaded data into</span>

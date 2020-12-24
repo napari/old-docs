@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev34+g2cfa1da documentation</title>
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev35+g3216fc5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev34+g2cfa1da
+                0.4.3.dev35+g3216fc5
               </div>
             
           
@@ -170,7 +170,7 @@
 <span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeLocation</span>
 <span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevel</span><span class="p">,</span> <span class="n">log_levels</span>
 <span class="kn">from</span> <span class="nn">.octree_tile_builder</span> <span class="kn">import</span> <span class="n">create_downsampled_levels</span>
-<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">SliceConfig</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeMetadata</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
 
@@ -204,20 +204,19 @@
 <span class="sd">        The id of the slice this octree is in.</span>
 <span class="sd">    data</span>
 <span class="sd">        The underlying multi-scale data.</span>
-<span class="sd">    slice_config : SliceConfig</span>
+<span class="sd">    meta : OctreeMetadata</span>
 <span class="sd">        The base shape and other information.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">slice_config</span><span class="p">:</span> <span class="n">SliceConfig</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">OctreeMetadata</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span> <span class="o">=</span> <span class="n">slice_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span> <span class="o">=</span> <span class="n">slice_config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">meta</span>
 
         <span class="n">_check_downscale_ratio</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># We expect a ratio of 2.</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">slice_config</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">meta</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
         <span class="p">]</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
@@ -234,7 +233,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_extra_levels</span><span class="p">())</span>
 
-        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Octree now has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2"> total levels:&quot;</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Octree now has </span><span class="si">%d</span><span class="s2"> total levels:&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">))</span>
         <span class="n">log_levels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
 
         <span class="c1"># Now the root should definitely contain only a single tile.</span>
@@ -244,6 +243,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Octree.get_level"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_level">[docs]</a>    <span class="k">def</span> <span class="nf">get_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeLevel</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the given OctreeLevel.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        level_index : int</span>
+<span class="sd">            Get the OctreeLevel with this index.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        OctreeLevel</span>
+<span class="sd">            The requested level.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level_index</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">IndexError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
@@ -263,7 +274,9 @@
 <span class="sd">        create : bool</span>
 <span class="sd">            If True create the chunk if it doesn&#39;t exist.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">col</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Octree.get_chunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunk</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="kc">False</span>
@@ -474,7 +487,7 @@
         <span class="c1"># Create additional data levels so that the root level</span>
         <span class="c1"># consists of only a single tile, using our standard/only</span>
         <span class="c1"># tile size.</span>
-        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">new_levels</span> <span class="o">=</span> <span class="n">create_downsampled_levels</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">tile_size</span>
         <span class="p">)</span>
@@ -485,9 +498,7 @@
         <span class="c1"># Return an OctreeLevel for each new data level.</span>
         <span class="n">num_current</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[</span>
-            <span class="n">OctreeLevel</span><span class="p">(</span>
-                <span class="n">slice_id</span><span class="p">,</span> <span class="n">new_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_config</span><span class="p">,</span> <span class="n">num_current</span> <span class="o">+</span> <span class="n">index</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">new_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span> <span class="n">num_current</span> <span class="o">+</span> <span class="n">index</span><span class="p">,)</span>
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">new_data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_levels</span><span class="p">)</span>
         <span class="p">]</span>
 

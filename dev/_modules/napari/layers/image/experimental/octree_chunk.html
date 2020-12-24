@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev34+g2cfa1da documentation</title>
+  <title>napari.layers.image.experimental.octree_chunk &mdash; napari 0.4.3.dev35+g3216fc5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev34+g2cfa1da
+                0.4.3.dev35+g3216fc5
               </div>
             
           
@@ -160,14 +160,14 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.image.experimental.octree_chunk</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;OctreeChunk class</span>
+<span></span><span class="sd">&quot;&quot;&quot;OctreeLocation and OctreeChunk classes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkKey</span><span class="p">,</span> <span class="n">LayerKey</span>
+<span class="kn">from</span> <span class="nn">....components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkLocation</span><span class="p">,</span> <span class="n">LayerRef</span>
 <span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
@@ -177,23 +177,41 @@
     <span class="sd">&quot;&quot;&quot;Position and scale of the chunk, for rendering.</span>
 
 <span class="sd">    Stored in the OctreeChunk so that we calculate them just once</span>
-<span class="sd">    at OctreeChunk creation time.</span>
+<span class="sd">    at OctreeChunk creation time. So the visual does not have to.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">pos</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">scale</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></div>
 
 
-<div class="viewcode-block" id="OctreeLocation"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeLocation">[docs]</a><span class="k">class</span> <span class="nc">OctreeLocation</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<div class="viewcode-block" id="OctreeLocation"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeLocation">[docs]</a><span class="k">class</span> <span class="nc">OctreeLocation</span><span class="p">(</span><span class="n">ChunkLocation</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Location of one chunk within the octree.</span>
 
-<span class="sd">    Part of the OctreeChunkKey to uniquely identify a chunk.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    slice_id : int</span>
+<span class="sd">        The id of the OctreeSlice we are in.</span>
+<span class="sd">    level_index : int</span>
+<span class="sd">        The octree level index.</span>
+<span class="sd">    row : int</span>
+<span class="sd">        The chunk row.</span>
+<span class="sd">    col : int</span>
+<span class="sd">        The chunk col.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">row</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">col</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">layer_ref</span><span class="p">:</span> <span class="n">LayerRef</span><span class="p">,</span>
+        <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer_ref</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">slice_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">level_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">row</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">col</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;location=(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="si">}</span><span class="s2">) &quot;</span>
@@ -207,45 +225,7 @@
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">))</span>
-
-<div class="viewcode-block" id="OctreeLocation.create_null"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeLocation.create_null">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create_null</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create null location that points to nothing.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span></div></div>
-
-
-<div class="viewcode-block" id="OctreeChunkKey"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunkKey">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunkKey</span><span class="p">(</span><span class="n">ChunkKey</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A ChunkKey plus some octree specific fields.</span>
-
-<span class="sd">    The ChunkLoader uses ChunkKey to identify chunks, for example for</span>
-<span class="sd">    caching or just tracking what has been loaded.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    layer : Layer</span>
-<span class="sd">        The OctreeImage layer.</span>
-<span class="sd">    indices : Tuple[Optional[slice], ...]</span>
-<span class="sd">        The indices of the image we are viewing.</span>
-<span class="sd">    location : OctreeLocation</span>
-<span class="sd">        The location of the chunk within the octree.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">layer_key</span><span class="p">:</span> <span class="n">LayerKey</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_location</span> <span class="o">=</span> <span class="n">location</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">layer_key</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">location</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_location</span>
-
-    <span class="k">def</span> <span class="nf">_get_hash_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># TODO_OCTREE: can&#39;t we just hash in the parent&#39;s hashed key with</span>
-        <span class="c1"># our additional values? Probably, but we do it from scratch here.</span>
-        <span class="n">parent</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_hash_values</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">parent</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,)</span></div>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="OctreeChunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_chunk.OctreeChunk">[docs]</a><span class="k">class</span> <span class="nc">OctreeChunk</span><span class="p">:</span>
@@ -254,9 +234,9 @@
 <span class="sd">    For 2D images a chunk is a &quot;tile&quot;. It&#39;s a 2D square region of pixels</span>
 <span class="sd">    which are part of the full 2D image.</span>
 
-<span class="sd">    If it&#39;s in level 0 of the octree, the pixels are 1:1 identical to the</span>
-<span class="sd">    full image. If it&#39;s in level 1 or greater the pixels are downsampled</span>
-<span class="sd">    from the full resolution image.</span>
+<span class="sd">    For level 0 of the octree, the pixels are 1:1 identical to the full</span>
+<span class="sd">    image. For level 1 or greater the pixels are downsampled from the full</span>
+<span class="sd">    resolution image.</span>
 
 <span class="sd">    For 3D, not yet implemented, a chunk is a sub-volume. Again for level 0</span>
 <span class="sd">    the voxels are at the full resolution of the full image, but for other</span>
@@ -326,19 +306,6 @@
         <span class="c1"># Assign and note the loading process has now finished.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeChunkKey</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;The unique key for this chunk.</span>
-
-<span class="sd">        TODO_OCTREE: Switch to __hash__? Tried __hash__ a while ago and ran</span>
-<span class="sd">        into problems, but maybe try again.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span>
-        <span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

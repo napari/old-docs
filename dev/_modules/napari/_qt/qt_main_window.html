@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.4.3.dev42+g947bdbc documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.4.3.dev43+geaf9b7b documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev42+g947bdbc
+                0.4.3.dev43+geaf9b7b
               </div>
             
           
@@ -741,6 +741,13 @@
             <span class="n">shortcut</span><span class="o">=</span><span class="n">shortcut</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_viewer_dock_widget</span><span class="p">(</span><span class="n">dock_widget</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="s1">&#39;reset_choices&#39;</span><span class="p">):</span>
+            <span class="c1"># Keep the dropdown menus in the widget in sync with the layer model</span>
+            <span class="c1"># if widget has a `reset_choices`, which is true for all magicgui</span>
+            <span class="c1"># `CategoricalWidget`s</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">reset_choices</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">dock_widget</span></div>
 
     <span class="k">def</span> <span class="nf">_add_viewer_dock_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dock_widget</span><span class="p">:</span> <span class="n">QtViewerDockWidget</span><span class="p">):</span>
@@ -797,6 +804,52 @@
         <span class="c1"># been removed. and anyway: people should be using add_dock_widget</span>
         <span class="c1"># rather than directly using _add_viewer_dock_widget</span>
         <span class="n">_dw</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Window.add_function_widget"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.add_function_widget">[docs]</a>    <span class="k">def</span> <span class="nf">add_function_widget</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">function</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">magic_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">area</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;bottom&#39;</span><span class="p">,</span>
+        <span class="n">allowed_areas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">shortcut</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Turn a function into a dock widget via magicgui.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        function : callable</span>
+<span class="sd">            Function that you want to add.</span>
+<span class="sd">        magic_kwargs : dict, optional</span>
+<span class="sd">            Keyword arguments to :func:`magicgui.magicgui` that</span>
+<span class="sd">            can be used to specify widget.</span>
+<span class="sd">        name : str, optional</span>
+<span class="sd">            Name of dock widget to appear in window menu.</span>
+<span class="sd">        area : str</span>
+<span class="sd">            Side of the main window to which the new dock widget will be added.</span>
+<span class="sd">            Must be in {&#39;left&#39;, &#39;right&#39;, &#39;top&#39;, &#39;bottom&#39;}</span>
+<span class="sd">        allowed_areas : list[str], optional</span>
+<span class="sd">            Areas, relative to main window, that the widget is allowed dock.</span>
+<span class="sd">            Each item in list must be in {&#39;left&#39;, &#39;right&#39;, &#39;top&#39;, &#39;bottom&#39;}</span>
+<span class="sd">            By default, all areas are allowed.</span>
+<span class="sd">        shortcut : str, optional</span>
+<span class="sd">            Keyboard shortcut to appear in dropdown menu.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dock_widget : QtViewerDockWidget</span>
+<span class="sd">            `dock_widget` that can pass viewer events.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">magicgui</span> <span class="kn">import</span> <span class="n">magicgui</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_dock_widget</span><span class="p">(</span>
+            <span class="n">magicgui</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="o">**</span><span class="n">magic_kwargs</span> <span class="ow">or</span> <span class="p">{}),</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="n">function</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">),</span>
+            <span class="n">area</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+            <span class="n">allowed_areas</span><span class="o">=</span><span class="n">allowed_areas</span><span class="p">,</span>
+            <span class="n">shortcut</span><span class="o">=</span><span class="n">shortcut</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Window.resize"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.resize">[docs]</a>    <span class="k">def</span> <span class="nf">resize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Resize the window.</span>

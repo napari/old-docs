@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev44+ged4a303 documentation</title>
+  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev45+gf6fb454 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev44+ged4a303
+                0.4.3.dev45+gf6fb454
               </div>
             
           
@@ -298,13 +298,15 @@
 <span class="sd">            The newly created chunk.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">level_index</span>
-        <span class="n">layer_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">layer_ref</span>
+
+        <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span>
+        <span class="n">layer_ref</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">layer_ref</span>
+
         <span class="n">location</span> <span class="o">=</span> <span class="n">OctreeLocation</span><span class="p">(</span>
             <span class="n">layer_ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">level_index</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span>
         <span class="p">)</span>
 
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">scale</span>
-        <span class="n">scale_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">scale</span><span class="p">,</span> <span class="n">scale</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
         <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="n">scaled_size</span> <span class="o">=</span> <span class="n">tile_size</span> <span class="o">*</span> <span class="n">scale</span>
@@ -313,10 +315,15 @@
             <span class="p">[</span><span class="n">col</span> <span class="o">*</span> <span class="n">scaled_size</span><span class="p">,</span> <span class="n">row</span> <span class="o">*</span> <span class="n">scaled_size</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
         <span class="p">)</span>
 
-        <span class="c1"># Geom is used by the visual for rendering this chunk.</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="n">OctreeChunkGeom</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">scale_vec</span><span class="p">)</span>
-
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_data</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+
+        <span class="c1"># Geom is used by the visual for rendering this chunk, size</span>
+        <span class="c1"># it based on the base image pixels, not based on the data</span>
+        <span class="c1"># in this level, so it&#39;s exact.</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">base_shape</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+        <span class="n">remain</span> <span class="o">=</span> <span class="n">base</span> <span class="o">-</span> <span class="n">pos</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">remain</span><span class="p">,</span> <span class="p">[</span><span class="n">scaled_size</span><span class="p">,</span> <span class="n">scaled_size</span><span class="p">])</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">OctreeChunkGeom</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 
         <span class="c1"># Return the newly created chunk.</span>
         <span class="k">return</span> <span class="n">OctreeChunk</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">geom</span><span class="p">)</span>

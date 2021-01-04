@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev56+g9ad2890 documentation</title>
+  <title>napari._qt.qt_viewer &mdash; napari 0.4.3.dev57+g19a8c4c documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev56+g9ad2890
+                0.4.3.dev57+g19a8c4c
               </div>
             
           
@@ -181,7 +181,7 @@
     <span class="n">mouse_wheel_callbacks</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..utils.io</span> <span class="kn">import</span> <span class="n">imsave</span>
-<span class="kn">from</span> <span class="nn">..utils.key_bindings</span> <span class="kn">import</span> <span class="n">components_to_key_combo</span>
+<span class="kn">from</span> <span class="nn">..utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapHandler</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">get_theme</span><span class="p">,</span> <span class="n">template</span>
 <span class="kn">from</span> <span class="nn">.dialogs.qt_about_key_bindings</span> <span class="kn">import</span> <span class="n">QtAboutKeyBindings</span>
 <span class="kn">from</span> <span class="nn">.dialogs.screenshot_dialog</span> <span class="kn">import</span> <span class="n">ScreenshotDialog</span>
@@ -266,6 +266,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="n">QtLayerList</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layerButtons</span> <span class="o">=</span> <span class="n">QtLayerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewerButtons</span> <span class="o">=</span> <span class="n">QtViewerButtons</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span> <span class="o">=</span> <span class="n">KeymapHandler</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">keymap_providers</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_console</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="n">layerList</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">()</span>
@@ -340,11 +343,13 @@
         <span class="p">}</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_theme</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_active_layer_change</span><span class="p">()</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_active_layer_change</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">theme</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_theme</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">interactive</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_interactive</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_cursor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_cursor</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">theme</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_theme</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reordered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reorder_layers</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">inserted</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_add_layer_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">removed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_remove_layer</span><span class="p">)</span>
@@ -390,8 +395,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_mouse_move</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_mouse_release</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_key_press</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_key_release</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">on_key_press</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">on_key_release</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_mouse_wheel</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_draw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_resize</span><span class="p">)</span>
@@ -472,6 +477,24 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">700</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">controls</span><span class="o">.</span><span class="n">setMaximumWidth</span><span class="p">(</span><span class="mi">220</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_active_layer_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;When active layer changes change keymap handler.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event : napari.utils.event.Event</span>
+<span class="sd">            The napari event that triggered this method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">active_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">keymap_providers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">keymap_providers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">active_layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_key_map_handler</span><span class="o">.</span><span class="n">keymap_providers</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">active_layer</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="o">=</span> <span class="n">active_layer</span>
 
     <span class="k">def</span> <span class="nf">_on_add_layer_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;When a layer is added, set its parent and order.</span>
@@ -836,44 +859,6 @@
         <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">active_layer</span>
         <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">mouse_release_callbacks</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="QtViewer.on_key_press"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_key_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_key_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Called whenever key pressed in canvas.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        event : napari.utils.event.Event</span>
-<span class="sd">            The napari event that triggered this method.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">event</span><span class="o">.</span><span class="n">native</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">native</span><span class="o">.</span><span class="n">isAutoRepeat</span><span class="p">()</span>
-            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;Up&#39;</span><span class="p">,</span> <span class="s1">&#39;Down&#39;</span><span class="p">,</span> <span class="s1">&#39;Left&#39;</span><span class="p">,</span> <span class="s1">&#39;Right&#39;</span><span class="p">]</span>
-        <span class="p">)</span> <span class="ow">or</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># pass if no key is present or if key is held down, unless the</span>
-            <span class="c1"># key being held down is one of the navigation keys</span>
-            <span class="c1"># this helps for scrolling, etc.</span>
-            <span class="k">return</span>
-
-        <span class="n">combo</span> <span class="o">=</span> <span class="n">components_to_key_combo</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">modifiers</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">press_key</span><span class="p">(</span><span class="n">combo</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="QtViewer.on_key_release"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_key_release">[docs]</a>    <span class="k">def</span> <span class="nf">on_key_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Called whenever key released in canvas.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        event : napari.utils.event.Event</span>
-<span class="sd">            The napari event that triggered this method.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="c1"># on linux press down is treated as multiple press and release</span>
-            <span class="n">event</span><span class="o">.</span><span class="n">native</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">native</span><span class="o">.</span><span class="n">isAutoRepeat</span><span class="p">()</span>
-        <span class="p">):</span>
-            <span class="k">return</span>
-        <span class="n">combo</span> <span class="o">=</span> <span class="n">components_to_key_combo</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">modifiers</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">release_key</span><span class="p">(</span><span class="n">combo</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="QtViewer.on_draw"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.QtViewer.on_draw">[docs]</a>    <span class="k">def</span> <span class="nf">on_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Called whenever the canvas is drawn.</span>

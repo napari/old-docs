@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.4.3.dev59+gc5d10bc documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.4.3.dev60+g1a9f9e5 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev59+gc5d10bc
+                0.4.3.dev60+g1a9f9e5
               </div>
             
           
@@ -165,8 +165,6 @@
 <span class="sd">wrap.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">platform</span>
-<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">time</span>
 
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">Qt</span>
@@ -180,11 +178,9 @@
     <span class="n">QMainWindow</span><span class="p">,</span>
     <span class="n">QMenu</span><span class="p">,</span>
     <span class="n">QShortcut</span><span class="p">,</span>
-    <span class="n">QStatusBar</span><span class="p">,</span>
     <span class="n">QWidget</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">__version__</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.io</span> <span class="kn">import</span> <span class="n">imsave</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">in_jupyter</span>
@@ -194,12 +190,28 @@
 <span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
 <span class="kn">from</span> <span class="nn">.dialogs.screenshot_dialog</span> <span class="kn">import</span> <span class="n">ScreenshotDialog</span>
 <span class="kn">from</span> <span class="nn">.perf.qt_debug_menu</span> <span class="kn">import</span> <span class="n">DebugMenu</span>
-<span class="kn">from</span> <span class="nn">.qt_event_loop</span> <span class="kn">import</span> <span class="n">get_app</span>
+<span class="kn">from</span> <span class="nn">.qt_event_loop</span> <span class="kn">import</span> <span class="n">NAPARI_ICON_PATH</span><span class="p">,</span> <span class="n">get_app</span>
 <span class="kn">from</span> <span class="nn">.qt_resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">QImg2array</span>
 <span class="kn">from</span> <span class="nn">.widgets.qt_plugin_sorter</span> <span class="kn">import</span> <span class="n">QtPluginSorter</span>
 <span class="kn">from</span> <span class="nn">.widgets.qt_viewer_dock_widget</span> <span class="kn">import</span> <span class="n">QtViewerDockWidget</span>
+
+
+<span class="k">class</span> <span class="nc">_QtMainWindow</span><span class="p">(</span><span class="n">QMainWindow</span><span class="p">):</span>
+    <span class="c1"># This was added so that someone can patch</span>
+    <span class="c1"># `napari._qt.qt_main_window._QtMainWindow._window_icon`</span>
+    <span class="c1"># to their desired window icon</span>
+    <span class="n">_window_icon</span> <span class="o">=</span> <span class="n">NAPARI_ICON_PATH</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_window_icon</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setUnifiedTitleAndToolBarOnMac</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">center</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">QHBoxLayout</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Window"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window">[docs]</a><span class="k">class</span> <span class="nc">Window</span><span class="p">:</span>
@@ -230,59 +242,22 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">viewer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">show</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
         <span class="c1"># create QApplication if it doesn&#39;t already exist</span>
-        <span class="n">app</span> <span class="o">=</span> <span class="n">get_app</span><span class="p">()</span>
-
-        <span class="c1"># TODO: We should move this stuff to `get_app` logic</span>
-        <span class="c1"># but it&#39;s currently tied to attributes on the viewer instance</span>
-        <span class="c1"># &gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</span>
-        <span class="n">_napari_app_id</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
-            <span class="n">viewer</span><span class="p">,</span>
-            <span class="s2">&quot;_napari_app_id&quot;</span><span class="p">,</span>
-            <span class="s1">&#39;napari.napari.viewer.&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">__version__</span><span class="p">),</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span>
-            <span class="ow">and</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s1">&#39;frozen&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="n">_napari_app_id</span>
-        <span class="p">):</span>
-            <span class="kn">import</span> <span class="nn">ctypes</span>
-
-            <span class="n">ctypes</span><span class="o">.</span><span class="n">windll</span><span class="o">.</span><span class="n">shell32</span><span class="o">.</span><span class="n">SetCurrentProcessExplicitAppUserModelID</span><span class="p">(</span>
-                <span class="n">_napari_app_id</span>
-            <span class="p">)</span>
-
-        <span class="n">logopath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="s1">&#39;resources&#39;</span><span class="p">,</span> <span class="s1">&#39;logo.png&#39;</span>
-        <span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">viewer</span><span class="p">,</span> <span class="s2">&quot;_napari_global_logo&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
-            <span class="n">app</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
-            <span class="n">app</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="n">logopath</span><span class="p">))</span>
-        <span class="c1"># &lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+        <span class="n">get_app</span><span class="p">()</span>
 
         <span class="c1"># Connect the Viewer and create the Main Window</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span> <span class="o">=</span> <span class="n">QtViewer</span><span class="p">(</span><span class="n">viewer</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span> <span class="o">=</span> <span class="n">QMainWindow</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="n">logopath</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setUnifiedTitleAndToolBarOnMac</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span> <span class="o">=</span> <span class="n">_QtMainWindow</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">centralWidget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">statusBar</span><span class="p">()</span>
 
         <span class="c1"># since we initialize canvas before window, we need to manually connect them again.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">windowHandle</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">windowHandle</span><span class="p">()</span><span class="o">.</span><span class="n">screenChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">_backend</span><span class="o">.</span><span class="n">screen_changed</span>
             <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">QHBoxLayout</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span> <span class="o">=</span> <span class="n">QStatusBar</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setStatusBar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_menubar</span><span class="p">()</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_file_menu</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_view_menu</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_window_menu</span><span class="p">()</span>

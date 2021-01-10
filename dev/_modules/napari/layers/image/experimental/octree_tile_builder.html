@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_tile_builder &mdash; napari 0.4.3.dev68+gec4c64d documentation</title>
+  <title>napari.layers.image.experimental.octree_tile_builder &mdash; napari 0.4.3.dev69+g7dbebff documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev68+gec4c64d
+                0.4.3.dev69+g7dbebff
               </div>
             
           
@@ -160,15 +160,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.image.experimental.octree_tile_builder</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Functions to downsample images and create multi-scale images.</span>
-
-<span class="sd">This file is early/placeholder. In normal useage we might never create</span>
-<span class="sd">tiles, because downsampling images is very slow. But for debugging and</span>
-<span class="sd">development we do make tiles on the fly, for test images and other reasons.</span>
-
-<span class="sd">Long term we might possible make tiles in the background at some point. So</span>
-<span class="sd">as you browse a large image that doesn&#39;t have tiles, they are created in</span>
-<span class="sd">the background. But that&#39;s pretty speculative and far out.</span>
+<span></span><span class="sd">&quot;&quot;&quot;create_downsampled_levels()</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">time</span>
@@ -179,27 +171,13 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
 
-<span class="kn">from</span> <span class="nn">....types</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span> <span class="nn">....utils.perf</span> <span class="kn">import</span> <span class="n">block_timer</span>
 <span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">NormalNoise</span>
-
-<span class="n">TileArray</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">]]</span>
 
 <span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
-    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
-
-<span class="k">def</span> <span class="nf">_none</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
-    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_add_delay</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span><span class="p">):</span>
+<div class="viewcode-block" id="add_delay"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.add_delay">[docs]</a><span class="k">def</span> <span class="nf">add_delay</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">delay_ms</span><span class="p">:</span> <span class="n">NormalNoise</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Add a random delay when this array is first accessed.</span>
 
 <span class="sd">    TODO_OCTREE: unused not but might use again...</span>
@@ -216,108 +194,7 @@
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">array</span>
 
-    <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span><span class="n">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">),</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Combine between one and four tiles into a single tile.</span>
-
-<span class="sd">    The single resulting tile is not downsampled, so its size is the size</span>
-<span class="sd">    of the four tiles combined together. However, typically the result will</span>
-<span class="sd">    be downsampled by half in the following steps.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    tiles</span>
-<span class="sd">        The 4 child tiles, some might be None.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have 4 values&quot;</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Position 0 cannot be None&quot;</span><span class="p">)</span>
-
-    <span class="c1"># The layout of the children is:</span>
-    <span class="c1"># 0 1</span>
-    <span class="c1"># 2 3</span>
-    <span class="k">if</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
-        <span class="c1"># We only have one tile:</span>
-        <span class="c1"># 0 X</span>
-        <span class="c1"># X X</span>
-        <span class="k">return</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">_none</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]):</span>
-        <span class="c1"># We only have the top two tiles:</span>
-        <span class="c1"># 0 1</span>
-        <span class="c1"># X X</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">_none</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">3</span><span class="p">])):</span>
-        <span class="c1"># We only have the left two tiles:</span>
-        <span class="c1"># 0 X</span>
-        <span class="c1"># 2 X</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
-
-    <span class="c1"># We have all four tiles:</span>
-    <span class="c1"># 0 1</span>
-    <span class="c1"># 2 3</span>
-    <span class="n">row1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
-    <span class="n">row2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">row1</span><span class="p">,</span> <span class="n">row2</span><span class="p">))</span>
-
-
-<span class="k">def</span> <span class="nf">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Create one parent tile from four child tiles.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    tiles</span>
-<span class="sd">        The 4 child tiles, some could be None.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Combine 1-4 tiles together.</span>
-    <span class="n">combined_tile</span> <span class="o">=</span> <span class="n">_combine_tiles</span><span class="p">(</span><span class="o">*</span><span class="n">tiles</span><span class="p">)</span>
-
-    <span class="c1"># Down sample by half.</span>
-    <span class="k">return</span> <span class="n">ndi</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span>
-        <span class="n">combined_tile</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span>
-    <span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_create_coarser_level</span><span class="p">(</span><span class="n">tiles</span><span class="p">:</span> <span class="n">TileArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TileArray</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Return a level that is one level coarser.</span>
-
-<span class="sd">    Combine each 2x2 group of tiles into one downsampled tile. This is slow</span>
-<span class="sd">    so currently it&#39;s only used for testing. Most multi-scale data will</span>
-<span class="sd">    be provided pre-downsampled into multiple levels.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    tiles : TileArray</span>
-<span class="sd">        The tiles to combine.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    TileArray</span>
-<span class="sd">        The coarser level of tiles.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">level</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">),</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="n">row_tiles</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tiles</span><span class="p">[</span><span class="n">row</span><span class="p">]),</span> <span class="mi">2</span><span class="p">):</span>
-            <span class="c1"># The layout of the children is:</span>
-            <span class="c1"># 0 1</span>
-            <span class="c1"># 2 3</span>
-            <span class="n">group</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
-                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
-                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span><span class="p">),</span>
-                <span class="n">_get_tile</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
-            <span class="p">)</span>
-            <span class="n">tile</span> <span class="o">=</span> <span class="n">_create_downsampled_tile</span><span class="p">(</span><span class="o">*</span><span class="n">group</span><span class="p">)</span>
-            <span class="n">row_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
-        <span class="n">level</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_tiles</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">level</span>
+    <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span><span class="n">delayed</span><span class="p">(</span><span class="n">array</span><span class="p">),</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="create_downsampled_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_tile_builder.create_downsampled_levels">[docs]</a><span class="k">def</span> <span class="nf">create_downsampled_levels</span><span class="p">(</span>
@@ -331,6 +208,19 @@
 
 <span class="sd">    For example if the tile_size is 256, the data in the file level will</span>
 <span class="sd">    be smaller than (256, 256).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Currently we use create_downsampled_levels() from Octree._create_extra_levels</span>
+<span class="sd">    so that the image pyramid extends up to the point where the coarsest level</span>
+<span class="sd">    fits within a single tile.</span>
+
+<span class="sd">    This is potentially quite slow and wasteful. A better long term solution might</span>
+<span class="sd">    be if our tiled visuals supported larger tiles, and a mix of tile sizes. Then</span>
+<span class="sd">    the root level could be a special case that had a larger tiles size than</span>
+<span class="sd">    the interior levels. This would mean zero downsampled, it&#39;d probably perform</span>
+<span class="sd">    better. Tiling an image that the graphics card can easily display is</span>
+<span class="sd">    probably not efficient.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>

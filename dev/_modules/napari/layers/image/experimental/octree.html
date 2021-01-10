@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev68+gec4c64d documentation</title>
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.4.3.dev69+g7dbebff documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev68+gec4c64d
+                0.4.3.dev69+g7dbebff
               </div>
             
           
@@ -176,23 +176,25 @@
 
 
 <div class="viewcode-block" id="Octree"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree">[docs]</a><span class="k">class</span> <span class="nc">Octree</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;A region octree that holds hold 2D or 3D images.</span>
+    <span class="sd">&quot;&quot;&quot;A sparse region octree that holds hold 2D or 3D images.</span>
 
-<span class="sd">    Today the octree is full/complete meaning every node has 4 or 8</span>
-<span class="sd">    children, and every leaf node is at the same level of the tree. This</span>
-<span class="sd">    makes sense for region/image trees, because the image exists</span>
-<span class="sd">    everywhere.</span>
+<span class="sd">    The Octree is sparse in that it contains the ArrayLike data for the</span>
+<span class="sd">    image, but it does not contain chunks or nodes or anything for that</span>
+<span class="sd">    data. There is no actual tree for the data, only the multiscale data</span>
+<span class="sd">    itself.</span>
 
-<span class="sd">    Since we are a complete tree we don&#39;t need actual nodes with references</span>
-<span class="sd">    to the node&#39;s children. Instead, every level is just an array, and</span>
-<span class="sd">    going from parent to child or child to parent is trivial, you just</span>
-<span class="sd">    need to double or half the indexes.</span>
+<span class="sd">    Instead Octree just provides methods so that other classes like</span>
+<span class="sd">    OctreeLevel, OctreeSlice and OctreeLoader can create and store OctreeChunks</span>
+<span class="sd">    for just the portion of the tree we are rendering. This class knows</span>
+<span class="sd">    how to go from chunks to their parents or children, but those parents</span>
+<span class="sd">    or children are only created as needed.</span>
 
-<span class="sd">    Future Work: Geometry</span>
-<span class="sd">    ---------------------</span>
-<span class="sd">    Eventually we want our octree to hold geometry, not just images.</span>
-<span class="sd">    Geometry such as points and meshes. For geometry a sparse octree might</span>
-<span class="sd">    make more sense than this full/complete region octree.</span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Future work related to geometry: Eventually we want our octree to hold</span>
+<span class="sd">    geometry, not just images. Geometry such as points and meshes. For</span>
+<span class="sd">    geometry a sparse octree might make more sense than this full/complete</span>
+<span class="sd">    region octree.</span>
 
 <span class="sd">    With geometry there might be lots of empty space in between small dense</span>
 <span class="sd">    pockets of geometry. Some parts of tree might need to be very deep, but</span>
@@ -448,42 +450,25 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        If we created this octree data, the root/highest level would</span>
-<span class="sd">        consist of a single tile. However, if we are reading someone</span>
-<span class="sd">        else&#39;s multiscale data, they did not know our tile size. Or they</span>
-<span class="sd">        might not have imagined someone using tiled rendering at all.</span>
-<span class="sd">        So their root level might be pretty large. We&#39;ve seen root</span>
+<span class="sd">        Whoever created this multiscale data probably did not know our tile</span>
+<span class="sd">        size. So their root level might be pretty large. We&#39;ve seen root</span>
 <span class="sd">        levels larger than 8000x8000 pixels.</span>
 
-<span class="sd">        It would be nice in this case if our root level could use a</span>
-<span class="sd">        really large tile size as a special case. So small tiles for most</span>
-<span class="sd">        levels, but then one big tile as the root.</span>
+<span class="sd">        Since our visual can&#39;t have variable size tiles or large tiles yet,</span>
+<span class="sd">        we compute/downsample additional levels ourselves and add them to</span>
+<span class="sd">        the data. We do this until we reach a level that fits within a</span>
+<span class="sd">        single tile.</span>
 
-<span class="sd">        However, today our TiledImageVisual can&#39;t handle that. It can&#39;t</span>
-<span class="sd">        handle a mix of tile sizes, and TextureAtlas2D can&#39;t even</span>
-<span class="sd">        allocate multiple textures!</span>
-
-<span class="sd">        So for now, we compute/downsample additional levels ourselves and</span>
-<span class="sd">        add them to the data. We do this until we reach a level that does</span>
-<span class="sd">        fit within a single tile.</span>
-
-<span class="sd">        For example for that 8000x8000 pixel root level, if we are using</span>
-<span class="sd">        256x256 tiles we&#39;ll keep adding levels until we get to a level</span>
-<span class="sd">        that fits within 256x256.</span>
+<span class="sd">        For example, for that 8000x8000 pixel root level, if we are using</span>
+<span class="sd">        (256, 256) tiles we&#39;ll keep adding levels until we get to a level</span>
+<span class="sd">        that fits within (256, 256).</span>
 
 <span class="sd">        Unfortunately, we can&#39;t be sure our downsampling approach will</span>
-<span class="sd">        match the rest of the data. The levels we add might be more/less</span>
-<span class="sd">        blurry than the original ones, or have different downsampling</span>
-<span class="sd">        artifacts. That&#39;s probably okay because these are low-resolution</span>
-<span class="sd">        levels, but still it would be better to show their root level</span>
-<span class="sd">        verbatim on a single large tiles.</span>
+<span class="sd">        visually match the rest of the data. That&#39;s probably okay because</span>
+<span class="sd">        these are the lowest-resolution levels. But this another reason</span>
+<span class="sd">        it&#39;d be better if our visuals could draw large tiles when needed.</span>
 
-<span class="sd">        Also, this is slow due to the downsampling, but also slow due to</span>
-<span class="sd">        having to load the full root level into memory. If we had a root</span>
-<span class="sd">        level that was tile sized, then we could load that very quickly.</span>
-<span class="sd">        That issue does not go away even if we have a special large-size</span>
-<span class="sd">        root tile. For best performance multiscale data should be built</span>
-<span class="sd">        down to a very small root tile, the extra storage is negligible.</span>
+<span class="sd">        Also, downsampling can be very slow.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Create additional data levels so that the root level</span>

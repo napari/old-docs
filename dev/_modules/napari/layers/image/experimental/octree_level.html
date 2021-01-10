@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev68+gec4c64d documentation</title>
+  <title>napari.layers.image.experimental.octree_level &mdash; napari 0.4.3.dev69+g7dbebff documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev68+gec4c64d
+                0.4.3.dev69+g7dbebff
               </div>
             
           
@@ -160,11 +160,11 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.layers.image.experimental.octree_level</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;OctreeLevel and OctreeLevelInfo classes.</span>
+<span></span><span class="sd">&quot;&quot;&quot;OctreeLevelInfo and OctreeLevel classes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -178,14 +178,14 @@
 <div class="viewcode-block" id="OctreeLevelInfo"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevelInfo">[docs]</a><span class="k">class</span> <span class="nc">OctreeLevelInfo</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Information about one level of the octree.</span>
 
+<span class="sd">    This should be a NamedTuple.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    meta : OctreeMetadata</span>
 <span class="sd">        Information about the entire octree.</span>
 <span class="sd">    level_index : int</span>
 <span class="sd">        The index of this level within the whole tree.</span>
-<span class="sd">    shape_in_tiles : Tuple[int, int]</span>
-<span class="sd">        The (height, width) dimensions of this level in terms of tiles.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">OctreeMetadata</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -213,9 +213,14 @@
 <div class="viewcode-block" id="OctreeLevel"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevel">[docs]</a><span class="k">class</span> <span class="nc">OctreeLevel</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;One level of the octree.</span>
 
-<span class="sd">    A level contains a 2D array of tiles.</span>
+<span class="sd">    An OctreeLevel is &quot;sparse&quot; in that it only contains a dict of</span>
+<span class="sd">    OctreeChunks for the portion of the octree that is currently being</span>
+<span class="sd">    rendered. So even if the full level contains hundreds of millions of</span>
+<span class="sd">    chunks, this class only contains a few dozens OctreeChunks.</span>
 
-<span class="sd">    Soon might also contain a 3D array of sub-volumes.</span>
+<span class="sd">    This was necessary because even having a null reference for every</span>
+<span class="sd">    OctreeChunk in a level would use too much space and be too slow to</span>
+<span class="sd">    construct.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -227,6 +232,13 @@
 <span class="sd">        The base image shape and other details.</span>
 <span class="sd">    level_index : int</span>
 <span class="sd">        Index of this specific level (0 is full resolution).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    info : OctreeLevelInfo</span>
+<span class="sd">        Metadata about this level.</span>
+<span class="sd">    _tiles : Dict[tuple, OctreeChunk]</span>
+<span class="sd">        Maps (row, col) tuple to the OctreeChunk at that location.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
@@ -240,7 +252,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">OctreeLevelInfo</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">level_index</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_tiles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tiles</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">OctreeChunk</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
 <div class="viewcode-block" id="OctreeLevel.get_chunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.OctreeLevel.get_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunk</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="kc">False</span>
@@ -272,8 +284,8 @@
 
         <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">shape_in_tiles</span>
         <span class="k">if</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">row</span> <span class="o">&gt;=</span> <span class="n">rows</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="n">cols</span><span class="p">:</span>
-            <span class="c1"># Chunk coordinates not in the level. Not an exception because</span>
-            <span class="c1"># callers might be trying to get children just out of bounds,</span>
+            <span class="c1"># The coordinates are not in the level. Not an exception because</span>
+            <span class="c1"># callers might be trying to get children just over the edge</span>
             <span class="c1"># for non-power-of-two base images.</span>
             <span class="k">return</span> <span class="kc">None</span>
 
@@ -317,9 +329,9 @@
 
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_data</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
 
-        <span class="c1"># Geom is used by the visual for rendering this chunk, size</span>
-        <span class="c1"># it based on the base image pixels, not based on the data</span>
-        <span class="c1"># in this level, so it&#39;s exact.</span>
+        <span class="c1"># Create OctreeChunkGeom used by the visual for rendering this</span>
+        <span class="c1"># chunk. Size it based on the base image pixels, not based on the</span>
+        <span class="c1"># data in this level, so it&#39;s exact.</span>
         <span class="n">base</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">base_shape</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
         <span class="n">remain</span> <span class="o">=</span> <span class="n">base</span> <span class="o">-</span> <span class="n">pos</span>
         <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">remain</span><span class="p">,</span> <span class="p">[</span><span class="n">scaled_size</span><span class="p">,</span> <span class="n">scaled_size</span><span class="p">])</span>
@@ -329,6 +341,20 @@
         <span class="k">return</span> <span class="n">OctreeChunk</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">geom</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayLike</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the chunk&#39;s data at this location.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        row : int</span>
+<span class="sd">            The row coordinate.</span>
+<span class="sd">        col : int</span>
+<span class="sd">            The column coordinate.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        ArrayLike</span>
+<span class="sd">            The data at this location.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
 
@@ -340,9 +366,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">array_slice</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),)</span>  <span class="c1"># Add the colors.</span>
 
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">array_slice</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="n">data</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">array_slice</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="log_levels"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_level.log_levels">[docs]</a><span class="k">def</span> <span class="nf">log_levels</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">],</span> <span class="n">start_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

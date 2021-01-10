@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental package &mdash; napari 0.4.3.dev68+gec4c64d documentation</title>
+  <title>napari.layers.image.experimental package &mdash; napari 0.4.3.dev69+g7dbebff documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                0.4.3.dev68+gec4c64d
+                0.4.3.dev69+g7dbebff
               </div>
             
           
@@ -286,18 +286,21 @@
 <dt id="napari.layers.image.experimental.octree.Octree">
 <em class="property">class </em><code class="sig-name descname">Octree</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">slice_id</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">meta</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_util.OctreeMetadata" title="napari.layers.image.experimental.octree_util.OctreeMetadata">napari.layers.image.experimental.octree_util.OctreeMetadata</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree.html#Octree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree.Octree" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>A region octree that holds hold 2D or 3D images.</p>
-<p>Today the octree is full/complete meaning every node has 4 or 8
-children, and every leaf node is at the same level of the tree. This
-makes sense for region/image trees, because the image exists
-everywhere.</p>
-<p>Since we are a complete tree we don’t need actual nodes with references
-to the node’s children. Instead, every level is just an array, and
-going from parent to child or child to parent is trivial, you just
-need to double or half the indexes.</p>
-<p>Eventually we want our octree to hold geometry, not just images.
-Geometry such as points and meshes. For geometry a sparse octree might
-make more sense than this full/complete region octree.</p>
+<p>A sparse region octree that holds hold 2D or 3D images.</p>
+<p>The Octree is sparse in that it contains the ArrayLike data for the
+image, but it does not contain chunks or nodes or anything for that
+data. There is no actual tree for the data, only the multiscale data
+itself.</p>
+<p>Instead Octree just provides methods so that other classes like
+OctreeLevel, OctreeSlice and OctreeLoader can create and store OctreeChunks
+for just the portion of the tree we are rendering. This class knows
+how to go from chunks to their parents or children, but those parents
+or children are only created as needed.</p>
+<p class="rubric">Notes</p>
+<p>Future work related to geometry: Eventually we want our octree to hold
+geometry, not just images. Geometry such as points and meshes. For
+geometry a sparse octree might make more sense than this full/complete
+region octree.</p>
 <p>With geometry there might be lots of empty space in between small dense
 pockets of geometry. Some parts of tree might need to be very deep, but
 it would be a waste for the tree to be that deep everywhere.</p>
@@ -428,7 +431,7 @@ it creates the parent and returns it.</p>
 </div>
 <div class="section" id="module-napari.layers.image.experimental.octree_chunk">
 <span id="napari-layers-image-experimental-octree-chunk-module"></span><h2>napari.layers.image.experimental.octree_chunk module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_chunk" title="Permalink to this headline">¶</a></h2>
-<p>OctreeLocation and OctreeChunk classes.</p>
+<p>OctreeChunkGeom, OctreeLocation and OctreeChunk classes.</p>
 <dl class="py class">
 <dt id="napari.layers.image.experimental.octree_chunk.OctreeChunk">
 <em class="property">class </em><code class="sig-name descname">OctreeChunk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.19)">numpy.ndarray</a><span class="p">, </span>dask.array.Array<span class="p">, </span>zarr.Array<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">location</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeLocation" title="napari.layers.image.experimental.octree_chunk.OctreeLocation">napari.layers.image.experimental.octree_chunk.OctreeLocation</a></span></em>, <em class="sig-param"><span class="n">geom</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunkGeom" title="napari.layers.image.experimental.octree_chunk.OctreeChunkGeom">napari.layers.image.experimental.octree_chunk.OctreeChunkGeom</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_chunk.html#OctreeChunk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_chunk.OctreeChunk" title="Permalink to this definition">¶</a></dt>
@@ -558,6 +561,7 @@ A loaded chunk’s data is always an ndarray.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>layer_ref</strong> (<em>LayerRef</em>) – Referen to the layer this location is in.</p></li>
 <li><p><strong>slice_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a>) – The id of the OctreeSlice we are in.</p></li>
 <li><p><strong>level_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a>) – The octree level index.</p></li>
 <li><p><strong>row</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a>) – The chunk row.</p></li>
@@ -587,20 +591,21 @@ A loaded chunk’s data is always an ndarray.</p>
 <span id="napari-layers-image-experimental-octree-image-module"></span><h2>napari.layers.image.experimental.octree_image module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_image" title="Permalink to this headline">¶</a></h2>
 <p>OctreeImage class.</p>
 <p>An eventual replacement for Image that combines single-scale and
-chunked/tiled multi-scale into one implementation.</p>
+chunked (tiled) multi-scale into one implementation.</p>
 <dl class="py class">
 <dt id="napari.layers.image.experimental.octree_image.OctreeImage">
 <em class="property">class </em><code class="sig-name descname">OctreeImage</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_image.html#OctreeImage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="napari.layers.image.html#napari.layers.image.image.Image" title="napari.layers.image.image.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">napari.layers.image.image.Image</span></code></a></p>
-<p>OctreeImage layer.</p>
+<p>Image layer rendered using an octree.</p>
 <p>Experimental variant of Image that renders using an octree. For 2D
 images the octree is really just a quadtree. For 3D volumes it will be
-a real octree. This class is intended to eventually fully replace the
+a real octree. This class is intended to eventually replace the
 existing Image class.</p>
+<p class="rubric">Notes</p>
 <p>The original Image class handled single-scale and multi-scale images,
 but they were handled quite differently. And its multi-scale did not
-use chunks or tiles. It worked well locally, but was basically unusable
-for remote or high latency data.</p>
+use chunks or tiles. It worked well on local data, but was basically
+unusable for remote or high latency data.</p>
 <p>OctreeImage always uses chunk/tiles. Today those tiles are always
 “small”. However, as a special case, if an image is smaller than the
 max texture size, we could some day allow OctreeImage to set its tile
@@ -630,10 +635,6 @@ needs to be draw.</p>
 <code class="sig-name descname">_slice</code><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage._slice" title="Permalink to this definition">¶</a></dt>
 <dd><p>When _set_view_slice() is called we create a OctreeSlice()
 that’s looking at some specific slice of the data.</p>
-<p>While the Image._slice was the data that was drawn on the screen,
-an OctreeSlice contains a full Octree. The OctreeImage
-visuals (VispyTiledImageLayer and TiledImageVisual) draw only
-the portion for OctreeImage which is visible in the OctreeView.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>OctreeSlice</p>
@@ -685,14 +686,6 @@ resolution best matches the current screen resolution.</p>
 a waste in that those chunks will just be downsampled by the card.
 You won’t see any “extra” resolution at all. The card can do this
 super fast, so the issue not such much speed as it is RAM and VRAM.</p>
-<p>For example, suppose we want to draw 40 ideal chunks at level N,
-and the chunks are (256, 256, 3) with dtype uint8. That’s around
-8MB.</p>
-<p>If instead we draw lower levels than the ideal, the number of
-chunks and storage goes up quickly:</p>
-<p>Level (N - 1) is 160 chunks = 32M
-Level (N - 2) is 640 chunks = 126M
-Level (N - 3) is 2560 chunks = 503M</p>
 <p>In the opposite direction, drawing chunks from a higher, the number
 of chunks and storage goes down quickly. The only issue there is
 visual quality, the imagery might look blurry.</p>
@@ -735,7 +728,7 @@ always be drawn. Even if no chunk/tiles are loaded yet.</p>
 <dl class="py method">
 <dt id="napari.layers.image.experimental.octree_image.OctreeImage.meta">
 <em class="property">property </em><code class="sig-name descname">meta</code><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage.meta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return information about the current octree.</p>
+<dd><p>Information about the current octree.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Octree dimensions and other info.</p>
@@ -763,7 +756,7 @@ always be drawn. Even if no chunk/tiles are loaded yet.</p>
 <dl class="py method">
 <dt id="napari.layers.image.experimental.octree_image.OctreeImage.octree_level_info">
 <em class="property">property </em><code class="sig-name descname">octree_level_info</code><a class="headerlink" href="#napari.layers.image.experimental.octree_image.OctreeImage.octree_level_info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return information about the current level of the current octree.</p>
+<dd><p>Information about the current level of the current octree.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Information about the current octree level.</p>
@@ -825,7 +818,7 @@ always be drawn. Even if no chunk/tiles are loaded yet.</p>
 </div>
 <div class="section" id="module-napari.layers.image.experimental.octree_intersection">
 <span id="napari-layers-image-experimental-octree-intersection-module"></span><h2>napari.layers.image.experimental.octree_intersection module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_intersection" title="Permalink to this headline">¶</a></h2>
-<p>OctreeIntersection class.</p>
+<p>OctreeView and OctreeIntersection classes.</p>
 <dl class="py class">
 <dt id="napari.layers.image.experimental.octree_intersection.OctreeIntersection">
 <em class="property">class </em><code class="sig-name descname">OctreeIntersection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">level</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_level.OctreeLevel" title="napari.layers.image.experimental.octree_level.OctreeLevel">napari.layers.image.experimental.octree_level.OctreeLevel</a></span></em>, <em class="sig-param"><span class="n">view</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_intersection.OctreeView" title="napari.layers.image.experimental.octree_intersection.OctreeView">napari.layers.image.experimental.octree_intersection.OctreeView</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_intersection.html#OctreeIntersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_intersection.OctreeIntersection" title="Permalink to this definition">¶</a></dt>
@@ -945,6 +938,8 @@ not already have one.</p>
 <em class="property">class </em><code class="sig-name descname">OctreeView</code><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_intersection.html#OctreeView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_intersection.OctreeView" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
 <p>A view into the octree.</p>
+<p>An OctreeView corresponds to a camera which is viewing the image data,
+plus options as to how we want to render the data.</p>
 <dl class="py attribute">
 <dt id="napari.layers.image.experimental.octree_intersection.OctreeView.corner">
 <code class="sig-name descname">corner</code><a class="headerlink" href="#napari.layers.image.experimental.octree_intersection.OctreeView.corner" title="Permalink to this definition">¶</a></dt>
@@ -1010,10 +1005,10 @@ not already have one.</p>
 <dd><p>The width between the corners, in data coordinates.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p></p>
+<dd class="field-odd"><p>The width in data coordinates.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>The width in data coordinates.</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1042,14 +1037,19 @@ you pan they are more likely to be already loaded.</p>
 </div>
 <div class="section" id="module-napari.layers.image.experimental.octree_level">
 <span id="napari-layers-image-experimental-octree-level-module"></span><h2>napari.layers.image.experimental.octree_level module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_level" title="Permalink to this headline">¶</a></h2>
-<p>OctreeLevel and OctreeLevelInfo classes.</p>
+<p>OctreeLevelInfo and OctreeLevel classes.</p>
 <dl class="py class">
 <dt id="napari.layers.image.experimental.octree_level.OctreeLevel">
 <em class="property">class </em><code class="sig-name descname">OctreeLevel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">slice_id</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.19)">numpy.ndarray</a><span class="p">, </span>dask.array.Array<span class="p">, </span>zarr.Array<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">meta</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_util.OctreeMetadata" title="napari.layers.image.experimental.octree_util.OctreeMetadata">napari.layers.image.experimental.octree_util.OctreeMetadata</a></span></em>, <em class="sig-param"><span class="n">level_index</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_level.html#OctreeLevel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_level.OctreeLevel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>One level of the octree.</p>
-<p>A level contains a 2D array of tiles.</p>
-<p>Soon might also contain a 3D array of sub-volumes.</p>
+<p>An OctreeLevel is “sparse” in that it only contains a dict of
+OctreeChunks for the portion of the octree that is currently being
+rendered. So even if the full level contains hundreds of millions of
+chunks, this class only contains a few dozens OctreeChunks.</p>
+<p>This was necessary because even having a null reference for every
+OctreeChunk in a level would use too much space and be too slow to
+construct.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1060,6 +1060,28 @@ you pan they are more likely to be already loaded.</p>
 </ul>
 </dd>
 </dl>
+<dl class="py attribute">
+<dt id="napari.layers.image.experimental.octree_level.OctreeLevel.info">
+<code class="sig-name descname">info</code><a class="headerlink" href="#napari.layers.image.experimental.octree_level.OctreeLevel.info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Metadata about this level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#napari.layers.image.experimental.octree_level.OctreeLevelInfo" title="napari.layers.image.experimental.octree_level.OctreeLevelInfo">OctreeLevelInfo</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="napari.layers.image.experimental.octree_level.OctreeLevel._tiles">
+<code class="sig-name descname">_tiles</code><a class="headerlink" href="#napari.layers.image.experimental.octree_level.OctreeLevel._tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps (row, col) tuple to the OctreeChunk at that location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)">tuple</a>, <a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunk" title="napari.layers.image.experimental.octree_chunk.OctreeChunk">OctreeChunk</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt id="napari.layers.image.experimental.octree_level.OctreeLevel.get_chunk">
 <code class="sig-name descname">get_chunk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">row</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">col</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">create</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span><a class="reference internal" href="#napari.layers.image.experimental.octree_chunk.OctreeChunk" title="napari.layers.image.experimental.octree_chunk.OctreeChunk">napari.layers.image.experimental.octree_chunk.OctreeChunk</a><span class="p">]</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_level.html#OctreeLevel.get_chunk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_level.OctreeLevel.get_chunk" title="Permalink to this definition">¶</a></dt>
@@ -1090,12 +1112,12 @@ does not exist at this location.</p>
 <em class="property">class </em><code class="sig-name descname">OctreeLevelInfo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">meta</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_util.OctreeMetadata" title="napari.layers.image.experimental.octree_util.OctreeMetadata">napari.layers.image.experimental.octree_util.OctreeMetadata</a></span></em>, <em class="sig-param"><span class="n">level_index</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_level.html#OctreeLevelInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_level.OctreeLevelInfo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Information about one level of the octree.</p>
+<p>This should be a NamedTuple.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>meta</strong> (<a class="reference internal" href="#napari.layers.image.experimental.octree_util.OctreeMetadata" title="napari.layers.image.experimental.octree_util.OctreeMetadata"><em>OctreeMetadata</em></a>) – Information about the entire octree.</p></li>
 <li><p><strong>level_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a>) – The index of this level within the whole tree.</p></li>
-<li><p><strong>shape_in_tiles</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>]</em>) – The (height, width) dimensions of this level in terms of tiles.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1120,13 +1142,19 @@ with their correct level numbers.</p>
 </div>
 <div class="section" id="module-napari.layers.image.experimental.octree_tile_builder">
 <span id="napari-layers-image-experimental-octree-tile-builder-module"></span><h2>napari.layers.image.experimental.octree_tile_builder module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_tile_builder" title="Permalink to this headline">¶</a></h2>
-<p>Functions to downsample images and create multi-scale images.</p>
-<p>This file is early/placeholder. In normal useage we might never create
-tiles, because downsampling images is very slow. But for debugging and
-development we do make tiles on the fly, for test images and other reasons.</p>
-<p>Long term we might possible make tiles in the background at some point. So
-as you browse a large image that doesn’t have tiles, they are created in
-the background. But that’s pretty speculative and far out.</p>
+<p>create_downsampled_levels()</p>
+<dl class="py function">
+<dt id="napari.layers.image.experimental.octree_tile_builder.add_delay">
+<code class="sig-name descname">add_delay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array</span></em>, <em class="sig-param"><span class="n">delay_ms</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#napari.layers.image.experimental.octree_util.NormalNoise" title="napari.layers.image.experimental.octree_util.NormalNoise">napari.layers.image.experimental.octree_util.NormalNoise</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_tile_builder.html#add_delay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_tile_builder.add_delay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a random delay when this array is first accessed.</p>
+<p>TODO_OCTREE: unused not but might use again…</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>noise</strong> (<a class="reference internal" href="#napari.layers.image.experimental.octree_util.NormalNoise" title="napari.layers.image.experimental.octree_util.NormalNoise"><em>NormalNoise</em></a>) – The amount of the random delay in milliseconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt id="napari.layers.image.experimental.octree_tile_builder.create_downsampled_levels">
 <code class="sig-name descname">create_downsampled_levels</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">image</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.19)">numpy.ndarray</a></span></em>, <em class="sig-param"><span class="n">next_level_index</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">tile_size</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.19)">numpy.ndarray</a><span class="p">]</span><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_tile_builder.html#create_downsampled_levels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_tile_builder.create_downsampled_levels" title="Permalink to this definition">¶</a></dt>
@@ -1136,6 +1164,16 @@ additional level is half as small again. The longest size in the
 last level is equal to or smaller than tile_size.</p>
 <p>For example if the tile_size is 256, the data in the file level will
 be smaller than (256, 256).</p>
+<p class="rubric">Notes</p>
+<p>Currently we use create_downsampled_levels() from Octree._create_extra_levels
+so that the image pyramid extends up to the point where the coarsest level
+fits within a single tile.</p>
+<p>This is potentially quite slow and wasteful. A better long term solution might
+be if our tiled visuals supported larger tiles, and a mix of tile sizes. Then
+the root level could be a special case that had a larger tiles size than
+the interior levels. This would mean zero downsampled, it’d probably perform
+better. Tiling an image that the graphics card can easily display is
+probably not efficient.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>image</strong> (<em>np.darray</em>) – The full image to create levels from.</p>
@@ -1152,7 +1190,7 @@ be smaller than (256, 256).</p>
 </div>
 <div class="section" id="module-napari.layers.image.experimental.octree_util">
 <span id="napari-layers-image-experimental-octree-util-module"></span><h2>napari.layers.image.experimental.octree_util module<a class="headerlink" href="#module-napari.layers.image.experimental.octree_util" title="Permalink to this headline">¶</a></h2>
-<p>Octree utility classes.</p>
+<p>OctreeDisplayOptions, NormalNoise and OctreeMetadata classes.</p>
 <dl class="py class">
 <dt id="napari.layers.image.experimental.octree_util.NormalNoise">
 <em class="property">class </em><code class="sig-name descname">NormalNoise</code><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_util.html#NormalNoise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_util.NormalNoise" title="Permalink to this definition">¶</a></dt>
@@ -1284,7 +1322,7 @@ be smaller than (256, 256).</p>
 <dt id="napari.layers.image.experimental.octree_util.OctreeMetadata">
 <em class="property">class </em><code class="sig-name descname">OctreeMetadata</code><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_util.html#OctreeMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_util.OctreeMetadata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
-<p>Configuration for a tiled image.</p>
+<p>Metadata for an Octree.</p>
 <dl class="py attribute">
 <dt id="napari.layers.image.experimental.octree_util.OctreeMetadata.base_shape">
 <code class="sig-name descname">base_shape</code><a class="headerlink" href="#napari.layers.image.experimental.octree_util.OctreeMetadata.base_shape" title="Permalink to this definition">¶</a></dt>
@@ -1337,7 +1375,7 @@ own tile size.</p>
 <dt id="napari.layers.image.experimental.octree_util.OctreeMetadata.aspect_ratio">
 <em class="property">property </em><code class="sig-name descname">aspect_ratio</code><a class="headerlink" href="#napari.layers.image.experimental.octree_util.OctreeMetadata.aspect_ratio" title="Permalink to this definition">¶</a></dt>
 <dd><p>height aspect ratio of the base image.</p>
-<p>For example HDTV resolution is 16:9 which is 1.77.</p>
+<p>For example HDTV resolution is 16:9 which has aspect ration 1.77.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>Return the width</p>
@@ -1367,25 +1405,6 @@ own tile size.</p>
 <dt id="id8">
 <em class="property">property </em><code class="sig-name descname">tile_size</code><a class="headerlink" href="#id8" title="Permalink to this definition">¶</a></dt>
 <dd><p>Alias for field number 3</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt id="napari.layers.image.experimental.octree_util.TestImageSettings">
-<em class="property">class </em><code class="sig-name descname">TestImageSettings</code><a class="reference internal" href="../_modules/napari/layers/image/experimental/octree_util.html#TestImageSettings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#napari.layers.image.experimental.octree_util.TestImageSettings" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
-<p>Settings for a test image we are creating.</p>
-<dl class="py method">
-<dt id="napari.layers.image.experimental.octree_util.TestImageSettings.base_shape">
-<em class="property">property </em><code class="sig-name descname">base_shape</code><a class="headerlink" href="#napari.layers.image.experimental.octree_util.TestImageSettings.base_shape" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias for field number 0</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="napari.layers.image.experimental.octree_util.TestImageSettings.tile_size">
-<em class="property">property </em><code class="sig-name descname">tile_size</code><a class="headerlink" href="#napari.layers.image.experimental.octree_util.TestImageSettings.tile_size" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias for field number 1</p>
 </dd></dl>
 
 </dd></dl>

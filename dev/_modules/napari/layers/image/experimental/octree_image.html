@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev68+gec4c64d documentation</title>
+  <title>napari.layers.image.experimental.octree_image &mdash; napari 0.4.3.dev69+g7dbebff documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.3.dev68+gec4c64d
+                0.4.3.dev69+g7dbebff
               </div>
             
           
@@ -163,7 +163,7 @@
 <span></span><span class="sd">&quot;&quot;&quot;OctreeImage class.</span>
 
 <span class="sd">An eventual replacement for Image that combines single-scale and</span>
-<span class="sd">chunked/tiled multi-scale into one implementation.</span>
+<span class="sd">chunked (tiled) multi-scale into one implementation.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span>
@@ -183,19 +183,19 @@
 
 
 <div class="viewcode-block" id="OctreeImage"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree_image.OctreeImage">[docs]</a><span class="k">class</span> <span class="nc">OctreeImage</span><span class="p">(</span><span class="n">Image</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;OctreeImage layer.</span>
+    <span class="sd">&quot;&quot;&quot;Image layer rendered using an octree.</span>
 
 <span class="sd">    Experimental variant of Image that renders using an octree. For 2D</span>
 <span class="sd">    images the octree is really just a quadtree. For 3D volumes it will be</span>
-<span class="sd">    a real octree. This class is intended to eventually fully replace the</span>
+<span class="sd">    a real octree. This class is intended to eventually replace the</span>
 <span class="sd">    existing Image class.</span>
 
-<span class="sd">    Background</span>
-<span class="sd">    ----------</span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
 <span class="sd">    The original Image class handled single-scale and multi-scale images,</span>
 <span class="sd">    but they were handled quite differently. And its multi-scale did not</span>
-<span class="sd">    use chunks or tiles. It worked well locally, but was basically unusable</span>
-<span class="sd">    for remote or high latency data.</span>
+<span class="sd">    use chunks or tiles. It worked well on local data, but was basically</span>
+<span class="sd">    unusable for remote or high latency data.</span>
 
 <span class="sd">    OctreeImage always uses chunk/tiles. Today those tiles are always</span>
 <span class="sd">    &quot;small&quot;. However, as a special case, if an image is smaller than the</span>
@@ -221,11 +221,6 @@
 <span class="sd">    _slice : OctreeSlice</span>
 <span class="sd">        When _set_view_slice() is called we create a OctreeSlice()</span>
 <span class="sd">        that&#39;s looking at some specific slice of the data.</span>
-
-<span class="sd">        While the Image._slice was the data that was drawn on the screen,</span>
-<span class="sd">        an OctreeSlice contains a full Octree. The OctreeImage</span>
-<span class="sd">        visuals (VispyTiledImageLayer and TiledImageVisual) draw only</span>
-<span class="sd">        the portion for OctreeImage which is visible in the OctreeView.</span>
 <span class="sd">    _display : OctreeDisplayOptions</span>
 <span class="sd">        Settings for how we draw the octree, such as tile size.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -245,7 +240,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">octree_level</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
 
         <span class="c1"># TODO_OCTREE: this is hack that we assign OctreeDisplayOptions</span>
-        <span class="c1"># this event after super().__init__(). Will cleanup soon.</span>
+        <span class="c1"># this event after super().__init__(). Needs to be cleaned up.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_display</span><span class="o">.</span><span class="n">loaded_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span>
 
     <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -322,8 +317,6 @@
 <span class="sd">        tuple</span>
 <span class="sd">            The shape of a single tile.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># TODO_OCTREE: Must be an easier way to get this shape based on</span>
-        <span class="c1"># information already stored in Image class?</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
             <span class="n">init_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
         <span class="k">else</span><span class="p">:</span>
@@ -339,7 +332,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">meta</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeMetadata</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return information about the current octree.</span>
+        <span class="sd">&quot;&quot;&quot;Information about the current octree.</span>
 
 <span class="sd">        Return</span>
 <span class="sd">        ------</span>
@@ -352,7 +345,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">octree_level_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeLevelInfo</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Return information about the current level of the current octree.</span>
+        <span class="sd">&quot;&quot;&quot;Information about the current level of the current octree.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -442,17 +435,6 @@
 <span class="sd">        a waste in that those chunks will just be downsampled by the card.</span>
 <span class="sd">        You won&#39;t see any &quot;extra&quot; resolution at all. The card can do this</span>
 <span class="sd">        super fast, so the issue not such much speed as it is RAM and VRAM.</span>
-
-<span class="sd">        For example, suppose we want to draw 40 ideal chunks at level N,</span>
-<span class="sd">        and the chunks are (256, 256, 3) with dtype uint8. That&#39;s around</span>
-<span class="sd">        8MB.</span>
-
-<span class="sd">        If instead we draw lower levels than the ideal, the number of</span>
-<span class="sd">        chunks and storage goes up quickly:</span>
-
-<span class="sd">        Level (N - 1) is 160 chunks = 32M</span>
-<span class="sd">        Level (N - 2) is 640 chunks = 126M</span>
-<span class="sd">        Level (N - 3) is 2560 chunks = 503M</span>
 
 <span class="sd">        In the opposite direction, drawing chunks from a higher, the number</span>
 <span class="sd">        of chunks and storage goes down quickly. The only issue there is</span>
@@ -575,7 +557,7 @@
             <span class="p">)</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Set the view given the indices to slice with.</span>
 
 <span class="sd">        This replaces Image._set_view_slice() entirely. The hope is eventually</span>

@@ -1,0 +1,804 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.utils.events.dataclass &mdash; napari 0.4.3 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+        <script src="../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.utils.events.dataclass</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.utils.events.dataclass</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">dataclasses</span> <span class="k">as</span> <span class="nn">_dc</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Any</span><span class="p">,</span>
+    <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">ClassVar</span><span class="p">,</span>
+    <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">NamedTuple</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">Type</span><span class="p">,</span>
+    <span class="n">TypeVar</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
+    <span class="n">cast</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">toolz</span> <span class="k">as</span> <span class="nn">tz</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Annotated</span><span class="p">,</span>
+    <span class="n">_AnnotatedAlias</span><span class="p">,</span>
+    <span class="n">get_args</span><span class="p">,</span>
+    <span class="n">get_origin</span><span class="p">,</span>
+    <span class="n">get_type_hints</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">_tp_cache</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">_tp_cache</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+
+<span class="kn">from</span> <span class="nn">.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">SupportsEvents</span>
+
+<span class="n">ON_SET</span> <span class="o">=</span> <span class="s2">&quot;_on_</span><span class="si">{name}</span><span class="s2">_set&quot;</span>
+<span class="n">ON_GET</span> <span class="o">=</span> <span class="s2">&quot;_on_</span><span class="si">{name}</span><span class="s2">_get&quot;</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">)</span>
+<span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">)</span>
+<span class="n">NO_ATTR</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Property"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.Property">[docs]</a><span class="k">class</span> <span class="nc">Property</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Declare a dataclass field as a property with getter/setter functions.</span>
+
+<span class="sd">    This class is nearly an alias for `typing_extensions.Annotated` (or, in</span>
+<span class="sd">    ≥python3.9, `typing.Annotated`), except that it provides stricter type</span>
+<span class="sd">    checking.  See `__class_getitem__` for special considerations.</span>
+
+<span class="sd">    ``Property`` should be used with the actual type, followed by an optional</span>
+<span class="sd">    ``getter`` function (or ``None``), followed by an optional ``setter``</span>
+<span class="sd">    function (or ``None``): e.g. ``Property[Blending, str, Blending]``</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; @evented_dataclass</span>
+<span class="sd">    ... class Test:</span>
+<span class="sd">    ...     # x will be stored as an int but *retrieved* as a string.</span>
+<span class="sd">    ...     x: Property[int, str, int]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Type Property cannot be instantiated&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init_subclass__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot subclass </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__module__</span><span class="si">}</span><span class="s2">.Property&quot;</span><span class="p">)</span>
+
+    <span class="nd">@_tp_cache</span>
+    <span class="k">def</span> <span class="nf">__class_getitem__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create the runtime type representation of a Property type.</span>
+
+<span class="sd">        Unfortunately, in order for this to behave like an `Annotated` type,</span>
+<span class="sd">        without us having to vendor a lot of the python</span>
+<span class="sd">        typing library, this must return an instance of</span>
+<span class="sd">        `typing_extensions._AnnotatedAlias` (which just points to</span>
+<span class="sd">        `typing._AnnotatedAlias` after python 3.9).  Hence the private import.</span>
+<span class="sd">        Since this works on python3.9 (when typing acquired the Annotated type)</span>
+<span class="sd">        it seems unlikely to break in future python releases.  But it should be</span>
+<span class="sd">        monitored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Property[...] should be used with exactly two or three &quot;</span>
+                <span class="s2">&quot;arguments (a type, a getter, and an optional setter)&quot;</span>
+            <span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Property[T, ...]: T must be a type.&quot;</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">_type_check</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Property getter not callable: </span><span class="si">{</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span>
+            <span class="ow">and</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Property getter not callable: </span><span class="si">{</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">return</span> <span class="n">_AnnotatedAlias</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span></div>
+
+
+<span class="c1"># from dataclasses.py in the standard library</span>
+<span class="k">def</span> <span class="nf">_is_classvar</span><span class="p">(</span><span class="n">a_type</span><span class="p">):</span>
+    <span class="c1"># This test uses a typing internal class, but it&#39;s the best way to</span>
+    <span class="c1"># test if this is a ClassVar.</span>
+    <span class="k">return</span> <span class="n">a_type</span> <span class="ow">is</span> <span class="n">typing</span><span class="o">.</span><span class="n">ClassVar</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="nb">type</span><span class="p">(</span><span class="n">a_type</span><span class="p">)</span> <span class="ow">is</span> <span class="n">typing</span><span class="o">.</span><span class="n">_GenericAlias</span>
+        <span class="ow">and</span> <span class="n">a_type</span><span class="o">.</span><span class="n">__origin__</span> <span class="ow">is</span> <span class="n">typing</span><span class="o">.</span><span class="n">ClassVar</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># from dataclasses.py in the standard library</span>
+<span class="k">def</span> <span class="nf">_is_initvar</span><span class="p">(</span><span class="n">a_type</span><span class="p">):</span>
+    <span class="c1"># The module we&#39;re checking against is the module we&#39;re</span>
+    <span class="c1"># currently in (dataclasses.py).</span>
+    <span class="k">return</span> <span class="n">a_type</span> <span class="ow">is</span> <span class="n">_dc</span><span class="o">.</span><span class="n">InitVar</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">a_type</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_dc</span><span class="o">.</span><span class="n">InitVar</span>
+
+
+<div class="viewcode-block" id="stripped_annotated_types"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.stripped_annotated_types">[docs]</a><span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">stripped_annotated_types</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Temporarily strip Annotated types (for cleaner function signatures).&quot;&quot;&quot;</span>
+    <span class="n">original_annotations</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span> <span class="o">=</span> <span class="n">get_type_hints</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">include_extras</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">yield</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span> <span class="o">=</span> <span class="n">original_annotations</span></div>
+
+
+<div class="viewcode-block" id="set_with_events"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.set_with_events">[docs]</a><span class="k">def</span> <span class="nf">set_with_events</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Modified __setattr__ method that emits an event when set.</span>
+
+<span class="sd">    Events will *only* be emitted if the ``name`` of the attribute being set</span>
+<span class="sd">    is one of the dataclass fields (i.e. ``name in self.__annotations__``),</span>
+<span class="sd">    and the dataclass ``__post_init__` method has already been called.</span>
+
+<span class="sd">    Also looks for and calls an optional ``_on_name_set()`` method afterwards.</span>
+
+<span class="sd">    Order of operations:</span>
+<span class="sd">        1. Call the original ``__setattr__`` function to set the value</span>
+<span class="sd">        2. Look for an ``_on_name_set`` method on the object</span>
+<span class="sd">            a. If present, call it with the current value</span>
+<span class="sd">            b. That method can do anything (including changing the value, or</span>
+<span class="sd">               emitting its own events if necessary).  If changing the value,</span>
+<span class="sd">               it should check to make sure that it is different than the</span>
+<span class="sd">               current value before setting, or a ``RecursionError`` may occur.</span>
+<span class="sd">            c. If that method returns ``True``. Return *without* emitting</span>
+<span class="sd">               an event.</span>
+<span class="sd">        3. If ``_on_name_set`` has not returned ``True``, then emit an event</span>
+<span class="sd">           from the EventEmitter with the corresponding ``name`` in the.</span>
+<span class="sd">           e.g. ``self.events.&lt;name&gt;(value=value)``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    self : C</span>
+<span class="sd">        An instance of the decorated dataclass of Type[C]</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The name of the attribute being set.</span>
+<span class="sd">    value : Any</span>
+<span class="sd">        The new value for the attribute.</span>
+<span class="sd">    fields : set of str</span>
+<span class="sd">        Only emit events for field names in this set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;events&#39;</span><span class="p">,</span> <span class="p">{}):</span>
+        <span class="c1"># fallback to default behavior</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># grab current value</span>
+    <span class="n">before</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">NO_ATTR</span><span class="p">)</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="c1"># if custom set method `_on_&lt;name&gt;_set` exists, call it</span>
+    <span class="n">setter_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ON_SET</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">setter_method</span><span class="p">):</span>
+        <span class="c1"># the method can return True, if it wants to handle its own events</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">setter_method</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)):</span>
+                <span class="k">return</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">before</span> <span class="ow">is</span> <span class="n">NO_ATTR</span><span class="p">:</span>
+                <span class="nb">object</span><span class="o">.</span><span class="fm">__delattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">before</span><span class="p">)</span>
+            <span class="n">meth_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">ON_SET</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">raise</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)(</span><span class="sa">f</span><span class="s2">&quot;Error in </span><span class="si">{</span><span class="n">meth_name</span><span class="si">}</span><span class="s2"> (value not set): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># if different we emit the event with new value</span>
+    <span class="n">after</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__equality_checks__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">is_equal</span><span class="p">)(</span><span class="n">after</span><span class="p">,</span> <span class="n">before</span><span class="p">):</span>
+        <span class="c1"># use gettattr again in case `_on_name_set` has modified it</span>
+        <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">name</span><span class="p">)(</span><span class="n">value</span><span class="o">=</span><span class="n">after</span><span class="p">)</span>  <span class="c1"># type: ignore</span></div>
+
+
+<div class="viewcode-block" id="is_equal"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.is_equal">[docs]</a><span class="k">def</span> <span class="nf">is_equal</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for basic comparison compare.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    v1: Any</span>
+<span class="sd">        first value</span>
+<span class="sd">    v2: Any</span>
+<span class="sd">        second value</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : bool</span>
+<span class="sd">        Returns ``True`` if ``v1`` and ``v2`` are equivalent.</span>
+<span class="sd">        If an exception is raised during comparison, returns ``False``.</span>
+
+<span class="sd">    Warns</span>
+<span class="sd">    -----</span>
+<span class="sd">    UserWarning</span>
+<span class="sd">        If an exception is raised during comparison.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">v1</span> <span class="o">==</span> <span class="n">v2</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Comparison method failed. Returned False. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;There may be need to define custom compare methods in __equality_checks__ dictionary. Exception </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<span class="k">def</span> <span class="nf">_type_to_compare</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Try to determine compare function for types which cannot be compared with `operator.eq`.</span>
+<span class="sd">    Currently support `numpy.ndarray` and `dask.core.Array`.</span>
+<span class="sd">    Unpack `typing.Optional` and `dataclasses.InitVar` box.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    type_: type</span>
+<span class="sd">    type to examine</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[Callable[[Any, Any], bool]]</span>
+<span class="sd">        Compare function</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">inspect</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">_AnnotatedAlias</span><span class="p">):</span>
+        <span class="n">type_</span> <span class="o">=</span> <span class="n">type_</span><span class="o">.</span><span class="n">__origin__</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">_dc</span><span class="o">.</span><span class="n">InitVar</span><span class="p">):</span>
+        <span class="n">type_</span> <span class="o">=</span> <span class="n">type_</span><span class="o">.</span><span class="n">type</span>
+
+    <span class="c1"># get main type from Optional[type]</span>
+    <span class="n">_args</span> <span class="o">=</span> <span class="n">get_args</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">get_origin</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span> <span class="ow">is</span> <span class="n">Union</span>
+        <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">_args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="p">):</span>
+        <span class="n">type_</span> <span class="o">=</span> <span class="n">_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">type_</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="s2">&quot;__module__&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;typing&quot;</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bug in type recognition </span><span class="si">{</span><span class="n">type_</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span>
+    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Array</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">operator</span><span class="o">.</span><span class="n">is_</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="add_events_to_class"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.add_events_to_class">[docs]</a><span class="k">def</span> <span class="nf">add_events_to_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return a new __post_init__ method wrapper with events.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cls : type</span>
+<span class="sd">        The class being decorated as a dataclass</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Callable[..., None]</span>
+<span class="sd">        A modified __post_init__ method that wraps the original.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># get a handle to the original __post_init__ method if present</span>
+    <span class="n">orig_post_init</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;__post_init__&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">_fields</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_dc</span><span class="o">.</span><span class="n">_get_field</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;__annotations__&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">]</span>
+    <span class="n">e_fields</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">fld</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">fld</span> <span class="ow">in</span> <span class="n">_fields</span>
+        <span class="k">if</span> <span class="n">fld</span><span class="o">.</span><span class="n">_field_type</span> <span class="ow">is</span> <span class="n">_dc</span><span class="o">.</span><span class="n">_FIELD</span> <span class="ow">and</span> <span class="n">fld</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;events&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c1"># create dict with compare functions for fields which cannot be compared</span>
+    <span class="c1"># using standard equal operator, like numpy arrays.</span>
+    <span class="c1"># it will be set to __equality_checks__ class parameter.</span>
+    <span class="n">compare_dict_base</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">&quot;__equality_checks__&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">compare_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">n</span><span class="p">:</span> <span class="n">t</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">_type_to_compare</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;__annotations__&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">compare_dict_base</span>
+        <span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># walrus operator is supported from python 3.8</span>
+    <span class="p">}</span>
+    <span class="c1"># use compare functions provided by class creator.</span>
+    <span class="n">compare_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">compare_dict_base</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">evented_post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span> <span class="o">*</span><span class="n">initvars</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># create an EmitterGroup with an EventEmitter for each field</span>
+        <span class="c1"># in the dataclass, skip those with metadata={&#39;events&#39; = False}</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;events&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">EmitterGroup</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">em</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">emitters</span><span class="p">:</span>
+                <span class="n">e_fields</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">em</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">**</span><span class="n">e_fields</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
+                <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">auto_connect</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">e_fields</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="c1"># call original __post_init__</span>
+        <span class="k">if</span> <span class="n">orig_post_init</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">orig_post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">initvars</span><span class="p">)</span>
+
+    <span class="c1"># modify __setattr__ with version that emits an event when setting</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;__setattr__&#39;</span><span class="p">,</span> <span class="n">set_with_events</span><span class="p">)</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;__post_init__&#39;</span><span class="p">,</span> <span class="n">evented_post_init</span><span class="p">)</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;__equality_checks__&#39;</span><span class="p">,</span> <span class="n">compare_dict</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span></div>
+
+
+<span class="c1"># make the actual getter/setter functions that the property will use</span>
+<div class="viewcode-block" id="prop_getter"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.prop_getter">[docs]</a><span class="nd">@tz</span><span class="o">.</span><span class="n">curry</span>
+<span class="k">def</span> <span class="nf">prop_getter</span><span class="p">(</span><span class="n">priv_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fcoerce</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="c1"># val = object.__getattribute__(obj, name)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">fcoerce</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">priv_name</span><span class="p">))</span>
+    <span class="n">pub_name</span> <span class="o">=</span> <span class="n">priv_name</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+    <span class="n">getter_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ON_GET</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">pub_name</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">getter_method</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">getter_method</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="prop_setter"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.prop_setter">[docs]</a><span class="nd">@tz</span><span class="o">.</span><span class="n">curry</span>
+<span class="k">def</span> <span class="nf">prop_setter</span><span class="p">(</span>
+    <span class="n">priv_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">fcoerce</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">value</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># during __init__, the dataclass will try to set the instance</span>
+    <span class="c1"># attribute to the property itself!  So we intervene and set it</span>
+    <span class="c1"># to the default value from the dataclass declaration</span>
+    <span class="n">pub_name</span> <span class="o">=</span> <span class="n">priv_name</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">property</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">default</span>
+        <span class="c1"># dataclasses may define attributes as field(...)</span>
+        <span class="c1"># so we need to get the default value from the field</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">_dc</span><span class="o">.</span><span class="n">Field</span><span class="p">):</span>
+            <span class="n">default</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">_dc</span><span class="o">.</span><span class="n">Field</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+            <span class="c1"># there will only ever be default_factory OR default</span>
+            <span class="c1"># otherwise an exception will have been raised earlier.</span>
+            <span class="k">if</span> <span class="n">default</span><span class="o">.</span><span class="n">default_factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_dc</span><span class="o">.</span><span class="n">MISSING</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">default</span><span class="o">.</span><span class="n">default_factory</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">default</span><span class="o">.</span><span class="n">default</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_dc</span><span class="o">.</span><span class="n">MISSING</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">default</span><span class="o">.</span><span class="n">default</span>
+        <span class="c1"># If the value is still missing, then it means that the user</span>
+        <span class="c1"># failed to provide a required positional argument when</span>
+        <span class="c1"># instantiating the dataclass.</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">_dc</span><span class="o">.</span><span class="n">MISSING</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;__init__() missing required &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;positional argument: &#39;</span><span class="si">{</span><span class="n">pub_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">priv_name</span><span class="p">,</span> <span class="n">fcoerce</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TypeGetSet"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.TypeGetSet">[docs]</a><span class="k">class</span> <span class="nc">TypeGetSet</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;A simple named tuple with a type, getter func, and setter func.&#39;&#39;&#39;</span>
+
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span>
+    <span class="n">fget</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">fset</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">T</span><span class="p">]</span></div>
+
+
+<span class="nd">@tz</span><span class="o">.</span><span class="n">curry</span>
+<span class="k">def</span> <span class="nf">_try_coerce</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to coerce value </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<div class="viewcode-block" id="parse_annotated_types"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.parse_annotated_types">[docs]</a><span class="k">def</span> <span class="nf">parse_annotated_types</span><span class="p">(</span>
+    <span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TypeGetSet</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return a dict of field names and their types.</span>
+
+<span class="sd">    If any type annotations are instances of ``Property``, then their</span>
+<span class="sd">    paramereters will be used to create type-coercion functions that will be</span>
+<span class="sd">    called during getting/setting of this field.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cls : Type</span>
+<span class="sd">        The class being processed as a dataclass</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        A dict of field names to ``TypeGetSet`` objects</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TypeGetSet</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">get_type_hints</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">include_extras</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">[</span><span class="n">typ</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">get_origin</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span> <span class="ow">is</span> <span class="n">Annotated</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">get_args</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span>
+            <span class="n">d</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)]</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">_try_coerce</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">_try_coerce</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">TypeGetSet</span><span class="p">(</span><span class="o">*</span><span class="n">d</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="convert_fields_to_properties"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.convert_fields_to_properties">[docs]</a><span class="k">def</span> <span class="nf">convert_fields_to_properties</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Convert all fields in a dataclass instance to property descriptors.</span>
+
+<span class="sd">    Note: this modifies class Type[C] (the class that was decorated with</span>
+<span class="sd">    ``@dataclass``) *after* instantiation of the class.  In other words, for a</span>
+<span class="sd">    given field `f` on class `C`, `C.f` will *not* be a property descriptor</span>
+<span class="sd">    until *after* C has been instantiated: `c = C()`.  (And reminder: property</span>
+<span class="sd">    descriptors are class attributes).</span>
+
+<span class="sd">    The reason for this is that dataclasses can have &quot;default factory&quot;</span>
+<span class="sd">    functions that create default values for fields only during instantiation,</span>
+<span class="sd">    and we don&#39;t want to have to recreate that logic here, (but we do need to</span>
+<span class="sd">    know what the value of the field is).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    obj : T</span>
+<span class="sd">        An instance of class ``Type[C]`` that has been deorated as a dataclass.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">numpydoc.docscrape</span> <span class="kn">import</span> <span class="n">ClassDoc</span>
+
+    <span class="c1"># grab docstring to populate properties docs</span>
+    <span class="n">cls_doc</span> <span class="o">=</span> <span class="n">ClassDoc</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">cls_doc</span><span class="p">[</span><span class="s2">&quot;Parameters&quot;</span><span class="p">]}</span>
+
+    <span class="n">coerce_funcs</span> <span class="o">=</span> <span class="n">parse_annotated_types</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+    <span class="c1"># loop through annotated members of the glass</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;__annotations__&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="c1"># ClassVar and InitVar types are exempt from dataclasses and properties</span>
+        <span class="c1"># https://docs.python.org/3/library/dataclasses.html#class-variables</span>
+        <span class="k">if</span> <span class="n">_is_classvar</span><span class="p">(</span><span class="n">type_</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_initvar</span><span class="p">(</span><span class="n">type_</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">private_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="c1"># store the original value for the property</span>
+        <span class="n">default</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">_dc</span><span class="o">.</span><span class="n">MISSING</span><span class="p">)</span>
+
+        <span class="c1"># add the private_name as a ClassVar annotation on the original class</span>
+        <span class="c1"># (annotations of type ClassVar are ignored by the dataclass)</span>
+        <span class="c1"># `self.x` is the property, `self._x` contains the data</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">[</span><span class="n">private_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">type_</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">coerce_funcs</span><span class="p">:</span>
+            <span class="n">fget</span> <span class="o">=</span> <span class="n">prop_getter</span><span class="p">(</span><span class="n">private_name</span><span class="p">,</span> <span class="n">coerce_funcs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">fget</span><span class="p">)</span>
+            <span class="n">fset</span> <span class="o">=</span> <span class="n">prop_setter</span><span class="p">(</span><span class="n">private_name</span><span class="p">,</span> <span class="n">default</span><span class="p">,</span> <span class="n">coerce_funcs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fget</span> <span class="o">=</span> <span class="n">_try_coerce</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">fset</span> <span class="o">=</span> <span class="n">_try_coerce</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="c1"># bring the docstring from the class to the property</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">param</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">desc</span><span class="p">)</span>
+            <span class="c1"># TODO: could compare param.type to field.type here for consistency</span>
+            <span class="c1"># alternatively, we may just want to use pydantic for type</span>
+            <span class="c1"># validation.</span>
+
+        <span class="c1"># create the actual property descriptor</span>
+        <span class="n">prop</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">fget</span><span class="o">=</span><span class="n">fget</span><span class="p">,</span> <span class="n">fset</span><span class="o">=</span><span class="n">fset</span><span class="p">,</span> <span class="n">fdel</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">prop</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span></div>
+
+
+<div class="viewcode-block" id="update_from_dict"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.update_from_dict">[docs]</a><span class="k">def</span> <span class="nf">update_from_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">compare_fun</span><span class="o">=</span><span class="n">is_equal</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">asdict</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported update from </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">compare_fun</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">asdict</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SupportsEvents</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blocker</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="evented_dataclass"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.components.axes.evented_dataclass">[docs]</a><span class="nd">@tz</span><span class="o">.</span><span class="n">curry</span>
+<span class="k">def</span> <span class="nf">evented_dataclass</span><span class="p">(</span>
+    <span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">init</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="nb">repr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">eq</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">order</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">unsafe_hash</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">frozen</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">properties</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">C</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Enhanced dataclass decorator with events and property descriptors.</span>
+
+<span class="sd">    Examines PEP 526 __annotations__ to determine fields.  Fields are defined</span>
+<span class="sd">    as class attributes with a type annotation.  Everything but ``events`` and</span>
+<span class="sd">    ``properties`` are defined on the builtin dataclass decorator.</span>
+
+<span class="sd">    Note: if ``events==False`` and ``properties==False``, this is functionally</span>
+<span class="sd">    equivalent to the builtin ``dataclasses.dataclass``</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cls : Type[C]</span>
+<span class="sd">        [description]</span>
+<span class="sd">    init : bool, optional</span>
+<span class="sd">        If  true, an __init__() method is added to the class, by default True</span>
+<span class="sd">    repr : bool, optional</span>
+<span class="sd">        If true, a __repr__() method is added, by default True</span>
+<span class="sd">    eq : bool, optional</span>
+<span class="sd">        [description], by default True</span>
+<span class="sd">    order : bool, optional</span>
+<span class="sd">        If true, rich comparison dunder methods are added, by default False</span>
+<span class="sd">    unsafe_hash : bool, optional</span>
+<span class="sd">        If true, a __hash__() method function is added, by default False</span>
+<span class="sd">    frozen : bool, optional</span>
+<span class="sd">        If true, fields may not be assigned to after instance creation, by</span>
+<span class="sd">        default False</span>
+<span class="sd">    events : bool, optional</span>
+<span class="sd">        If true, an ``EmmitterGroup`` instance is added as attribute &quot;events&quot;.</span>
+<span class="sd">        Events will be emitted each time one of the dataclass fields are</span>
+<span class="sd">        altered, by default True</span>
+<span class="sd">    properties : bool, optional</span>
+<span class="sd">        If true, field attributes will be converted to property descriptors.</span>
+<span class="sd">        If the class has a class docstring in numpydocs format, docs for each</span>
+<span class="sd">        property will be taken from the ``Parameters`` section for the</span>
+<span class="sd">        corresponding parameter, by default True</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    decorated class</span>
+<span class="sd">        Returns the same class as was passed in, with dunder methods</span>
+<span class="sd">        added based on the fields defined in the class.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If both ``properties`` and ``frozen`` are True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">frozen</span> <span class="ow">and</span> <span class="p">(</span><span class="n">events</span> <span class="ow">or</span> <span class="n">properties</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;`frozen=True` is incompatible `properties=True` or `events=True`&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># TODO: currently, events must be process first here, otherwise</span>
+    <span class="c1"># metada={&#39;events&#39;:False} does not work... but that should be fixed.</span>
+    <span class="k">if</span> <span class="n">events</span><span class="p">:</span>
+        <span class="c1"># create a modified __post_init__ method that creates an EmitterGroup</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">add_events_to_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+
+    <span class="c1"># if neither events or properties are True, this function is exactly like</span>
+    <span class="c1"># the builtin `dataclasses.dataclass`</span>
+    <span class="k">with</span> <span class="n">stripped_annotated_types</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">_dc</span><span class="o">.</span><span class="n">dataclass</span><span class="p">(</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+            <span class="nb">repr</span><span class="o">=</span><span class="nb">repr</span><span class="p">,</span>
+            <span class="n">eq</span><span class="o">=</span><span class="n">eq</span><span class="p">,</span>
+            <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
+            <span class="n">unsafe_hash</span><span class="o">=</span><span class="n">unsafe_hash</span><span class="p">,</span>
+            <span class="n">frozen</span><span class="o">=</span><span class="n">frozen</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">properties</span><span class="p">:</span>
+        <span class="c1"># convert public dataclass fields to properties</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">convert_fields_to_properties</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;asdict&#39;</span><span class="p">,</span> <span class="n">_dc</span><span class="o">.</span><span class="n">asdict</span><span class="p">)</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="n">update_from_dict</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

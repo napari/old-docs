@@ -1,0 +1,435 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.plugins.pypi &mdash; napari 0.4.3 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.plugins.pypi</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.plugins.pypi</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">These convenience functions will be useful for searching pypi for packages</span>
+<span class="sd">that match the plugin naming convention, and retrieving related metadata.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">configparser</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">error</span><span class="p">,</span> <span class="n">request</span>
+
+<span class="n">PYPI_SIMPLE_API_URL</span> <span class="o">=</span> <span class="s1">&#39;https://pypi.org/simple/&#39;</span>
+
+<span class="n">setup_py_entrypoint</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;entry_points\s?=\s?([^}]*napari.plugin[^}]*)}&quot;</span>
+<span class="p">)</span>
+<span class="n">setup_py_pypi_name</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="sa">r</span><span class="s2">&quot;setup\s?\(.*name\s?=\s?[&#39;</span><span class="se">\&quot;</span><span class="s2">]([^&#39;</span><span class="se">\&quot;</span><span class="s2">]+)[&#39;</span><span class="se">\&quot;</span><span class="s2">]&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="ProjectInfo"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ProjectInfo">[docs]</a><span class="k">class</span> <span class="nc">ProjectInfo</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Info associated with a PyPI Project.&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">summary</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">author</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">license</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="get_packages_by_prefix"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.get_packages_by_prefix">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_packages_by_prefix</span><span class="p">(</span><span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Search for packages starting with ``prefix`` on pypi.</span>
+
+<span class="sd">    Packages using naming convention: http://bit.ly/pynaming-convention</span>
+<span class="sd">    can be autodiscovered on pypi using the SIMPLE API:</span>
+<span class="sd">    https://www.python.org/dev/peps/pep-0503/</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        {name: url} for all packages at pypi that start with ``prefix``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">PYPI_SIMPLE_API_URL</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+        <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">PYPI_SIMPLE_API_URL</span> <span class="o">+</span> <span class="n">url</span>
+        <span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;&lt;a href=&quot;/simple/(.+)&quot;&gt;(</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s1">.*)&lt;/a&gt;&#39;</span><span class="p">,</span> <span class="n">html</span>
+        <span class="p">)</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="get_package_versions"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.get_package_versions">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_package_versions</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Get available versions of a package on pypi</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        name of the package</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        versions available on pypi</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">PYPI_SIMPLE_API_URL</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+        <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&gt;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">-(.+).tar&#39;</span><span class="p">,</span> <span class="n">html</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="get_napari_plugin_repos_from_github"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.get_napari_plugin_repos_from_github">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_napari_plugin_repos_from_github</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return GitHub API hits for repos with &quot;napari plugin&quot; in the README.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span>
+        <span class="s1">&#39;https://api.github.com/search/repositories?q=&quot;napari+plugin&quot;+in:readme&#39;</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ensure_published_at_pypi"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ensure_published_at_pypi">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">ensure_published_at_pypi</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">min_dev_status</span><span class="o">=</span><span class="mi">3</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ProjectInfo</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return name if ``name`` is a package in PyPI with dev_status &gt; min.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;https://pypi.org/pypi/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">/json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">classifiers</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;classifiers&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">min_dev_status</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Development Status :: </span><span class="si">{</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">classifiers</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">ProjectInfo</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">normalized_name</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]),</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;home_page&quot;</span><span class="p">],</span>
+        <span class="n">summary</span><span class="o">=</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;summary&quot;</span><span class="p">],</span>
+        <span class="n">author</span><span class="o">=</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">],</span>
+        <span class="n">license</span><span class="o">=</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;license&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;UNKNOWN&quot;</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ensure_repo_is_napari_plugin"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ensure_repo_is_napari_plugin">[docs]</a><span class="k">def</span> <span class="nf">ensure_repo_is_napari_plugin</span><span class="p">(</span><span class="n">repo_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ProjectInfo</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return ProjectInfo of published napari plugin or None.</span>
+
+<span class="sd">    This function looks for a setup.py or setup.cfg file in the default branch</span>
+<span class="sd">    of the repo, then looks for a &quot;napari.plugins&quot; in the entry_points section.</span>
+<span class="sd">    As such, it will only currently find projects that use setuptools.</span>
+
+<span class="sd">    NOTE: this is a hack because we don&#39;t have a trove classifier on PyPI (and</span>
+<span class="sd">    may not be able to get one)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_info : dict</span>
+<span class="sd">        info as returned from the github API (or</span>
+<span class="sd">        ``get_napari_plugin_repos_from_github``)</span>
+<span class="sd">        see: https://developer.github.com/v3/repos/</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    info : ProjectInfo, optional</span>
+<span class="sd">        named tuple with project info or None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># assume repos starting with napari are following naming convention</span>
+    <span class="k">if</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;napari&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ensure_published_at_pypi</span><span class="p">(</span><span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
+
+    <span class="c1"># otherwise... we have to look for the entry_point</span>
+    <span class="n">raw_url</span> <span class="o">=</span> <span class="s1">&#39;https://raw.githubusercontent.com/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/&#39;</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">raw_url</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;full_name&#39;</span><span class="p">],</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;default_branch&#39;</span><span class="p">])</span>
+
+    <span class="c1"># first check setup.py</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">base</span> <span class="o">+</span> <span class="s2">&quot;setup.py&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">setup_py_entrypoint</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="s1">&#39;napari.plugin&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+            <span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">setup_py_pypi_name</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">ensure_published_at_pypi</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">except</span> <span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>  <span class="c1"># usually 404</span>
+        <span class="k">pass</span>
+
+    <span class="c1"># then check setup.cfg</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">base</span> <span class="o">+</span> <span class="s2">&quot;setup.cfg&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">read_string</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">parser</span><span class="o">.</span><span class="n">has_option</span><span class="p">(</span><span class="s1">&#39;options.entry_points&#39;</span><span class="p">,</span> <span class="s1">&#39;napari.plugin&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">ensure_published_at_pypi</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">))</span>
+    <span class="k">except</span> <span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="iter_napari_plugin_info"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.iter_napari_plugin_info">[docs]</a><span class="k">def</span> <span class="nf">iter_napari_plugin_info</span><span class="p">(</span>
+    <span class="n">skip</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;napari-plugin-engine&#39;</span><span class="p">},</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">ProjectInfo</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return a generator that yields ProjectInfo of available napari plugins.</span>
+
+<span class="sd">    By default, requires that packages are at least &quot;Alpha&quot; stage of</span>
+<span class="sd">    development.  to allow lower, change the ``min_dev_status`` argument to</span>
+<span class="sd">    ``ensure_published_at_pypi``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">already_yielded</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+        <span class="n">futures</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ensure_published_at_pypi</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">get_packages_by_prefix</span><span class="p">(</span><span class="s2">&quot;napari-&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span>
+        <span class="p">]</span>
+        <span class="n">futures</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ensure_repo_is_napari_plugin</span><span class="p">,</span> <span class="n">repo_info</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">repo_info</span> <span class="ow">in</span> <span class="n">get_napari_plugin_repos_from_github</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span>  <span class="c1"># repo may not have pkg name</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">futures</span><span class="p">):</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">info</span> <span class="ow">and</span> <span class="n">info</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">already_yielded</span><span class="p">:</span>
+                <span class="n">already_yielded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+                <span class="k">yield</span> <span class="n">info</span></div>
+
+
+<div class="viewcode-block" id="list_outdated"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.list_outdated">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">list_outdated</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+    <span class="c1"># slow!</span>
+    <span class="kn">import</span> <span class="nn">subprocess</span>
+
+    <span class="kn">from</span> <span class="nn">..utils._appdirs</span> <span class="kn">import</span> <span class="n">user_site_packages</span>
+
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">pathsep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">user_site_packages</span><span class="p">(),</span> <span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;PYTHONPATH&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s1">&#39;PYTHONPATH&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-m&#39;</span><span class="p">,</span> <span class="s1">&#39;pip&#39;</span><span class="p">,</span> <span class="s1">&#39;list&#39;</span><span class="p">,</span> <span class="s1">&#39;--outdated&#39;</span><span class="p">],</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span>
+    <span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="mi">2</span><span class="p">:]:</span>
+        <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rest</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="normalized_name"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.normalized_name">[docs]</a><span class="k">def</span> <span class="nf">normalized_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[-_.]+&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

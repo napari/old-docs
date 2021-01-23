@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.hook_specifications &mdash; napari 0.4.4.dev13+gfb1170a documentation</title>
+  <title>napari.plugins.hook_specifications &mdash; napari 0.4.4.dev14+g3631b15 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.4.dev13+gfb1170a
+                0.4.4.dev14+g3631b15
               </div>
             
           
@@ -535,7 +535,7 @@
 <span class="k">def</span> <span class="nf">napari_experimental_provide_dock_widget</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span>
     <span class="n">AugmentedWidget</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AugmentedWidget</span><span class="p">]</span>
 <span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Provide QWidget classes to be instantiated and docked on the viewer.</span>
+    <span class="sd">&quot;&quot;&quot;Provide functions that return widgets to be docked in the viewer.</span>
 
 <span class="sd">    This hook specification is marked as experimental as the API or how the</span>
 <span class="sd">    returned value is handled may change here more frequently then the</span>
@@ -543,39 +543,63 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dock_widget(s) : QWidget class or list of QWidget classes</span>
-<span class="sd">        Implementations should return either QWidget classes (one or a list),</span>
-<span class="sd">        or tuple(s) containing QWidget classes as well as a dictionary</span>
-<span class="sd">        containing keyword arguments for</span>
-<span class="sd">        :meth:`napari.qt.Window.add_dock_widget` (though note that the</span>
-<span class="sd">        ``shortcut=`` keyword is not yet supported).</span>
+<span class="sd">    result : callable or tuple or list of callables or list of tuples</span>
+<span class="sd">        A &quot;callable&quot; in this context is a class or function that, when</span>
+<span class="sd">        called, returns an instance of either a</span>
+<span class="sd">        :class:`~qtpy.QtWidgets.QWidget` or a</span>
+<span class="sd">        :class:`~magicgui.widgets.FunctionGui`.</span>
+
+<span class="sd">        Implementations of this hook specification must return a callable, or a</span>
+<span class="sd">        tuple of ``(callable, dict)``, where the dict contains keyword</span>
+<span class="sd">        arguments for :meth:`napari.qt.Window.add_dock_widget`. (note, however,</span>
+<span class="sd">        that ``shortcut=`` keyword is not yet supported).</span>
+
+<span class="sd">        Implementations may also return a list, in which each item must be a</span>
+<span class="sd">        callable or ``(callable, dict)`` tuple.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
+<span class="sd">    An example with a QtWidget:</span>
+
 <span class="sd">    &gt;&gt;&gt; from qtpy.QtWidgets import QWidget</span>
 <span class="sd">    &gt;&gt;&gt; from napari_plugin_engine import napari_hook_implementation</span>
 <span class="sd">    &gt;&gt;&gt;</span>
 <span class="sd">    &gt;&gt;&gt; class MyWidget(QWidget):</span>
-<span class="sd">    &gt;&gt;&gt;     def __init__(self, napari_viewer):</span>
-<span class="sd">    &gt;&gt;&gt;         self.viewer = napari_viewer</span>
-<span class="sd">    &gt;&gt;&gt;         super().__init__()</span>
-<span class="sd">    &gt;&gt;&gt;</span>
-<span class="sd">    &gt;&gt;&gt;         # initialize layout</span>
-<span class="sd">    &gt;&gt;&gt;         layout = QGridLayout()</span>
-<span class="sd">    &gt;&gt;&gt;</span>
-<span class="sd">    &gt;&gt;&gt;         # add a button</span>
-<span class="sd">    &gt;&gt;&gt;         btn = QPushButton(&#39;Click me!&#39;, self)</span>
-<span class="sd">    &gt;&gt;&gt;         def trigger():</span>
-<span class="sd">    &gt;&gt;&gt;             print(&quot;napari has&quot;, len(napari_viewer.layers), &quot;layers&quot;)</span>
-<span class="sd">    &gt;&gt;&gt;         btn.clicked.connect(trigger)</span>
-<span class="sd">    &gt;&gt;&gt;         layout.addWidget(btn)</span>
-<span class="sd">    &gt;&gt;&gt;</span>
-<span class="sd">    &gt;&gt;&gt;         # activate layout</span>
-<span class="sd">    &gt;&gt;&gt;         self.setLayout(layout)</span>
+<span class="sd">    ...     def __init__(self, napari_viewer):</span>
+<span class="sd">    ...         self.viewer = napari_viewer</span>
+<span class="sd">    ...         super().__init__()</span>
+<span class="sd">    ...</span>
+<span class="sd">    ...         # initialize layout</span>
+<span class="sd">    ...         layout = QGridLayout()</span>
+<span class="sd">    ...</span>
+<span class="sd">    ...         # add a button</span>
+<span class="sd">    ...         btn = QPushButton(&#39;Click me!&#39;, self)</span>
+<span class="sd">    ...         def trigger():</span>
+<span class="sd">    ...             print(&quot;napari has&quot;, len(napari_viewer.layers), &quot;layers&quot;)</span>
+<span class="sd">    ...         btn.clicked.connect(trigger)</span>
+<span class="sd">    ...         layout.addWidget(btn)</span>
+<span class="sd">    ...</span>
+<span class="sd">    ...         # activate layout</span>
+<span class="sd">    ...         self.setLayout(layout)</span>
 <span class="sd">    &gt;&gt;&gt;</span>
 <span class="sd">    &gt;&gt;&gt; @napari_hook_implementation</span>
 <span class="sd">    &gt;&gt;&gt; def napari_experimental_provide_dock_widget():</span>
-<span class="sd">    &gt;&gt;&gt;     return MyWidget</span>
+<span class="sd">    ...     return MyWidget</span>
+
+<span class="sd">    An example using magicgui:</span>
+
+<span class="sd">    &gt;&gt;&gt; from magicgui import magic_factory</span>
+<span class="sd">    &gt;&gt;&gt; from napari_plugin_engine import napari_hook_implementation</span>
+<span class="sd">    &gt;&gt;&gt;</span>
+<span class="sd">    &gt;&gt;&gt; @magic_factory(auto_call=True, threshold={&#39;max&#39;: 2 ** 16})</span>
+<span class="sd">    &gt;&gt;&gt; def threshold(</span>
+<span class="sd">    ...     data: &#39;napari.types.ImageData&#39;, threshold: int</span>
+<span class="sd">    ... ) -&gt; &#39;napari.types.LabelsData&#39;:</span>
+<span class="sd">    ...     return (data &gt; threshold).astype(int)</span>
+<span class="sd">    &gt;&gt;&gt;</span>
+<span class="sd">    &gt;&gt;&gt; @napari_hook_implementation</span>
+<span class="sd">    &gt;&gt;&gt; def napari_experimental_provide_dock_widget():</span>
+<span class="sd">    ...     return threshold</span>
 <span class="sd">    &quot;&quot;&quot;</span></div>
 </pre></div>
 

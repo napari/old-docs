@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.pypi &mdash; napari 0.4.4.dev14+g3631b15 documentation</title>
+  <title>napari.plugins.pypi &mdash; napari 0.4.4.dev15+g23ecd6e documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.4.dev14+g3631b15
+                0.4.4.dev15+g23ecd6e
               </div>
             
           
@@ -164,7 +164,6 @@
 <span class="sd">These convenience functions will be useful for searching pypi for packages</span>
 <span class="sd">that match the plugin naming convention, and retrieving related metadata.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">configparser</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
@@ -172,7 +171,7 @@
 <span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
-<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">error</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">error</span><span class="p">,</span> <span class="n">parse</span><span class="p">,</span> <span class="n">request</span>
 
 <span class="n">PYPI_SIMPLE_API_URL</span> <span class="o">=</span> <span class="s1">&#39;https://pypi.org/simple/&#39;</span>
 
@@ -220,6 +219,23 @@
     <span class="p">}</span></div>
 
 
+<div class="viewcode-block" id="get_packages_by_classifier"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.get_packages_by_classifier">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_packages_by_classifier</span><span class="p">(</span><span class="n">classifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Search for packages declaring ``classifier`` on PyPI</span>
+
+<span class="sd">    Yields</span>
+<span class="sd">    -------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        name of all packages at pypi that declare ``classifier``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://pypi.org/search/?c=</span><span class="si">{</span><span class="n">parse</span><span class="o">.</span><span class="n">quote_plus</span><span class="p">(</span><span class="n">classifier</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+        <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;class=&quot;package-snippet__name&quot;&gt;(.+)&lt;/span&gt;&#39;</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="get_package_versions"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.get_package_versions">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">get_package_versions</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Get available versions of a package on pypi</span>
@@ -246,7 +262,8 @@
     <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span>
         <span class="s1">&#39;https://api.github.com/search/repositories?q=&quot;napari+plugin&quot;+in:readme&#39;</span>
     <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">)</span></div>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="ensure_published_at_pypi"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ensure_published_at_pypi">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
@@ -274,22 +291,21 @@
     <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="ensure_repo_is_napari_plugin"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ensure_repo_is_napari_plugin">[docs]</a><span class="k">def</span> <span class="nf">ensure_repo_is_napari_plugin</span><span class="p">(</span><span class="n">repo_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ProjectInfo</span><span class="p">]:</span>
+<div class="viewcode-block" id="ensure_repo_is_napari_plugin"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.plugins.pypi.ensure_repo_is_napari_plugin">[docs]</a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">ensure_repo_is_napari_plugin</span><span class="p">(</span>
+    <span class="n">info</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ProjectInfo</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Return ProjectInfo of published napari plugin or None.</span>
 
 <span class="sd">    This function looks for a setup.py or setup.cfg file in the default branch</span>
 <span class="sd">    of the repo, then looks for a &quot;napari.plugins&quot; in the entry_points section.</span>
 <span class="sd">    As such, it will only currently find projects that use setuptools.</span>
 
-<span class="sd">    NOTE: this is a hack because we don&#39;t have a trove classifier on PyPI (and</span>
-<span class="sd">    may not be able to get one)</span>
-
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    repo_info : dict</span>
-<span class="sd">        info as returned from the github API (or</span>
-<span class="sd">        ``get_napari_plugin_repos_from_github``)</span>
-<span class="sd">        see: https://developer.github.com/v3/repos/</span>
+<span class="sd">    info : tuple</span>
+<span class="sd">        2-tuple containing full repo name on github (e.g. &quot;napari/napari&quot;), and</span>
+<span class="sd">        branch to query (e.g. &quot;master&quot;)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -297,13 +313,8 @@
 <span class="sd">        named tuple with project info or None</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># assume repos starting with napari are following naming convention</span>
-    <span class="k">if</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;napari&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">ensure_published_at_pypi</span><span class="p">(</span><span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
-
     <span class="c1"># otherwise... we have to look for the entry_point</span>
-    <span class="n">raw_url</span> <span class="o">=</span> <span class="s1">&#39;https://raw.githubusercontent.com/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/&#39;</span>
-    <span class="n">base</span> <span class="o">=</span> <span class="n">raw_url</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;full_name&#39;</span><span class="p">],</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;default_branch&#39;</span><span class="p">])</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="s1">&#39;https://raw.githubusercontent.com/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">info</span><span class="p">)</span>
 
     <span class="c1"># first check setup.py</span>
     <span class="k">try</span><span class="p">:</span>
@@ -323,6 +334,8 @@
 
     <span class="c1"># then check setup.cfg</span>
     <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">configparser</span>
+
         <span class="k">with</span> <span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">base</span> <span class="o">+</span> <span class="s2">&quot;setup.cfg&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
             <span class="n">text</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="n">parser</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
@@ -347,12 +360,16 @@
     <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
         <span class="n">futures</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ensure_published_at_pypi</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">get_packages_by_prefix</span><span class="p">(</span><span class="s2">&quot;napari-&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">get_packages_by_classifier</span><span class="p">(</span><span class="s2">&quot;Framework :: napari&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span>
         <span class="p">]</span>
+
         <span class="n">futures</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
             <span class="p">[</span>
-                <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ensure_repo_is_napari_plugin</span><span class="p">,</span> <span class="n">repo_info</span><span class="p">)</span>
+                <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                    <span class="n">ensure_repo_is_napari_plugin</span><span class="p">,</span>
+                    <span class="p">(</span><span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;full_name&#39;</span><span class="p">],</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;default_branch&#39;</span><span class="p">]),</span>
+                <span class="p">)</span>
                 <span class="k">for</span> <span class="n">repo_info</span> <span class="ow">in</span> <span class="n">get_napari_plugin_repos_from_github</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">repo_info</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span>  <span class="c1"># repo may not have pkg name</span>
             <span class="p">]</span>

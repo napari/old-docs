@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.layers.base.base &mdash; napari 0.4.4.dev19+g0cbcdaa documentation</title>
+  <title>napari.layers.base.base &mdash; napari 0.4.4.dev20+g79fceb2 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.4.dev19+g0cbcdaa
+                0.4.4.dev20+g79fceb2
               </div>
             
           
@@ -174,7 +174,7 @@
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.mouse_bindings</span> <span class="kn">import</span> <span class="n">MousemapProvider</span>
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
-<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">format_float</span><span class="p">,</span> <span class="n">status_format</span>
+<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">generate_layer_status</span>
 <span class="kn">from</span> <span class="nn">...utils.transforms</span> <span class="kn">import</span> <span class="n">Affine</span><span class="p">,</span> <span class="n">TransformChain</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">compute_multiscale_level_and_corners</span><span class="p">,</span>
@@ -492,7 +492,6 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">format_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opacity</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">opacity</span><span class="p">()</span>
 
     <span class="nd">@property</span>
@@ -635,7 +634,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">==</span> <span class="n">_position</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="n">_position</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_dims_displayed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -691,7 +690,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndim</span> <span class="o">=</span> <span class="n">ndim</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="nd">@abstractmethod</span>
@@ -892,6 +891,15 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;str: displayed in status bar bottom left.&quot;&quot;&quot;</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;The status attribute is deprecated and will be removed in version 0.4.6.&quot;</span>
+                <span class="s2">&quot; Instead you should use the get_status method with the position where you&quot;</span>
+                <span class="s2">&quot; want to get the status from.&quot;</span>
+            <span class="p">),</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_status</span>
 
     <span class="nd">@status</span><span class="o">.</span><span class="n">setter</span>
@@ -1024,19 +1032,51 @@
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Value of the data at a position in data coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple</span>
+<span class="sd">            Position in data coordinates.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : tuple</span>
+<span class="sd">            Value of the data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
 
-<div class="viewcode-block" id="Layer.get_value"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.get_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Value of data at current coordinates.</span>
+<div class="viewcode-block" id="Layer.get_value"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.get_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Value of the data at a position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple</span>
+<span class="sd">            Position in either data or world coordinates.</span>
+<span class="sd">        world : bool</span>
+<span class="sd">            If True the position is taken to be in world coordinates</span>
+<span class="sd">            and converted into data coordinates. False by default.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        value : tuple, None</span>
-<span class="sd">            Value of the data at the coordinates.</span>
+<span class="sd">            Value of the data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">position</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s2">&quot;The position argument of get_value will no longer be optional in 0.4.6.&quot;</span>
+                        <span class="s2">&quot; Instead you should provide the position where you want to get the value.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span>
+            <span class="k">elif</span> <span class="n">world</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">position</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span></div>
 
@@ -1062,19 +1102,37 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">set_view_slice</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_thumbnail</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_value_and_status</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_set_highlight</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Cursor position in data coordinates.&quot;&quot;&quot;</span>
         <span class="c1"># Note we ignore the first transform which is tile2data</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_update_value_and_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Update value and status message.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_message</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">_world_to_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert from world coordinates to data coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple, list, 1D array</span>
+<span class="sd">            Position in world coorindates. If longer then the</span>
+<span class="sd">            number of dimensions of the layer, the later</span>
+<span class="sd">            dimensions will be used.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            Position in data coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="p">:])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cursor position must be at least&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">coords</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_update_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">corner_pixels</span><span class="p">,</span> <span class="n">shape_threshold</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Update canvas scale and corner values on draw.</span>
@@ -1128,6 +1186,25 @@
         <span class="n">coordinates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">coordinates</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
 
+<div class="viewcode-block" id="Layer.get_status"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.get_status">[docs]</a>    <span class="k">def</span> <span class="nf">get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Status message of the data at a coordinate position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple</span>
+<span class="sd">            Position in either data or world coordinates.</span>
+<span class="sd">        world : bool</span>
+<span class="sd">            If True the position is taken to be in world coordinates</span>
+<span class="sd">            and converted into data coordinates. False by default.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        msg : string</span>
+<span class="sd">            String containing a message that can be used as a status update.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">generate_layer_status</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Layer.get_message"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.get_message">[docs]</a>    <span class="k">def</span> <span class="nf">get_message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Generate a status message based on the coordinates and value</span>
 
@@ -1136,21 +1213,16 @@
 <span class="sd">        msg : string</span>
 <span class="sd">            String containing a message that can be used as a status update.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">full_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-
-        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">full_coord</span><span class="si">}</span><span class="s1">&#39;</span>
-
-        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span>
-        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="c1"># it&#39;s a multiscale -&gt; value = (data_level, value)</span>
-                <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;: </span><span class="si">{</span><span class="n">status_format</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s1">&#39;</span>
-                <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;, </span><span class="si">{</span><span class="n">status_format</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># it&#39;s either a grayscale or rgb image (scalar or list)</span>
-                <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;: </span><span class="si">{</span><span class="n">status_format</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
-        <span class="k">return</span> <span class="n">msg</span></div>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;The get_message method is deprecated and will be removed in version 0.4.6.&quot;</span>
+                <span class="s2">&quot; Instead you should use the get_status method with the position where you&quot;</span>
+                <span class="s2">&quot; want to get the status from.&quot;</span>
+            <span class="p">),</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">generate_layer_status</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Layer.save"><a class="viewcode-back" href="../../../../api/napari.layers.base.html#napari.layers.base.base.Layer.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Save this layer to ``path`` with default (or specified) plugin.</span>

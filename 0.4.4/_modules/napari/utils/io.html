@@ -1,0 +1,735 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.utils.io &mdash; napari 0.4.4 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.utils.io</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.utils.io</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">dask</span> <span class="kn">import</span> <span class="n">array</span> <span class="k">as</span> <span class="n">da</span>
+<span class="kn">from</span> <span class="nn">dask</span> <span class="kn">import</span> <span class="n">delayed</span>
+
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">FullLayerData</span>
+<span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">abspath_or_url</span>
+
+
+<div class="viewcode-block" id="imsave"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.imsave">[docs]</a><span class="k">def</span> <span class="nf">imsave</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Custom implementation of imsave to avoid skimage dependency.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : string</span>
+<span class="sd">        The path to write the file to.</span>
+<span class="sd">    data : np.ndarray</span>
+<span class="sd">        The image data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ext</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.tif&quot;</span><span class="p">,</span> <span class="s2">&quot;.tiff&quot;</span><span class="p">]:</span>
+        <span class="kn">import</span> <span class="nn">tifffile</span>
+
+        <span class="n">tifffile</span><span class="o">.</span><span class="n">imsave</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">compress</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">imageio</span>
+
+        <span class="n">imageio</span><span class="o">.</span><span class="n">imsave</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="imsave_extensions"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.imsave_extensions">[docs]</a><span class="k">def</span> <span class="nf">imsave_extensions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Valid extensions of files that imsave can write to.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        Valid extensions of files that imsave can write to.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># import imageio</span>
+    <span class="c1"># return tuple(set(x for f in imageio.formats for x in f.extensions))</span>
+
+    <span class="c1"># The above method generates a lot of extensions that will fail.  This list</span>
+    <span class="c1"># is a more realistic set, generated by trying to write a variety of numpy</span>
+    <span class="c1"># arrays (skimage.data.camera, grass, and some random numpy arrays/shapes).</span>
+    <span class="c1"># TODO: maybe write a proper imageio plugin.</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="s1">&#39;.bmp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.bsdf&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.bw&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.eps&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.gif&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.icns&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.ico&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.im&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.j2c&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.j2k&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jfif&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jp2&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpc&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpe&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpeg&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpf&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpg&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.jpx&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.lsm&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.mpo&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.npz&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.pbm&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.pcx&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.pgm&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.png&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.ppm&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.ps&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.rgb&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.rgba&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.sgi&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.stk&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.tga&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.tif&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;.tiff&#39;</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="imread"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.imread">[docs]</a><span class="k">def</span> <span class="nf">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Custom implementation of imread to avoid skimage dependency.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : string</span>
+<span class="sd">        The path from which to read the image.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    data : np.ndarray</span>
+<span class="sd">        The image data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">abspath_or_url</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.tif&quot;</span><span class="p">,</span> <span class="s2">&quot;.tiff&quot;</span><span class="p">,</span> <span class="s2">&quot;.lsm&quot;</span><span class="p">]:</span>
+        <span class="kn">import</span> <span class="nn">tifffile</span>
+
+        <span class="k">return</span> <span class="n">tifffile</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">imageio</span>
+
+        <span class="k">return</span> <span class="n">imageio</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_alphanumeric_key</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert string to list of strings and ints that gives intuitive sorting.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    s : string</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    k : a list of strings and ints</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _alphanumeric_key(&#39;z23a&#39;)</span>
+<span class="sd">    [&#39;z&#39;, 23, &#39;a&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; filenames = [&#39;f9.10.png&#39;, &#39;e10.png&#39;, &#39;f9.9.png&#39;, &#39;f10.10.png&#39;,</span>
+<span class="sd">    ...              &#39;f10.9.png&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; sorted(filenames)</span>
+<span class="sd">    [&#39;e10.png&#39;, &#39;f10.10.png&#39;, &#39;f10.9.png&#39;, &#39;f9.10.png&#39;, &#39;f9.9.png&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; sorted(filenames, key=_alphanumeric_key)</span>
+<span class="sd">    [&#39;e10.png&#39;, &#39;f9.9.png&#39;, &#39;f9.10.png&#39;, &#39;f10.9.png&#39;, &#39;f10.10.png&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">else</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;([0-9]+)&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">k</span>
+
+
+<div class="viewcode-block" id="magic_imread"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.magic_imread">[docs]</a><span class="k">def</span> <span class="nf">magic_imread</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">use_dask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stack</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dispatch the appropriate reader given some files.</span>
+
+<span class="sd">    The files are assumed to all have the same shape.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filenames : list</span>
+<span class="sd">        List of filenames or directories to be opened.</span>
+<span class="sd">        A list of `pathlib.Path` objects and a single filename or `Path` object</span>
+<span class="sd">        are also accepted.</span>
+<span class="sd">    use_dask : bool</span>
+<span class="sd">        Whether to use dask to create a lazy array, rather than NumPy.</span>
+<span class="sd">        Default of None will resolve to True if filenames contains more than</span>
+<span class="sd">        one image, False otherwise.</span>
+<span class="sd">    stack : bool</span>
+<span class="sd">        Whether to stack the images in multiple files into a single array. If</span>
+<span class="sd">        False, a list of arrays will be returned.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    image : array-like</span>
+<span class="sd">        Array or list of images</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># cast Path to string</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="n">filenames</span> <span class="o">=</span> <span class="n">filenames</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">filenames</span> <span class="o">=</span> <span class="p">[</span><span class="n">filenames</span><span class="p">]</span>  <span class="c1"># ensure list</span>
+
+    <span class="c1"># replace folders with their contents</span>
+    <span class="n">filenames_expanded</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+        <span class="c1"># zarr files are folders, but should be read as 1 file</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">guess_zarr_path</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="n">dir_contents</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;*.*&#39;</span><span class="p">)),</span> <span class="n">key</span><span class="o">=</span><span class="n">_alphanumeric_key</span>
+            <span class="p">)</span>
+            <span class="c1"># remove subdirectories</span>
+            <span class="n">dir_contents_files</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="n">dir_contents</span>
+            <span class="p">)</span>
+            <span class="n">filenames_expanded</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">dir_contents_files</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filenames_expanded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">use_dask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">use_dask</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames_expanded</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">filenames_expanded</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No files found in </span><span class="si">{</span><span class="n">filenames</span><span class="si">}</span><span class="s2"> after removing subdirectories&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># then, read in images</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames_expanded</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">guess_zarr_path</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="n">image</span><span class="p">,</span> <span class="n">zarr_shape</span> <span class="o">=</span> <span class="n">read_zarr_dataset</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">shape</span> <span class="o">=</span> <span class="n">zarr_shape</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                <span class="n">shape</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="k">if</span> <span class="n">use_dask</span><span class="p">:</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span>
+                    <span class="n">delayed</span><span class="p">(</span><span class="n">imread</span><span class="p">)(</span><span class="n">filename</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># not read by shape clause</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">imread</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">stack</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">use_dask</span><span class="p">:</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;input arrays must have the same shape&#39;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="s1">&#39;To stack multiple files into a single array with &#39;</span>
+                            <span class="s1">&#39;numpy, all input arrays must have the same shape.&#39;</span>
+                            <span class="s1">&#39; Set `use_dask` to True to stack arrays with &#39;</span>
+                            <span class="s1">&#39;different shapes.&#39;</span>
+                        <span class="p">)</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">e</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">images</span>  <span class="c1"># return a list</span>
+    <span class="k">return</span> <span class="n">image</span></div>
+
+
+<div class="viewcode-block" id="guess_zarr_path"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.guess_zarr_path">[docs]</a><span class="k">def</span> <span class="nf">guess_zarr_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Guess whether string path is part of a zarr hierarchy.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to a file or directory.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        Whether path is for zarr.</span>
+<span class="sd">    &gt;&gt;&gt; guess_zarr_path(&#39;dataset.zarr&#39;)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; guess_zarr_path(&#39;dataset.zarr/path/to/array&#39;)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; guess_zarr_path(&#39;dataset.zarr/component.png&#39;)</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.zarr&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_zarr_dataset"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.read_zarr_dataset">[docs]</a><span class="k">def</span> <span class="nf">read_zarr_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read a zarr dataset, including an array or a group of arrays.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to directory ending in &#39;.zarr&#39;. Path can contain either an array</span>
+<span class="sd">        or a group of arrays in the case of multiscale data.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    image : array-like</span>
+<span class="sd">        Array or list of arrays</span>
+<span class="sd">    shape : tuple</span>
+<span class="sd">        Shape of array or first array in list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;.zarray&#39;</span><span class="p">)):</span>
+        <span class="c1"># load zarr array</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">from_zarr</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;.zgroup&#39;</span><span class="p">)):</span>
+        <span class="c1"># else load zarr all arrays inside file, useful for multiscale data</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">subpath</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">subpath</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">):</span>
+                <span class="n">image</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">read_zarr_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">subpath</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a zarr dataset or group: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">image</span><span class="p">,</span> <span class="n">shape</span></div>
+
+
+<div class="viewcode-block" id="write_csv"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.write_csv">[docs]</a><span class="k">def</span> <span class="nf">write_csv</span><span class="p">(</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">column_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write a csv file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        Filename for saving csv.</span>
+<span class="sd">    data : list or ndarray</span>
+<span class="sd">        Table values, contained in a list of lists or an ndarray.</span>
+<span class="sd">    column_names : list, optional</span>
+<span class="sd">        List of column names for table data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span>
+            <span class="n">csvfile</span><span class="p">,</span>
+            <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span>
+            <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span>
+            <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">column_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">column_names</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="guess_layer_type_from_column_names"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.guess_layer_type_from_column_names">[docs]</a><span class="k">def</span> <span class="nf">guess_layer_type_from_column_names</span><span class="p">(</span>
+    <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Guess layer type based on column names from a csv file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        List of the column names from the csv.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        Layer type if recognized, otherwise None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="s1">&#39;shape-type&#39;</span><span class="p">,</span> <span class="s1">&#39;vertex-index&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-0&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-1&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span>
+        <span class="n">column_names</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;shapes&#39;</span>
+    <span class="k">elif</span> <span class="p">{</span><span class="s1">&#39;axis-0&#39;</span><span class="p">,</span> <span class="s1">&#39;axis-1&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">column_names</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;points&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="read_csv"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.read_csv">[docs]</a><span class="k">def</span> <span class="nf">read_csv</span><span class="p">(</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">require_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;Return CSV data only if column names match format for ``require_type``.</span>
+
+<span class="sd">    Reads only the first line of the CSV at first, then optionally raises an</span>
+<span class="sd">    exception if the column names are not consistent with a known format, as</span>
+<span class="sd">    determined by the ``require_type`` argument and</span>
+<span class="sd">    :func:`guess_layer_type_from_column_names`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        Path of file to open</span>
+<span class="sd">    require_type : str, optional</span>
+<span class="sd">        The desired layer type. If provided, should be one of the keys in</span>
+<span class="sd">        ``csv_reader_functions`` or the string &quot;any&quot;.  If ``None``, data, will</span>
+<span class="sd">        not impose any format requirements on the csv, and data will always be</span>
+<span class="sd">        returned.  If ``any``, csv must be recognized as one of the valid layer</span>
+<span class="sd">        data formats, otherwise a ``ValueError`` will be raised.  If a specific</span>
+<span class="sd">        layer type string, then a ``ValueError`` will be raised if the column</span>
+<span class="sd">        names are not of the predicted format.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    (data, column_names, layer_type) : Tuple[np.array, List[str], str]</span>
+<span class="sd">        The table data and column names from the CSV file, along with the</span>
+<span class="sd">        detected layer type (string).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the column names do not match the format requested by</span>
+<span class="sd">        ``require_type``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="n">column_names</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+
+        <span class="n">layer_type</span> <span class="o">=</span> <span class="n">guess_layer_type_from_column_names</span><span class="p">(</span><span class="n">column_names</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">require_type</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">layer_type</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;File &quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s1">&quot; not recognized as valid Layer data&#39;</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">layer_type</span> <span class="o">!=</span> <span class="n">require_type</span> <span class="ow">and</span> <span class="n">require_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;any&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;File &quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s1">&quot; not recognized as </span><span class="si">{</span><span class="n">require_type</span><span class="si">}</span><span class="s1"> data&#39;</span>
+                <span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">reader</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">column_names</span><span class="p">,</span> <span class="n">layer_type</span></div>
+
+
+<div class="viewcode-block" id="csv_to_layer_data"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.io.csv_to_layer_data">[docs]</a><span class="k">def</span> <span class="nf">csv_to_layer_data</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">require_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">FullLayerData</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Return layer data from a CSV file if detected as a valid type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path of file to open</span>
+<span class="sd">    require_type : str, optional</span>
+<span class="sd">        The desired layer type. If provided, should be one of the keys in</span>
+<span class="sd">        ``csv_reader_functions`` or the string &quot;any&quot;.  If ``None``,</span>
+<span class="sd">        unrecognized CSV files will simply return ``None``.  If ``any``,</span>
+<span class="sd">        unrecognized CSV files will raise a ``ValueError``.  If a specific</span>
+<span class="sd">        layer type string, then a ``ValueError`` will be raised if the column</span>
+<span class="sd">        names are not of the predicted format.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple, or None</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, layer_type) if</span>
+<span class="sd">        CSV is recognized as a valid type.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``require_type`` is not ``None``, but the CSV is not detected as a</span>
+<span class="sd">        valid data format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># pass at least require &quot;any&quot; here so that we don&#39;t bother reading the</span>
+        <span class="c1"># full dataset if it&#39;s not going to yield valid layer_data.</span>
+        <span class="n">_require</span> <span class="o">=</span> <span class="n">require_type</span> <span class="ow">or</span> <span class="s1">&#39;any&#39;</span>
+        <span class="n">table</span><span class="p">,</span> <span class="n">column_names</span><span class="p">,</span> <span class="n">_type</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">require_type</span><span class="o">=</span><span class="n">_require</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">require_type</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">raise</span>
+    <span class="k">if</span> <span class="n">_type</span> <span class="ow">in</span> <span class="n">csv_reader_functions</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">csv_reader_functions</span><span class="p">[</span><span class="n">_type</span><span class="p">](</span><span class="n">table</span><span class="p">,</span> <span class="n">column_names</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># only reachable if it is a valid layer type without a reader</span></div>
+
+
+<span class="k">def</span> <span class="nf">_points_csv_to_layerdata</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert table data and column names from a csv file to Points LayerData.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : np.ndarray</span>
+<span class="sd">        CSV data.</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        The column names of the csv file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, &#39;points&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">cn</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;axis-&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">cn</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="n">data_axes</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Add properties to metadata if provided</span>
+    <span class="n">prop_axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_not</span><span class="p">(</span><span class="n">data_axes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">column_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;index&#39;</span><span class="p">:</span>
+        <span class="n">prop_axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">prop_axes</span><span class="p">):</span>
+        <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">prop_axes</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">table</span><span class="p">[:,</span> <span class="n">ind</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;properties&#39;</span><span class="p">][</span><span class="n">column_names</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">=</span> <span class="n">values</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">,</span> <span class="s1">&#39;points&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_shapes_csv_to_layerdata</span><span class="p">(</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">column_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FullLayerData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert table data and column names from a csv file to Shapes LayerData.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : np.ndarray</span>
+<span class="sd">        CSV data.</span>
+<span class="sd">    column_names : list of str</span>
+<span class="sd">        The column names of the csv file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layer_data : tuple</span>
+<span class="sd">        3-tuple ``(array, dict, str)`` (points data, metadata, &#39;shapes&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">cn</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;axis-&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">cn</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="n">data_axes</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+
+    <span class="n">inds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+    <span class="n">n_shapes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">inds</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="c1"># Determine when shape id changes</span>
+    <span class="n">transitions</span> <span class="o">=</span> <span class="nb">list</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">inds</span><span class="p">))</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">shape_boundaries</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">transitions</span> <span class="o">+</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">n_shapes</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape_boundaries</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Expected number of shapes not found&#39;</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">shape_type</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ind_a</span><span class="p">,</span> <span class="n">ind_b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">shape_boundaries</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">shape_boundaries</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="n">ind_a</span><span class="p">:</span><span class="n">ind_b</span><span class="p">])</span>
+        <span class="n">shape_type</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">ind_a</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;shape_type&#39;</span><span class="p">:</span> <span class="n">shape_type</span><span class="p">},</span> <span class="s1">&#39;shapes&#39;</span>
+
+
+<span class="n">csv_reader_functions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">_points_csv_to_layerdata</span><span class="p">,</span>
+    <span class="s1">&#39;shapes&#39;</span><span class="p">:</span> <span class="n">_shapes_csv_to_layerdata</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

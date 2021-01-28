@@ -1,0 +1,861 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Multithreading in napari &mdash; napari 0.4.4 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Performance Monitoring" href="perfmon.html" />
+    <link rel="prev" title="An Introduction to the Event Loop in napari" href="event_loop.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.4
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Guides</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="event_loop.html">An Introduction to the Event Loop in napari</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Multithreading in napari</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#processes-threads-and-asyncio">Processes, Threads, and <code class="docutils literal notranslate"><span class="pre">asyncio</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#threading-in-napari-with-thread-worker">Threading in napari with <code class="docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#responding-to-feedback-from-threads">Responding to Feedback from Threads</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#example-custom-exception-handler">Example: Custom Exception Handler</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#generators-for-the-win">Generators for the Win!</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#retrieving-intermediate-results">Retrieving Intermediate Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#flow-control-and-escape-hatches">Flow Control and Escape Hatches</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#graceful-exit">Graceful Exit</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#full-two-way-communication">Full Two-way Communication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#syntactic-sugar">Syntactic Sugar</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-a-custom-worker-class">Using a Custom Worker Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#adding-custom-signals">Adding custom signals</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="perfmon.html">Performance Monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rendering.html">Asynchronous Rendering</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Guides</a> &raquo;</li>
+        
+      <li>Multithreading in napari</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/events/threading.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="multithreading-in-napari">
+<span id="id1"></span><h1>Multithreading in napari<a class="headerlink" href="#multithreading-in-napari" title="Permalink to this headline">¶</a></h1>
+<p>As described in <a class="reference internal" href="event_loop.html#intro-to-event-loop"><span class="std std-ref">An Introduction to the Event Loop in napari</span></a>, <code class="docutils literal notranslate"><span class="pre">napari</span></code>, like most GUI
+applications, runs in an event loop that is continually receiving and
+responding to events like button presses and mouse events.  This works fine
+until one of the events takes a very long time to process.  A long-running
+function (such as training a machine learning model or running a complicated
+analysis routine) may “block” the event loop in the main thread, leading to a
+completely unresponsive viewer.  The example used there was:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">napari</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+    <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+    <span class="c1"># everything is fine so far... but if we trigger a long computation</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">viewer</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="c1"># the entire interface freezes!</span>
+</pre></div>
+</div>
+<p>In order to avoid freezing the viewer during a long-running blocking function,
+you must run your function in another thread or process.</p>
+<div class="section" id="processes-threads-and-asyncio">
+<h2>Processes, Threads, and <code class="docutils literal notranslate"><span class="pre">asyncio</span></code><a class="headerlink" href="#processes-threads-and-asyncio" title="Permalink to this headline">¶</a></h2>
+<p>There are multiple ways to achieve “concurrency” (multiple things happening at
+the same time) in python, each with their own advantages and disadvantages.
+It’s a rich, complicated topic, and a full treatment is well beyond the scope
+of this document, but strategies generally fall into one of three camps:</p>
+<ol class="arabic simple">
+<li><p>Multithreading</p></li>
+<li><p>Multprocessing</p></li>
+<li><p>Single-thread concurrency with <a class="reference external" href="https://docs.python.org/3/library/asyncio.html">asyncio</a></p></li>
+</ol>
+<p>For a good high level overview on concurrency in python, see <a class="reference external" href="https://realpython.com/python-concurrency/">this post</a>.  See the <a class="reference external" href="https://trio.readthedocs.io/en/stable/tutorial.html">trio docs</a> for a good introduction
+to Python’s new <code class="docutils literal notranslate"><span class="pre">async/await</span></code> syntax. And of course, see the python docs on
+<a class="reference external" href="https://docs.python.org/3/library/threading.html">threading</a>,
+<a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html">multiprocessing</a>,
+<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html">concurrent.futures</a>, and <a class="reference external" href="https://docs.python.org/3/library/asyncio.html">asyncio</a>.</p>
+<p>If you already have experience with any of these methods, you should be able to
+immediately leverage them in napari.  <code class="docutils literal notranslate"><span class="pre">napari</span></code> also provides a few
+convenience functions that allow you to easily run your long-running
+methods in another thread.</p>
+</div>
+<div class="section" id="threading-in-napari-with-thread-worker">
+<h2>Threading in napari with <code class="docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code><a class="headerlink" href="#threading-in-napari-with-thread-worker" title="Permalink to this headline">¶</a></h2>
+<p>The simplest way to run a function in another thread in napari is to decorate
+your function with the <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator. Continuing with the example
+above:</p>
+<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="kn">import</span> <span class="nn">napari</span>
+ <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="hll"> <span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">thread_worker</span>
+</span>
+
+<span class="hll"> <span class="nd">@thread_worker</span>
+</span> <span class="k">def</span> <span class="nf">average_large_image</span><span class="p">():</span>
+     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+ <span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+     <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+<span class="hll">     <span class="n">worker</span> <span class="o">=</span> <span class="n">average_large_image</span><span class="p">()</span>  <span class="c1"># create &quot;worker&quot; object</span>
+</span><span class="hll">     <span class="n">worker</span><span class="o">.</span><span class="n">returned</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">viewer</span><span class="o">.</span><span class="n">add_image</span><span class="p">)</span>  <span class="c1"># connect callback functions</span>
+</span><span class="hll">     <span class="n">worker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>  <span class="c1"># start the thread!</span>
+</span></pre></div>
+</td></tr></table></div>
+<p>The <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator
+(<strong>7</strong>), converts your function into one that returns a
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a> instance (<strong>13</strong>). The <code class="docutils literal notranslate"><span class="pre">worker</span></code>
+manages the work being done by your function in another thread.  It also
+exposes a few “signals” that let you respond to events happening in the other
+thread.  Here, we connect the <code class="docutils literal notranslate"><span class="pre">worker.returned</span></code> signal to the
+<a class="reference internal" href="../api/napari.components.html#napari.components.viewer_model.ViewerModel.add_image" title="napari.components.viewer_model.ViewerModel.add_image"><code class="xref py py-meth docutils literal notranslate"><span class="pre">viewer.add_image</span></code></a> function
+(<strong>14</strong>), which has the effect of adding the result to the viewer when it is
+ready. Lastly, we start the worker with
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.start" title="napari.qt.threading.WorkerBase.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a> (<strong>15</strong>) because workers do not
+start themselves by default.</p>
+<p>The <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator also
+accepts keyword arguments like <code class="docutils literal notranslate"><span class="pre">connect</span></code>, and <code class="docutils literal notranslate"><span class="pre">start_thread</span></code>, which may
+enable more concise syntax. The example below is equivalent to lines 7-15 in
+the above example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+    <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+
+    <span class="nd">@thread_worker</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;returned&quot;</span><span class="p">:</span> <span class="n">viewer</span><span class="o">.</span><span class="n">add_image</span><span class="p">})</span>
+    <span class="k">def</span> <span class="nf">average_large_image</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">average_large_image</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><em>Note: when the</em> <code class="docutils literal notranslate"><span class="pre">connect</span></code> <em>argument to</em> <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> <em>is not</em> <code class="docutils literal notranslate"><span class="pre">None</span></code>, <em>the thread will start
+by default when the decorated function is</em> <em>called.  Otherwise the thread must
+be manually started by calling</em> <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.start" title="napari.qt.threading.WorkerBase.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.start()</span></code></a>.</p>
+</div>
+<div class="section" id="responding-to-feedback-from-threads">
+<h2>Responding to Feedback from Threads<a class="headerlink" href="#responding-to-feedback-from-threads" title="Permalink to this headline">¶</a></h2>
+<p>As shown above, the <code class="docutils literal notranslate"><span class="pre">worker</span></code> object returned by a function decorated with
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> has a number of
+signals that are emitted in response to certain events.  The base signals
+provided by the <code class="docutils literal notranslate"><span class="pre">worker</span></code> are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">started</span></code> - emitted when the work is started</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">finished</span></code> - emitted when the work is finished</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">returned</span></code> [<em>value</em>] - emitted with return value when the function returns</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">errored</span></code> [<em>exception</em>] - emitted with an <code class="docutils literal notranslate"><span class="pre">Exception</span></code> object if an
+exception is raised in the thread.</p></li>
+</ul>
+<div class="section" id="example-custom-exception-handler">
+<h3>Example: Custom Exception Handler<a class="headerlink" href="#example-custom-exception-handler" title="Permalink to this headline">¶</a></h3>
+<p>Because debugging issues in multithreaded applications can be tricky, the
+default behavior of a <code class="docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code> - decorated function is to re-raise
+any exceptions in the main thread.  But just as we connected the
+<code class="docutils literal notranslate"><span class="pre">worker.returned</span></code> event above to the <code class="docutils literal notranslate"><span class="pre">viewer.add_image</span></code> method, you can
+also connect your own custom handler to the <code class="docutils literal notranslate"><span class="pre">worker.errored</span></code> event:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="k">def</span> <span class="nf">my_handler</span><span class="p">(</span><span class="n">exc</span><span class="p">):</span>
+     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;We had a minor problem </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+     <span class="k">else</span><span class="p">:</span>
+         <span class="k">raise</span> <span class="n">exc</span>
+
+<span class="nd">@thread_worker</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;errored&quot;</span><span class="p">:</span> <span class="n">my_handler</span><span class="p">})</span>
+ <span class="k">def</span> <span class="nf">error_prone_function</span><span class="p">():</span>
+     <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="generators-for-the-win">
+<h2>Generators for the Win!<a class="headerlink" href="#generators-for-the-win" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-quick-reminder admonition">
+<p class="admonition-title">quick reminder</p>
+<p>A generator function is a <a class="reference external" href="https://realpython.com/introduction-to-python-generators/">special kind of function</a> that returns
+a lazy iterator. To make a generator, you “yield” results rather than (or in
+addition to) “returning” them:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_generator</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">i</span>
+</pre></div>
+</div>
+</div>
+<p><strong>Use a generator!</strong> By writing our decorated function as a generator that
+<code class="docutils literal notranslate"><span class="pre">yields</span></code> results instead of a function that <code class="docutils literal notranslate"><span class="pre">returns</span></code> a single result at
+the end, we gain a number of valuable features, and a few extra signals and
+methods on the <code class="docutils literal notranslate"><span class="pre">worker</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">yielded</span></code> [<em>value</em>]- emitted with a value when a value is yielded</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">paused</span></code> - emitted when a running job has successfully paused</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">resumed</span></code>  - emitted when a paused job has successfully resumed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">aborted</span></code> - emitted when a running job is successfully aborted</p></li>
+</ul>
+<p>Additionally, generator <code class="docutils literal notranslate"><span class="pre">workers</span></code> will also have a few additional methods:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">send</span></code> - send a value <em>into</em> the thread (see below)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pause</span></code> - send a request to pause a running worker</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">resume</span></code> - send a request to resume a paused worker</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">toggle_pause</span></code> - send a request to toggle the running state of the worker</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">quit</span></code> - send a request to abort the worker</p></li>
+</ul>
+<div class="section" id="retrieving-intermediate-results">
+<h3>Retrieving Intermediate Results<a class="headerlink" href="#retrieving-intermediate-results" title="Permalink to this headline">¶</a></h3>
+<p>The most obvious benefit of using a generator is that you can monitor
+intermediate results back in the main thread.  Continuing with our example of
+taking the mean projection of a large stack, if we yield the cumulative average
+as it is generated (rather than taking the average of the fully generated
+stack) we can watch the mean projection as it builds:</p>
+<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="kn">import</span> <span class="nn">napari</span>
+ <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+ <span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">thread_worker</span>
+
+
+ <span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+     <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+
+     <span class="k">def</span> <span class="nf">update_layer</span><span class="p">(</span><span class="n">new_image</span><span class="p">):</span>
+         <span class="k">try</span><span class="p">:</span>
+             <span class="c1"># if the layer exists, update the data</span>
+             <span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">new_image</span>
+         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+             <span class="c1"># otherwise add it to the viewer</span>
+             <span class="n">viewer</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span>
+                 <span class="n">new_image</span><span class="p">,</span> <span class="n">contrast_limits</span><span class="o">=</span><span class="p">(</span><span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;result&#39;</span>
+             <span class="p">)</span>
+
+<span class="hll">     <span class="nd">@thread_worker</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;yielded&#39;</span><span class="p">:</span> <span class="n">update_layer</span><span class="p">})</span>
+</span>     <span class="k">def</span> <span class="nf">large_random_images</span><span class="p">():</span>
+         <span class="n">cumsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">))</span>
+         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1024</span><span class="p">):</span>
+             <span class="n">cumsum</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
+             <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">16</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<span class="hll">                 <span class="k">yield</span> <span class="n">cumsum</span> <span class="o">/</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span>
+     <span class="n">large_random_images</span><span class="p">()</span>  <span class="c1"># call the function!</span>
+</pre></div>
+</td></tr></table></div>
+<p>Note how we periodically (every 16 iterations) <code class="docutils literal notranslate"><span class="pre">yield</span></code> the image result in
+the <code class="docutils literal notranslate"><span class="pre">large_random_images</span></code> function (<strong>25</strong>).  We also connected the
+<code class="docutils literal notranslate"><span class="pre">yielded</span></code> event in the <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator to the previously-defined
+<code class="docutils literal notranslate"><span class="pre">update_layer</span></code> function (<strong>19</strong>).  The result is that the image in the viewer
+is updated every time a new image is yielded.</p>
+<p>Any time you can break up a long-running function into a stream of
+shorter-running yield statements like this, you not only benefit from the
+increased responsiveness in the viewer, you can often save on precious memory
+resources.</p>
+</div>
+<div class="section" id="flow-control-and-escape-hatches">
+<h3>Flow Control and Escape Hatches<a class="headerlink" href="#flow-control-and-escape-hatches" title="Permalink to this headline">¶</a></h3>
+<p>A perhaps even more useful aspect of yielding periodically in our long running
+function is that we provide a “hook” for the main thread to control the flow of
+our long running function.  When you use the <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator on a generator function, the
+ability to stop, start, and quit a thread comes for free.  In the example below
+we decorate what would normally be an infinitely yielding generator, but add a
+button that aborts the worker when clicked:</p>
+<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="kn">import</span> <span class="nn">time</span>
+ <span class="kn">import</span> <span class="nn">napari</span>
+ <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QPushButton</span>
+
+ <span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+     <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+
+     <span class="k">def</span> <span class="nf">update_layer</span><span class="p">(</span><span class="n">new_image</span><span class="p">):</span>
+         <span class="k">try</span><span class="p">:</span>
+             <span class="n">viewer</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">new_image</span>
+         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+             <span class="n">viewer</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span>
+                 <span class="n">new_image</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;result&#39;</span><span class="p">,</span> <span class="n">contrast_limits</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>
+             <span class="p">)</span>
+
+     <span class="nd">@thread_worker</span>
+     <span class="k">def</span> <span class="nf">yield_random_images_forever</span><span class="p">():</span>
+         <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="hll">         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>  <span class="c1"># infinite loop!</span>
+</span>             <span class="k">yield</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">0.2</span><span class="p">)</span>
+             <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+
+     <span class="n">worker</span> <span class="o">=</span> <span class="n">yield_random_images_forever</span><span class="p">()</span>
+     <span class="n">worker</span><span class="o">.</span><span class="n">yielded</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update_layer</span><span class="p">)</span>
+
+     <span class="c1"># add a button to the viewew that, when clicked, stops the worker</span>
+     <span class="n">button</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;STOP!&quot;</span><span class="p">)</span>
+<span class="hll">     <span class="n">button</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">quit</span><span class="p">)</span>
+</span>     <span class="n">worker</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">button</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">disconnect</span><span class="p">)</span>
+     <span class="n">viewer</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">add_dock_widget</span><span class="p">(</span><span class="n">button</span><span class="p">)</span>
+
+     <span class="n">worker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="graceful-exit">
+<h3>Graceful Exit<a class="headerlink" href="#graceful-exit" title="Permalink to this headline">¶</a></h3>
+<p>A side-effect of this added flow control is that <code class="docutils literal notranslate"><span class="pre">napari</span></code> can gracefully
+shutdown any still-running workers when you try to quit the program.  Try the
+example above, but quit the program <em>without</em> pressing the “STOP” button.  No
+problem!  <code class="docutils literal notranslate"><span class="pre">napari</span></code> asks the thread to stop itself the next time it yields,
+and then closes without leaving any orphaned threads.</p>
+<p>Now go back to the first example with the pure (non-generator) function, and
+try quitting before the function has returned (i.e. before the image appears).
+You’ll notice that it takes a while to quit: it has to wait for the background
+thread to finish because there is no good way to communicate equest that it
+quit!  If you had a <em>very</em> long function, you’d be left with no choice but to
+force quit your program.</p>
+<p>So whenever possible, sprinkle your long-running functions with <code class="docutils literal notranslate"><span class="pre">yield</span></code>.</p>
+</div>
+</div>
+<div class="section" id="full-two-way-communication">
+<h2>Full Two-way Communication<a class="headerlink" href="#full-two-way-communication" title="Permalink to this headline">¶</a></h2>
+<p>So far we’ve mostly been <em>receiving</em> results from the threaded function, but we
+can send values <em>into</em> a generator-based thread as well using
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.GeneratorWorker.send" title="napari.qt.threading.GeneratorWorker.send"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.send()</span></code></a> This works
+exactly like a standard python <a class="reference external" href="https://docs.python.org/3/reference/expressions.html#generator.send">generator.send</a>
+pattern.  This next example ties together a number of concepts and demonstrates
+two-thread communication with conditional flow control.  It’s a simple
+cumulative multiplier that runs in another thread, and exits if the product
+hits “0”:</p>
+<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57</pre></div></td><td class="code"><div class="highlight"><pre><span></span> <span class="kn">import</span> <span class="nn">napari</span>
+ <span class="kn">import</span> <span class="nn">time</span>
+
+ <span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">thread_worker</span>
+ <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QLineEdit</span><span class="p">,</span> <span class="n">QLabel</span><span class="p">,</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">QVBoxLayout</span>
+ <span class="kn">from</span> <span class="nn">qtpy.QtGui</span> <span class="kn">import</span> <span class="n">QDoubleValidator</span>
+
+
+<span class="hll"> <span class="nd">@thread_worker</span>
+</span> <span class="k">def</span> <span class="nf">multiplier</span><span class="p">():</span>
+     <span class="n">total</span> <span class="o">=</span> <span class="mi">1</span>
+     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="hll">         <span class="n">new</span> <span class="o">=</span> <span class="k">yield</span> <span class="n">total</span>
+</span><span class="hll">         <span class="n">total</span> <span class="o">*=</span> <span class="n">new</span> <span class="k">if</span> <span class="n">new</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">1</span>
+</span><span class="hll">         <span class="k">if</span> <span class="n">total</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span>             <span class="k">return</span> <span class="s2">&quot;Game Over!&quot;</span>
+
+
+ <span class="k">with</span> <span class="n">napari</span><span class="o">.</span><span class="n">gui_qt</span><span class="p">():</span>
+     <span class="n">viewer</span> <span class="o">=</span> <span class="n">napari</span><span class="o">.</span><span class="n">Viewer</span><span class="p">()</span>
+
+     <span class="c1"># make a widget to control the worker</span>
+     <span class="c1"># (not the main point of this example...)</span>
+     <span class="n">widget</span> <span class="o">=</span> <span class="n">QWidget</span><span class="p">()</span>
+     <span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
+     <span class="n">widget</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+     <span class="n">result_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">()</span>
+     <span class="n">line_edit</span> <span class="o">=</span> <span class="n">QLineEdit</span><span class="p">()</span>
+     <span class="n">line_edit</span><span class="o">.</span><span class="n">setValidator</span><span class="p">(</span><span class="n">QDoubleValidator</span><span class="p">())</span>
+     <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">line_edit</span><span class="p">)</span>
+     <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">result_label</span><span class="p">)</span>
+     <span class="n">viewer</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">add_dock_widget</span><span class="p">(</span><span class="n">widget</span><span class="p">)</span>
+
+<span class="hll">     <span class="c1"># create the worker</span>
+</span>     <span class="n">worker</span> <span class="o">=</span> <span class="n">multiplier</span><span class="p">()</span>
+
+     <span class="c1"># define some callbacks</span>
+<span class="hll">     <span class="k">def</span> <span class="nf">on_yielded</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+</span>         <span class="n">worker</span><span class="o">.</span><span class="n">pause</span><span class="p">()</span>
+         <span class="n">result_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+         <span class="n">line_edit</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">)</span>
+
+     <span class="k">def</span> <span class="nf">on_return</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+         <span class="n">line_edit</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+         <span class="n">line_edit</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+         <span class="n">result_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+<span class="hll">     <span class="k">def</span> <span class="nf">send_next_value</span><span class="p">():</span>
+</span><span class="hll">         <span class="n">worker</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">line_edit</span><span class="o">.</span><span class="n">text</span><span class="p">()))</span>
+</span>         <span class="n">worker</span><span class="o">.</span><span class="n">resume</span><span class="p">()</span>
+<span class="hll">
+</span><span class="hll">     <span class="n">worker</span><span class="o">.</span><span class="n">yielded</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">on_yielded</span><span class="p">)</span>
+</span>     <span class="n">worker</span><span class="o">.</span><span class="n">returned</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">on_return</span><span class="p">)</span>
+     <span class="n">line_edit</span><span class="o">.</span><span class="n">returnPressed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">send_next_value</span><span class="p">)</span>
+
+     <span class="n">worker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>Let’s break it down:</p>
+<ol class="arabic simple">
+<li><p>As usual, we decorate our generator function with <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> (<strong>9</strong>) and instantiate it to create
+a <code class="docutils literal notranslate"><span class="pre">worker</span></code> (<strong>35</strong>).</p></li>
+<li><p>The most interesting line in this example is line <strong>14</strong>, where we both
+<code class="docutils literal notranslate"><span class="pre">yield</span></code> the current <code class="docutils literal notranslate"><span class="pre">total</span></code> to the main thread (<code class="docutils literal notranslate"><span class="pre">yield</span> <span class="pre">total</span></code>), <em>and</em>
+receive a new value from the main thread (with <code class="docutils literal notranslate"><span class="pre">new</span> <span class="pre">=</span> <span class="pre">yield</span></code>).</p></li>
+<li><p>In the main thread, we have connected that <code class="docutils literal notranslate"><span class="pre">worker.yielded</span></code> event (<strong>52</strong>)
+to a callback that pauses the worker and updates the <code class="docutils literal notranslate"><span class="pre">result_label</span></code>
+widget (<strong>38</strong>).</p></li>
+<li><p>The thread will then wait indefinitely for the <code class="docutils literal notranslate"><span class="pre">resume()</span></code> command
+(<strong>50</strong>), which we have connected to the <code class="docutils literal notranslate"><span class="pre">line_edit.returnPressed</span></code> signal
+(<strong>54</strong>).</p></li>
+<li><p>However, before that <code class="docutils literal notranslate"><span class="pre">resume()</span></code> command gets sent, we use
+<code class="docutils literal notranslate"><span class="pre">worker.send()</span></code> to send the current value of the <code class="docutils literal notranslate"><span class="pre">line_edit</span></code> widget
+into the thread (<strong>49</strong>) which the thread will multiple by the existing
+total (<strong>15</strong>).</p></li>
+<li><p>Lastly, if the thread total ever goes to “0”, we stop the thread by
+returning the string <code class="docutils literal notranslate"><span class="pre">&quot;Game</span> <span class="pre">Over&quot;</span></code> (<strong>16</strong>).  In the main thread, the
+<code class="docutils literal notranslate"><span class="pre">worker.returned</span></code> event is connected to a callback that disables the
+<code class="docutils literal notranslate"><span class="pre">line_edit</span></code> widget and shows the string returned from the thread (<strong>53</strong>).</p></li>
+</ol>
+<p>This example is a bit contrived, since there’s little need to put such a basic
+computation in another thread.  But it demonstrates some of the power and
+features provided when decorating a generator function with the
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator.</p>
+</div>
+<div class="section" id="syntactic-sugar">
+<h2>Syntactic Sugar<a class="headerlink" href="#syntactic-sugar" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.thread_worker" title="napari.qt.threading.thread_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code></a> decorator is
+just syntactic sugar for calling <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.create_worker" title="napari.qt.threading.create_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_worker()</span></code></a> on
+your function.  In turn, <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.create_worker" title="napari.qt.threading.create_worker"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_worker()</span></code></a> is just a
+convenient “factory function” that creates the right subtype of <code class="docutils literal notranslate"><span class="pre">Worker</span></code>
+depending on your function type. The following three examples are equivalent:</p>
+<p><strong>Using the</strong> <code class="docutils literal notranslate"><span class="pre">&#64;thread_worker</span></code> <strong>decorator:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">thread_worker</span>
+
+<span class="nd">@thread_worker</span>
+<span class="k">def</span> <span class="nf">my_function</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="o">...</span>
+
+<span class="n">worker</span> <span class="o">=</span> <span class="n">my_function</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Using the</strong> <code class="docutils literal notranslate"><span class="pre">create_worker</span></code> <strong>function:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">create_worker</span>
+
+<span class="k">def</span> <span class="nf">my_function</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+   <span class="o">...</span>
+
+<span class="n">worker</span> <span class="o">=</span> <span class="n">create_worker</span><span class="p">(</span><span class="n">my_function</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Using a</strong> <code class="docutils literal notranslate"><span class="pre">Worker</span></code> <strong>class:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">FunctionWorker</span>
+
+<span class="k">def</span> <span class="nf">my_function</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+   <span class="o">...</span>
+
+<span class="n">worker</span> <span class="o">=</span> <span class="n">FunctionWorker</span><span class="p">(</span><span class="n">my_function</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>(the main difference between using <code class="docutils literal notranslate"><span class="pre">create_worker</span></code> and directly instantiating
+the <code class="docutils literal notranslate"><span class="pre">FunctionWorker</span></code> class is that <code class="docutils literal notranslate"><span class="pre">create_worker</span></code> will automatically
+dispatch the appropriate type of <code class="docutils literal notranslate"><span class="pre">Worker</span></code> class depending on whether the
+function is a generator or not).</p>
+</div>
+<div class="section" id="using-a-custom-worker-class">
+<h2>Using a Custom Worker Class<a class="headerlink" href="#using-a-custom-worker-class" title="Permalink to this headline">¶</a></h2>
+<p>If you need even more control over the worker – such as the ability to define
+custom methods or signals that the worker can emit, then you can subclass the
+napari <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a> class.  When doing so, please
+keep in mind the following guidelines:</p>
+<ol class="arabic">
+<li><p>The subclass must either implement the
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.work" title="napari.qt.threading.WorkerBase.work"><code class="xref py py-meth docutils literal notranslate"><span class="pre">work()</span></code></a> method (preferred), or in
+extreme cases, may directly reimplement the
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.run" title="napari.qt.threading.WorkerBase.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method.  (When a worker “start”
+is started with <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.start" title="napari.qt.threading.WorkerBase.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a>, the call
+order is always <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.start" title="napari.qt.threading.WorkerBase.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.start()</span></code></a> → <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.run" title="napari.qt.threading.WorkerBase.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.run()</span></code></a> → <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.work" title="napari.qt.threading.WorkerBase.work"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.work()</span></code></a>.</p></li>
+<li><p>When implementing the <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.work" title="napari.qt.threading.WorkerBase.work"><code class="xref py py-meth docutils literal notranslate"><span class="pre">work()</span></code></a> method,
+it is important that you periodically check <code class="docutils literal notranslate"><span class="pre">self.abort_requested</span></code> in your
+thread loop, and exit the thread accordingly, otherwise <code class="docutils literal notranslate"><span class="pre">napari</span></code> will not
+be able to gracefully exit a long-running thread.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">abort_requested</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aborted</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+            <span class="k">break</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>It is also important to be mindful of the fact that the
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.start" title="napari.qt.threading.WorkerBase.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">worker.start()</span></code></a> method adds
+the worker to a global Pool, such that it can request shutdown when exiting
+napari.  So if you re-implement <code class="docutils literal notranslate"><span class="pre">start</span></code>, please be sure to call
+<code class="docutils literal notranslate"><span class="pre">super().start()</span></code> to keep track of the <code class="docutils literal notranslate"><span class="pre">worker</span></code>.</p></li>
+<li><p>When reimplementing the <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase.run" title="napari.qt.threading.WorkerBase.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method,
+it is your responsibility to emit the <code class="docutils literal notranslate"><span class="pre">started</span></code>, <code class="docutils literal notranslate"><span class="pre">returned</span></code>,
+<code class="docutils literal notranslate"><span class="pre">finished</span></code>, and <code class="docutils literal notranslate"><span class="pre">errored</span></code> signals at the appropriate moments.</p></li>
+</ol>
+<p>For examples of subclassing <a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a>, have a
+look at the two main concrete subclasses in napari:
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.FunctionWorker" title="napari.qt.threading.FunctionWorker"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionWorker</span></code></a> and
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.GeneratorWorker" title="napari.qt.threading.GeneratorWorker"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneratorWorker</span></code></a>.  You may also wish to simply
+subclass one of those two classes.</p>
+<div class="section" id="adding-custom-signals">
+<h3>Adding custom signals<a class="headerlink" href="#adding-custom-signals" title="Permalink to this headline">¶</a></h3>
+<p>In order to emit signals, an object must inherit from <code class="docutils literal notranslate"><span class="pre">QObject</span></code>.  However,
+due to challenges with multiple inheritance in Qt, the signals for
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a> objects actually live in the
+<code class="docutils literal notranslate"><span class="pre">WorkerBase._signals</span></code> attribute (though they are accessible directly in the
+worker namespace).  To add custom signals to a
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a> subclass you must first create a new
+<code class="docutils literal notranslate"><span class="pre">QObject</span></code> with signals as class attributes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">Signal</span>
+
+<span class="k">class</span> <span class="nc">MyWorkerSignals</span><span class="p">(</span><span class="n">QObject</span><span class="p">):</span>
+    <span class="n">signal_name</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
+
+<span class="c1"># or subclass one of the existing signals objects to &quot;add&quot;</span>
+<span class="c1"># additional signals:</span>
+
+<span class="kn">from</span> <span class="nn">napari.qt.threading</span> <span class="kn">import</span> <span class="n">WorkerBaseSignals</span>
+
+<span class="c1"># WorkerBaseSignals already has started, finished, errored...</span>
+<span class="k">class</span> <span class="nc">MyWorkerSignals</span><span class="p">(</span><span class="n">WorkerBaseSignals</span><span class="p">):</span>
+    <span class="n">signal_name</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>and then either directly override the <code class="docutils literal notranslate"><span class="pre">self._signals</span></code> attribute on the
+<a class="reference internal" href="../api/napari.qt.html#napari.qt.threading.WorkerBase" title="napari.qt.threading.WorkerBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerBase</span></code></a> class with an instance of your
+signals class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyWorker</span><span class="p">(</span><span class="n">WorkerBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_signals</span> <span class="o">=</span> <span class="n">MyWorkerSignals</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>… or pass the signals class as the <code class="docutils literal notranslate"><span class="pre">SignalsClass</span></code> argument when
+initializing the superclass in your <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyWorker</span><span class="p">(</span><span class="n">WorkerBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">SignalsClass</span><span class="o">=</span><span class="n">MyWorkerSignals</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="perfmon.html" class="btn btn-neutral float-right" title="Performance Monitoring" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="event_loop.html" class="btn btn-neutral float-left" title="An Introduction to the Event Loop in napari" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

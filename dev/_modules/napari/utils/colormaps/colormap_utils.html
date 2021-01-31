@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.colormaps.colormap_utils &mdash; napari 0.4.5.dev3+g0d5fa95 documentation</title>
+  <title>napari.utils.colormaps.colormap_utils &mdash; napari 0.4.5.dev4+g0753976 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.5.dev3+g0d5fa95
+                0.4.5.dev4+g0753976
               </div>
             
           
@@ -161,6 +161,7 @@
             
   <h1>Source code for napari.utils.colormaps.colormap_utils</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Lock</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -508,6 +509,8 @@
 
 <span class="c1"># ... sorted alphabetically by name</span>
 <span class="n">AVAILABLE_COLORMAPS</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ALL_COLORMAPS</span><span class="o">.</span><span class="n">items</span><span class="p">())}</span>
+<span class="c1"># lock to allow update of AVAILABLE_COLORMAPS in threads</span>
+<span class="n">AVAILABLE_COLORMAPS_LOCK</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
 
 <span class="c1"># curated colormap sets</span>
 <span class="c1"># these are selected to look good or at least reasonable when using additive</span>
@@ -568,95 +571,98 @@
 <span class="sd">    TypeError</span>
 <span class="sd">        If ``colormap`` is not a ``str``, ``dict``, ``tuple``, or ``Colormap``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="p">:</span>
-            <span class="n">cmap</span> <span class="o">=</span> <span class="n">vispy_or_mpl_colormap</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>  <span class="c1"># raises KeyError if not found</span>
+    <span class="k">with</span> <span class="n">AVAILABLE_COLORMAPS_LOCK</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="p">:</span>
+                <span class="n">cmap</span> <span class="o">=</span> <span class="n">vispy_or_mpl_colormap</span><span class="p">(</span>
+                    <span class="n">name</span>
+                <span class="p">)</span>  <span class="c1"># raises KeyError if not found</span>
+                <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">):</span>
+            <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">colormap</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
+            <span class="c1"># if a vispy colormap instance is provided, make sure we don&#39;t already</span>
+            <span class="c1"># know about it before adding a new unnamed colormap</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">colormap</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span><span class="n">AVAILABLE_COLORMAPS</span><span class="p">)</span>
+            <span class="c1"># Convert from vispy colormap</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
             <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">):</span>
-        <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">colormap</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">colormap</span><span class="o">.</span><span class="n">name</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
-        <span class="c1"># if a vispy colormap instance is provided, make sure we don&#39;t already</span>
-        <span class="c1"># know about it before adding a new unnamed colormap</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">colormap</span> <span class="o">==</span> <span class="n">val</span><span class="p">:</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
-                <span class="k">break</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">increment_unnamed_colormap</span><span class="p">(</span><span class="n">AVAILABLE_COLORMAPS</span><span class="p">)</span>
-        <span class="c1"># Convert from vispy colormap</span>
-        <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-        <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
 
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
-            <span class="ow">and</span> <span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">VispyColormap</span><span class="p">)</span>
-                <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">Colormap</span><span class="p">)</span>
-            <span class="p">)</span>
-            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">&quot;When providing a tuple as a colormap argument, the first &quot;</span>
-                <span class="s2">&quot;element must be a string and the second a Colormap instance&quot;</span>
-            <span class="p">)</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
-        <span class="c1"># Convert from vispy colormap</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
-            <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">cmap</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s1">&#39;colors&#39;</span> <span class="ow">in</span> <span class="n">colormap</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="s1">&#39;colors&#39;</span><span class="p">],</span> <span class="n">VispyColormap</span><span class="p">)</span>
-            <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="s1">&#39;colors&#39;</span><span class="p">],</span> <span class="n">Colormap</span><span class="p">)</span>
-        <span class="p">):</span>
-            <span class="n">cmap</span> <span class="o">=</span> <span class="n">Colormap</span><span class="p">(</span><span class="o">**</span><span class="n">colormap</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+                <span class="ow">and</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">VispyColormap</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">Colormap</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;When providing a tuple as a colormap argument, the first &quot;</span>
+                    <span class="s2">&quot;element must be a string and the second a Colormap instance&quot;</span>
+                <span class="p">)</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormap</span>
+            <span class="c1"># Convert from vispy colormap</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
+                <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cmap</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
             <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
-            <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">))</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">colormap</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-        <span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">&quot;When providing a dict as a colormap, &quot;</span>
-                <span class="s2">&quot;all values must be Colormap instances&quot;</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Convert from vispy colormaps</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">cmap</span> <span class="ow">in</span> <span class="n">colormap</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="c1"># Convert from vispy colormap</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
-                    <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">cmap</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
-                <span class="n">colormap</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
-            <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
-            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="kn">import</span> <span class="nn">warnings</span>
 
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                    <span class="s2">&quot;only the first item in a colormap dict is used as an argument&quot;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;colors&#39;</span> <span class="ow">in</span> <span class="n">colormap</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="s1">&#39;colors&#39;</span><span class="p">],</span> <span class="n">VispyColormap</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">colormap</span><span class="p">[</span><span class="s1">&#39;colors&#39;</span><span class="p">],</span> <span class="n">Colormap</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="n">cmap</span> <span class="o">=</span> <span class="n">Colormap</span><span class="p">(</span><span class="o">**</span><span class="n">colormap</span><span class="p">)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">cmap</span><span class="o">.</span><span class="n">name</span>
+                <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">colormap</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;When providing a dict as a colormap, &quot;</span>
+                    <span class="s2">&quot;all values must be Colormap instances&quot;</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;Received an empty dict as a colormap argument.&quot;</span>
-                <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;invalid type for colormap: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span><span class="si">}</span><span class="s1">. &#39;</span>
-            <span class="s1">&#39;Must be a {str, tuple, dict, napari.utils.Colormap, &#39;</span>
-            <span class="s1">&#39;vispy.colors.Colormap}&#39;</span>
-        <span class="p">)</span>
+                <span class="c1"># Convert from vispy colormaps</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">cmap</span> <span class="ow">in</span> <span class="n">colormap</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="c1"># Convert from vispy colormap</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">VispyColormap</span><span class="p">):</span>
+                        <span class="n">cmap</span> <span class="o">=</span> <span class="n">convert_vispy_colormap</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">cmap</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">key</span>
+                    <span class="n">colormap</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmap</span>
+                <span class="n">AVAILABLE_COLORMAPS</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># first key in dict</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">colormap</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="kn">import</span> <span class="nn">warnings</span>
+
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="s2">&quot;only the first item in a colormap dict is used as an argument&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;Received an empty dict as a colormap argument.&quot;</span>
+                    <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;invalid type for colormap: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span><span class="si">}</span><span class="s1">. &#39;</span>
+                <span class="s1">&#39;Must be a {str, tuple, dict, napari.utils.Colormap, &#39;</span>
+                <span class="s1">&#39;vispy.colors.Colormap}&#39;</span>
+            <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">AVAILABLE_COLORMAPS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span></div>
 </pre></div>

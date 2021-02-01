@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.utils.events.evented_model &mdash; napari 0.4.5.dev6+g93c71cb documentation</title>
+  <title>napari.utils.events.evented_model &mdash; napari 0.4.5.dev7+g01822f1 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.5.dev6+g93c71cb
+                0.4.5.dev7+g01822f1
               </div>
             
           
@@ -160,13 +160,14 @@
            <div itemprop="articleBody">
             
   <h1>Source code for napari.utils.events.evented_model</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Set</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Set</span>
 
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">PrivateAttr</span>
 
 <span class="kn">from</span> <span class="nn">.custom_types</span> <span class="kn">import</span> <span class="n">JSON_ENCODERS</span>
 <span class="kn">from</span> <span class="nn">.dataclass</span> <span class="kn">import</span> <span class="n">_type_to_compare</span><span class="p">,</span> <span class="n">is_equal</span>
-<span class="kn">from</span> <span class="nn">.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span>
+<span class="kn">from</span> <span class="nn">.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
 
 
 <div class="viewcode-block" id="EventedModel"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.utils.events.evented_model.EventedModel">[docs]</a><span class="k">class</span> <span class="nc">EventedModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -236,7 +237,41 @@
     <span class="c1"># expose the private EmitterGroup publically</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_events</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_events</span>
+
+<div class="viewcode-block" id="EventedModel.asdict"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.utils.events.evented_model.EventedModel.asdict">[docs]</a>    <span class="k">def</span> <span class="nf">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert a model to a dictionary.&quot;&quot;&quot;</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;The `asdict` method has been renamed `dict` and is now deprecated. It will be&quot;</span>
+                <span class="s2">&quot; removed in 0.4.7&quot;</span>
+            <span class="p">),</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="EventedModel.update"><a class="viewcode-back" href="../../../../api/napari.utils.events.html#napari.utils.events.evented_model.EventedModel.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a model in place.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        values : dict, napari.utils.events.EventedModel</span>
+<span class="sd">            Values to update the model with. If an EventedModel is passed it is first</span>
+<span class="sd">            converted to a dictionary. The keys of this dictionary must be found as</span>
+<span class="sd">            attributes on the current model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported update from </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blocker</span><span class="p">()</span> <span class="k">as</span> <span class="n">block</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">block</span><span class="o">.</span><span class="n">count</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div></div>
 </pre></div>
 
            </div>

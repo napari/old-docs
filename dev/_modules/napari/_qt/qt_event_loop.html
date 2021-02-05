@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_event_loop &mdash; napari 0.4.5.dev10+g2a6adfa documentation</title>
+  <title>napari._qt.qt_event_loop &mdash; napari 0.4.5.dev11+g4da755f documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.5.dev10+g2a6adfa
+                0.4.5.dev11+g4da755f
               </div>
             
           
@@ -170,6 +170,7 @@
 
 <span class="kn">from</span> <span class="nn">napari</span> <span class="kn">import</span> <span class="n">__version__</span>
 
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
 <span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">ExceptionHandler</span>
 <span class="kn">from</span> <span class="nn">.qthreading</span> <span class="kn">import</span> <span class="n">wait_for_workers_to_quit</span>
@@ -298,6 +299,39 @@
     <span class="n">app</span><span class="o">.</span><span class="n">aboutToQuit</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">wait_for_workers_to_quit</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">app</span></div>
+
+
+<span class="k">def</span> <span class="nf">quit_app</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Close all windows and quit the QApplication if napari started it.&quot;&quot;&quot;</span>
+    <span class="n">QApplication</span><span class="o">.</span><span class="n">closeAllWindows</span><span class="p">()</span>
+    <span class="c1"># if we started the application then the app will be named &#39;napari&#39;.</span>
+    <span class="k">if</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
+        <span class="n">QApplication</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+
+    <span class="c1"># otherwise, something else created the QApp before us (such as</span>
+    <span class="c1"># %gui qt IPython magic).  If we quit the app in this case, then</span>
+    <span class="c1"># *later* attempts to instantiate a napari viewer won&#39;t work until</span>
+    <span class="c1"># the event loop is restarted with app.exec_().  So rather than</span>
+    <span class="c1"># quit just close all the windows (and clear our app icon).</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">QApplication</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
+        <span class="c1"># Write trace file before exit, if we were writing one.</span>
+        <span class="c1"># Is there a better place to make sure this is done on exit?</span>
+        <span class="n">perf</span><span class="o">.</span><span class="n">timers</span><span class="o">.</span><span class="n">stop_trace_file</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">monitor</span><span class="p">:</span>
+        <span class="c1"># Stop the monitor service if we were using it</span>
+        <span class="kn">from</span> <span class="nn">..components.experimental.monitor</span> <span class="kn">import</span> <span class="n">monitor</span>
+
+        <span class="n">monitor</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
+        <span class="c1"># Shutdown the chunkloader</span>
+        <span class="kn">from</span> <span class="nn">..components.experimental.chunk</span> <span class="kn">import</span> <span class="n">chunk_loader</span>
+
+        <span class="n">chunk_loader</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="gui_qt"><a class="viewcode-back" href="../../../api/napari.html#napari.gui_qt">[docs]</a><span class="nd">@contextmanager</span>

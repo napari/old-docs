@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari._qt.qt_main_window &mdash; napari 0.4.5.dev10+g2a6adfa documentation</title>
+  <title>napari._qt.qt_main_window &mdash; napari 0.4.5.dev11+g4da755f documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.5.dev10+g2a6adfa
+                0.4.5.dev11+g4da755f
               </div>
             
           
@@ -195,7 +195,7 @@
 <span class="kn">from</span> <span class="nn">.dialogs.qt_plugin_report</span> <span class="kn">import</span> <span class="n">QtPluginErrReporter</span>
 <span class="kn">from</span> <span class="nn">.dialogs.screenshot_dialog</span> <span class="kn">import</span> <span class="n">ScreenshotDialog</span>
 <span class="kn">from</span> <span class="nn">.perf.qt_debug_menu</span> <span class="kn">import</span> <span class="n">DebugMenu</span>
-<span class="kn">from</span> <span class="nn">.qt_event_loop</span> <span class="kn">import</span> <span class="n">NAPARI_ICON_PATH</span><span class="p">,</span> <span class="n">get_app</span>
+<span class="kn">from</span> <span class="nn">.qt_event_loop</span> <span class="kn">import</span> <span class="n">NAPARI_ICON_PATH</span><span class="p">,</span> <span class="n">get_app</span><span class="p">,</span> <span class="n">quit_app</span>
 <span class="kn">from</span> <span class="nn">.qt_resources</span> <span class="kn">import</span> <span class="n">get_stylesheet</span>
 <span class="kn">from</span> <span class="nn">.qt_viewer</span> <span class="kn">import</span> <span class="n">QtViewer</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">QImg2array</span>
@@ -209,9 +209,8 @@
     <span class="c1"># to their desired window icon</span>
     <span class="n">_window_icon</span> <span class="o">=</span> <span class="n">NAPARI_ICON_PATH</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qt_viewer</span><span class="p">:</span> <span class="n">QtViewer</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_viewer</span> <span class="o">=</span> <span class="n">qt_viewer</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_window_icon</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">.</span><span class="n">WA_DeleteOnClose</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setUnifiedTitleAndToolBarOnMac</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -219,50 +218,20 @@
         <span class="n">center</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">QHBoxLayout</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_delete_qt_window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Delete our self._qt_window.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method will be called when the main window is closing.</span>
+
+<span class="sd">        Regardless of whether cmd Q, cmd W, or the close button is used...</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># On some versions of Darwin, exiting while fullscreen seems to tickle</span>
         <span class="c1"># some bug deep in NSWindow.  This forces the fullscreen keybinding</span>
         <span class="c1"># test to complete its draw cycle, then pop back out of fullscreen.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isFullScreen</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">showNormal</span><span class="p">()</span>
-            <span class="k">for</span> <span class="n">__</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
                 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
                 <span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_viewer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_viewer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_handle_exit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle exiting the aplication.</span>
-
-<span class="sd">        This will execute when closing via menu or via the close button of the main window.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># if the event loop was started in gui_qt() then the app will be</span>
-        <span class="c1"># named &#39;napari&#39;. Since the Qapp was started by us, just close it.</span>
-        <span class="k">if</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">applicationName</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;napari&#39;</span><span class="p">:</span>
-            <span class="n">QApplication</span><span class="o">.</span><span class="n">closeAllWindows</span><span class="p">()</span>
-            <span class="n">QApplication</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
-        <span class="c1"># otherwise, something else created the QApp before us (such as</span>
-        <span class="c1"># %gui qt IPython magic).  If we quit the app in this case, then</span>
-        <span class="c1"># *later* attempts to instantiate a napari viewer won&#39;t work until</span>
-        <span class="c1"># the event loop is restarted with app.exec_().  So rather than</span>
-        <span class="c1"># quit just close all the windows (and clear our app icon).</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">QApplication</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">())</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_delete_qt_window</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="n">perf</span><span class="o">.</span><span class="n">USE_PERFMON</span><span class="p">:</span>
-            <span class="c1"># Write trace file before exit, if we were writing one.</span>
-            <span class="c1"># Is there a better place to make sure this is done on exit?</span>
-            <span class="n">perf</span><span class="o">.</span><span class="n">timers</span><span class="o">.</span><span class="n">stop_trace_file</span><span class="p">()</span>
-
-        <span class="n">_stop_monitor</span><span class="p">()</span>
-        <span class="n">_shutdown_chunkloader</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Override Qt event.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_handle_exit</span><span class="p">()</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="Window"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window">[docs]</a><span class="k">class</span> <span class="nc">Window</span><span class="p">:</span>
@@ -298,8 +267,7 @@
 
         <span class="c1"># Connect the Viewer and create the Main Window</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span> <span class="o">=</span> <span class="n">QtViewer</span><span class="p">(</span><span class="n">viewer</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span> <span class="o">=</span> <span class="n">_QtMainWindow</span><span class="p">(</span><span class="n">qt_viewer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">_qt_viewer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span> <span class="o">=</span> <span class="n">_QtMainWindow</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_qt_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">centralWidget</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_status_bar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">statusBar</span><span class="p">()</span>
@@ -437,10 +405,11 @@
         <span class="n">screenshot_wv</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_screenshot_dialog</span><span class="p">)</span>
 
         <span class="c1"># OS X will rename this to Quit and put it in the app menu.</span>
+        <span class="c1"># This quits the entire QApplication and all windows that may be open.</span>
         <span class="n">exitAction</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Exit&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
         <span class="n">exitAction</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s1">&#39;Ctrl+Q&#39;</span><span class="p">)</span>
         <span class="n">exitAction</span><span class="o">.</span><span class="n">setMenuRole</span><span class="p">(</span><span class="n">QAction</span><span class="o">.</span><span class="n">QuitRole</span><span class="p">)</span>
-        <span class="n">exitAction</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">_handle_exit</span><span class="p">)</span>
+        <span class="n">exitAction</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">quit_app</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;File&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">file_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">open_images</span><span class="p">)</span>
@@ -570,10 +539,10 @@
 
     <span class="k">def</span> <span class="nf">_add_window_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add &#39;Window&#39; menu to app menubar.&quot;&quot;&quot;</span>
-        <span class="n">exit_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Close Window&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
-        <span class="n">exit_action</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s2">&quot;Ctrl+W&quot;</span><span class="p">)</span>
-        <span class="n">exit_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Close napari window&#39;</span><span class="p">)</span>
-        <span class="n">exit_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="n">close_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Close Window&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
+        <span class="n">close_action</span><span class="o">.</span><span class="n">setShortcut</span><span class="p">(</span><span class="s2">&quot;Ctrl+W&quot;</span><span class="p">)</span>
+        <span class="n">close_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Close napari window&#39;</span><span class="p">)</span>
+        <span class="n">close_action</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
 
         <span class="n">clear_action</span> <span class="o">=</span> <span class="n">QAction</span><span class="p">(</span><span class="s2">&quot;Remove Dock Widgets&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="p">)</span>
         <span class="n">clear_action</span><span class="o">.</span><span class="n">setStatusTip</span><span class="p">(</span><span class="s1">&#39;Remove all dock widgets&#39;</span><span class="p">)</span>
@@ -582,7 +551,7 @@
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu</span><span class="o">.</span><span class="n">addMenu</span><span class="p">(</span><span class="s1">&#39;&amp;Window&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">exit_action</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">close_action</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">clear_action</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_menu</span><span class="o">.</span><span class="n">addSeparator</span><span class="p">()</span>
 
@@ -1011,8 +980,15 @@
 
 <div class="viewcode-block" id="Window.show"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Resize, show, and bring forward the window.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">sizeHint</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span><span class="o">.</span><span class="n">sizeHint</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;This viewer has already been closed and deleted. &quot;</span>
+                <span class="s2">&quot;Please create a new one.&quot;</span>
+            <span class="p">)</span>
+
         <span class="c1"># Resize axis labels now that window is shown</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">_resize_axis_labels</span><span class="p">()</span>
 
@@ -1111,28 +1087,12 @@
 
 <div class="viewcode-block" id="Window.close"><a class="viewcode-back" href="../../../api/napari.qt.html#napari.qt.Window.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Close the viewer window and cleanup sub-widgets.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_qt_window&#39;</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span>
-        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-            <span class="k">pass</span></div></div>
-
-
-<span class="k">def</span> <span class="nf">_stop_monitor</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Stop the monitor service if we were using it.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">monitor</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">..components.experimental.monitor</span> <span class="kn">import</span> <span class="n">monitor</span>
-
-        <span class="n">monitor</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-
-
-<span class="k">def</span> <span class="nf">_shutdown_chunkloader</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Shutdown the ChunkLoader.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">..components.experimental.chunk</span> <span class="kn">import</span> <span class="n">chunk_loader</span>
-
-        <span class="n">chunk_loader</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="c1"># Someone is closing us twice? Only try to delete self._qt_window</span>
+        <span class="c1"># if we still have one.</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_qt_window&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qt_viewer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qt_window</span></div></div>
 </pre></div>
 
            </div>

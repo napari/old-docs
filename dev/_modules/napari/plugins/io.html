@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>napari.plugins.io &mdash; napari 0.4.5.dev14+gce4a9a1 documentation</title>
+  <title>napari.plugins.io &mdash; napari 0.4.5.dev15+gb4a492a documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.4.5.dev14+gce4a9a1
+                0.4.5.dev15+gb4a492a
               </div>
             
           
@@ -162,7 +162,7 @@
   <h1>Source code for napari.plugins.io</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">HookImplementation</span><span class="p">,</span>
@@ -182,13 +182,13 @@
     <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">plugin_manager</span><span class="p">:</span> <span class="n">PluginManager</span> <span class="o">=</span> <span class="n">napari_plugin_manager</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]]:</span>
     <span class="sd">&quot;&quot;&quot;Iterate reader hooks and return first non-None LayerData or None.</span>
 
 <span class="sd">    This function returns as soon as the path has been read successfully,</span>
-<span class="sd">    while catching any plugin exceptions, storing them for later retrievial,</span>
-<span class="sd">    providing useful error messages, and relooping until either layer data is</span>
-<span class="sd">    returned, or no valid readers are found.</span>
+<span class="sd">    while catching any plugin exceptions, storing them for later retrieval,</span>
+<span class="sd">    providing useful error messages, and re-looping until either a read</span>
+<span class="sd">    operation was successful, or no valid readers were found.</span>
 
 <span class="sd">    Exceptions will be caught and stored as PluginErrors</span>
 <span class="sd">    (in plugins.exceptions.PLUGIN_ERRORS)</span>
@@ -213,7 +213,7 @@
 <span class="sd">        ``LayerData`` is a list tuples, where each tuple is one of</span>
 <span class="sd">        ``(data,)``, ``(data, meta)``, or ``(data, meta, layer_type)`` .</span>
 
-<span class="sd">        If no reader plugins are (or they all error), returns ``None``</span>
+<span class="sd">        If no reader plugins were found (or they all failed), returns ``None``</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -232,7 +232,12 @@
         <span class="n">reader</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">_call_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">reader</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Plugin </span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s1"> does not support file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="n">layer_data</span> <span class="o">=</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="c1"># if the reader returns a &quot;null layer&quot; sentinel indicating an empty</span>
+        <span class="c1"># file, return an empty list, otherwise return the result or None</span>
+        <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span>
 
     <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">PluginCallError</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -276,7 +281,11 @@
         <span class="n">err_msg</span> <span class="o">+=</span> <span class="s1">&#39;See full error logs in &quot;Plugins → Plugin Errors...&quot;&#39;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="p">[]</span></div>
+    <span class="c1"># if the reader returns a &quot;null layer&quot; sentinel indicating an empty file,</span>
+    <span class="c1"># return an empty list, otherwise return the result or None</span>
+    <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="save_layers"><a class="viewcode-back" href="../../../api/napari.plugins.html#napari.save_layers">[docs]</a><span class="k">def</span> <span class="nf">save_layers</span><span class="p">(</span>
@@ -354,6 +363,29 @@
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">written</span></div>
+
+
+<span class="k">def</span> <span class="nf">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">LayerData</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Checks if the layer data returned from a reader function indicates an</span>
+<span class="sd">    empty file. The sentinel value used for this is ``[(None,)]``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layer_data: LayerData</span>
+<span class="sd">        The layer data returned from a reader function to check</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        True, if the layer_data indicates an empty file, False otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="ow">and</span> <span class="n">layer_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_write_multiple_layers_with_plugins</span><span class="p">(</span>

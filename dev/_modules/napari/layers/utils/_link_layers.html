@@ -1,0 +1,412 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.layers.utils._link_layers &mdash; napari 0.4.5.dev21+g133ab7f documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+        <script src="../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.5.dev21+g133ab7f
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.layers.utils._link_layers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.layers.utils._link_layers</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">combinations</span><span class="p">,</span> <span class="n">permutations</span><span class="p">,</span> <span class="n">product</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">napari.layers</span> <span class="kn">import</span> <span class="n">Layer</span>
+
+<span class="c1">#: Record of already linked layers... to avoid duplicating callbacks</span>
+<span class="c1">#  in the form of {(id(layer1), id(layer2), attribute_name) -&gt; callback}</span>
+<span class="n">LinkKey</span> <span class="o">=</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<span class="n">Unlinker</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]</span>
+<span class="n">_LINKED_LAYERS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">LinkKey</span><span class="p">,</span> <span class="n">Unlinker</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="link_layers"><a class="viewcode-back" href="../../../../api/napari.experimental.html#napari.experimental.link_layers">[docs]</a><span class="k">def</span> <span class="nf">link_layers</span><span class="p">(</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s1">&#39;Layer&#39;</span><span class="p">],</span> <span class="n">attributes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">LinkKey</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Link ``attributes`` between all layers in ``layers``.</span>
+
+<span class="sd">    This essentially performs the following operation:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       for lay1, lay2 in permutations(layers, 2):</span>
+<span class="sd">           for attr in attributes:</span>
+<span class="sd">               lay1.events.&lt;attr&gt;.connect(_set_lay2_&lt;attr&gt;)</span>
+
+<span class="sd">    Recursion is prevented by checking for value equality prior to setting.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layers : Iterable[napari.layers.Layer]</span>
+<span class="sd">        The set of layers to link</span>
+<span class="sd">    attributes : Iterable[str], optional</span>
+<span class="sd">        The set of attributes to link.  If not provided (the default),</span>
+<span class="sd">        *all*, event-providing attributes that are common to all ``layers``</span>
+<span class="sd">        will be linked.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    links: list of (int, int, str) keys</span>
+<span class="sd">        The links created during execution of the function. The first two</span>
+<span class="sd">        elements of each tuple are the ids of the two layers, and the last</span>
+<span class="sd">        element is the linked attribute.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If any of the attributes provided are not valid &quot;event-emitting&quot;</span>
+<span class="sd">        attributes, or are not shared by all of the layers provided.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; data = np.random.rand(3, 64, 64)</span>
+<span class="sd">    &gt;&gt;&gt; viewer = napari.view_image(data, channel_axis=0)</span>
+<span class="sd">    &gt;&gt;&gt; link_layers(viewer.layers)  # doctest: +SKIP</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">pick_equality_operator</span>
+
+    <span class="n">valid_attrs</span> <span class="o">=</span> <span class="n">_get_common_evented_attributes</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span>
+
+    <span class="c1"># now, ensure that the attributes requested are valid</span>
+    <span class="n">attr_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">attributes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">attributes</span><span class="p">:</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="n">attr_set</span> <span class="o">-</span> <span class="n">valid_attrs</span>
+        <span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot link attributes that are not shared by all &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;layers: </span><span class="si">{</span><span class="n">extra</span><span class="si">}</span><span class="s2">. Allowable attrs include:</span><span class="se">\n</span><span class="si">{</span><span class="n">valid_attrs</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># if no attributes are specified, ALL valid attributes are linked.</span>
+        <span class="n">attr_set</span> <span class="o">=</span> <span class="n">valid_attrs</span>
+
+    <span class="c1"># now, connect requested attributes between all requested layers.</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">lay1</span><span class="p">,</span> <span class="n">lay2</span><span class="p">),</span> <span class="n">attribute</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="n">permutations</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">attr_set</span><span class="p">):</span>
+
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_link_key</span><span class="p">(</span><span class="n">lay1</span><span class="p">,</span> <span class="n">lay2</span><span class="p">,</span> <span class="n">attribute</span><span class="p">)</span>
+        <span class="c1"># if the layers and attribute are already linked then ignore</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_LINKED_LAYERS</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">def</span> <span class="nf">_make_l2_setter</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="n">lay1</span><span class="p">,</span> <span class="n">l2</span><span class="o">=</span><span class="n">lay2</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="n">attribute</span><span class="p">):</span>
+            <span class="c1"># get a suitable equality operator for this attribute type</span>
+            <span class="n">eq_op</span> <span class="o">=</span> <span class="n">pick_equality_operator</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">attr</span><span class="p">))</span>
+
+            <span class="k">def</span> <span class="nf">setter</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">new_val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                <span class="c1"># this line is the important part for avoiding recursion</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">eq_op</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">l2</span><span class="p">,</span> <span class="n">attr</span><span class="p">),</span> <span class="n">new_val</span><span class="p">):</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">l2</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">new_val</span><span class="p">)</span>
+
+            <span class="n">setter</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Set </span><span class="si">{</span><span class="n">attr</span><span class="si">!r}</span><span class="s2"> on </span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s2"> to that of </span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">setter</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;set_</span><span class="si">{</span><span class="n">attr</span><span class="si">}</span><span class="s2">_on_layer_</span><span class="si">{</span><span class="nb">id</span><span class="p">(</span><span class="n">l2</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">return</span> <span class="n">setter</span>
+
+        <span class="c1"># acually make the connection</span>
+        <span class="n">callback</span> <span class="o">=</span> <span class="n">_make_l2_setter</span><span class="p">()</span>
+        <span class="n">emitter_group</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">lay1</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">attribute</span><span class="p">)</span>
+        <span class="n">emitter_group</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+
+        <span class="c1"># store the connection so that we don&#39;t make it again.</span>
+        <span class="c1"># and save an &quot;unlink&quot; function for the key.</span>
+        <span class="n">_LINKED_LAYERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">emitter_group</span><span class="o">.</span><span class="n">disconnect</span><span class="p">,</span> <span class="n">callback</span><span class="p">)</span>
+        <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">links</span></div>
+
+
+<div class="viewcode-block" id="unlink_layers"><a class="viewcode-back" href="../../../../api/napari.experimental.html#napari.experimental.unlink_layers">[docs]</a><span class="k">def</span> <span class="nf">unlink_layers</span><span class="p">(</span><span class="n">layers</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s1">&#39;Layer&#39;</span><span class="p">],</span> <span class="n">attributes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()):</span>
+    <span class="sd">&quot;&quot;&quot;Unlink previously linked ``attributes`` between all layers in ``layers``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layers : Iterable[napari.layers.Layer]</span>
+<span class="sd">        The list of layers to unlink.  All combinations of layers provided will</span>
+<span class="sd">        be unlinked.  If a single layer is provided, it will be unlinked from</span>
+<span class="sd">        all other layers.</span>
+<span class="sd">    attributes : Iterable[str], optional</span>
+<span class="sd">        The set of attributes to unlink.  If not provided, all connections</span>
+<span class="sd">        between the provided layers will be unlinked.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">layer_ids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">layer_ids</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must provide at least one layer to unlink&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">layer_id</span> <span class="o">=</span> <span class="n">layer_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">_LINKED_LAYERS</span><span class="p">)</span> <span class="k">if</span> <span class="n">layer_id</span> <span class="ow">in</span> <span class="n">k</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">layer_combos</span> <span class="o">=</span> <span class="p">{</span><span class="nb">frozenset</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">(</span><span class="n">layer_ids</span><span class="p">,</span> <span class="mi">2</span><span class="p">)}</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">_LINKED_LAYERS</span><span class="p">)</span> <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">k</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span> <span class="ow">in</span> <span class="n">layer_combos</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">attributes</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">)</span>
+    <span class="n">_unlink_keys</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="layers_linked"><a class="viewcode-back" href="../../../../api/napari.experimental.html#napari.experimental.layers_linked">[docs]</a><span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">layers_linked</span><span class="p">(</span><span class="n">layers</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s1">&#39;Layer&#39;</span><span class="p">],</span> <span class="n">attributes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()):</span>
+    <span class="sd">&quot;&quot;&quot;Context manager that temporarily links ``attributes`` on ``layers``.&quot;&quot;&quot;</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="n">link_layers</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">attributes</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">_unlink_keys</span><span class="p">(</span><span class="n">links</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_get_common_evented_attributes</span><span class="p">(</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s1">&#39;Layer&#39;</span><span class="p">],</span>
+    <span class="n">exclude</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;thumbnail&#39;</span><span class="p">,</span> <span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">},</span>
+    <span class="n">with_private</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Get the set of common, non-private evented attributes in ``layers``.</span>
+
+<span class="sd">    Not all layer events are attributes, and not all attributes have</span>
+<span class="sd">    corresponding events.  Here we get the set of valid, non-private attributes</span>
+<span class="sd">    that are both events and attributes for the provided layer set.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    layers : iterable</span>
+<span class="sd">        A set of layers to evaluate for attribute linking.</span>
+<span class="sd">    exclude : set, optional</span>
+<span class="sd">        Layer attributes that make no sense to link, or may error on changing.</span>
+<span class="sd">        {&#39;thumbnail&#39;, &#39;status&#39;, &#39;name&#39;, &#39;data&#39;}</span>
+<span class="sd">    private : bool, optional</span>
+<span class="sd">        include private attributes</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    names : set of str</span>
+<span class="sd">        A set of attribute names that may be linked between ``layers``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">ismethod</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">first_layer</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">layers</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;``layers`` iterable must have at least one layer&quot;</span><span class="p">)</span>
+    <span class="n">common_events</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">lay</span><span class="o">.</span><span class="n">events</span><span class="p">)</span> <span class="k">for</span> <span class="n">lay</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">))</span>
+    <span class="n">common_attrs</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">dir</span><span class="p">(</span><span class="n">lay</span><span class="p">))</span> <span class="k">for</span> <span class="n">lay</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">with_private</span><span class="p">:</span>
+        <span class="n">common_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">common_attrs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
+    <span class="n">common</span> <span class="o">=</span> <span class="n">common_events</span> <span class="o">&amp;</span> <span class="n">common_attrs</span> <span class="o">-</span> <span class="n">exclude</span>
+
+    <span class="c1"># lastly, discard any method-only events (we just want attrs)</span>
+    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">common_attrs</span><span class="p">):</span>
+        <span class="c1"># properties do not count as methods and will not be excluded</span>
+        <span class="k">if</span> <span class="n">ismethod</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">first_layer</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="n">common</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">common</span>
+
+
+<span class="k">def</span> <span class="nf">_link_key</span><span class="p">(</span><span class="n">lay1</span><span class="p">:</span> <span class="s1">&#39;Layer&#39;</span><span class="p">,</span> <span class="n">lay2</span><span class="p">:</span> <span class="s1">&#39;Layer&#39;</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LinkKey</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Generate a &quot;link key&quot; for these layers and attribute.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">lay1</span><span class="p">),</span> <span class="nb">id</span><span class="p">(</span><span class="n">lay2</span><span class="p">),</span> <span class="n">attr</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_unlink_keys</span><span class="p">(</span><span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">LinkKey</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;Disconnect layer linkages by keys.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">disconnecter</span> <span class="o">=</span> <span class="n">_LINKED_LAYERS</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">disconnecter</span><span class="p">:</span>
+            <span class="n">disconnecter</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

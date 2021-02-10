@@ -1,0 +1,598 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>napari.layers.image.experimental.octree &mdash; napari 0.1.9 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+        <script src="../../../../../_static/jquery.js"></script>
+        <script src="../../../../../_static/underscore.js"></script>
+        <script src="../../../../../_static/doctools.js"></script>
+        <script src="../../../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <script async defer data-domain="napari.org" src="https://plausible.io/js/plausible.js"></script>
+     
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../../index.html" class="icon icon-home"> napari
+          
+
+          
+            
+            <img src="../../../../../_static/napari_logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.9
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../events/index.html">Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../releases.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developers/index.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../explanations/index.html">Explanations</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://napari.org">Home</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/napari/napari">Source Code</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">napari</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>napari.layers.image.experimental.octree</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for napari.layers.image.experimental.octree</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Octree class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">....utils.perf</span> <span class="kn">import</span> <span class="n">block_timer</span>
+<span class="kn">from</span> <span class="nn">.octree_chunk</span> <span class="kn">import</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">OctreeLocation</span>
+<span class="kn">from</span> <span class="nn">.octree_level</span> <span class="kn">import</span> <span class="n">OctreeLevel</span><span class="p">,</span> <span class="n">log_levels</span>
+<span class="kn">from</span> <span class="nn">.octree_tile_builder</span> <span class="kn">import</span> <span class="n">create_downsampled_levels</span>
+<span class="kn">from</span> <span class="nn">.octree_util</span> <span class="kn">import</span> <span class="n">OctreeMetadata</span>
+
+<span class="n">LOGGER</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;napari.octree&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Octree"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree">[docs]</a><span class="k">class</span> <span class="nc">Octree</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A region octree that holds hold 2D or 3D images.</span>
+
+<span class="sd">    Today the octree is full/complete meaning every node has 4 or 8</span>
+<span class="sd">    children, and every leaf node is at the same level of the tree. This</span>
+<span class="sd">    makes sense for region/image trees, because the image exists</span>
+<span class="sd">    everywhere.</span>
+
+<span class="sd">    Since we are a complete tree we don&#39;t need actual nodes with references</span>
+<span class="sd">    to the node&#39;s children. Instead, every level is just an array, and</span>
+<span class="sd">    going from parent to child or child to parent is trivial, you just</span>
+<span class="sd">    need to double or half the indexes.</span>
+
+<span class="sd">    Future Work: Geometry</span>
+<span class="sd">    ---------------------</span>
+<span class="sd">    Eventually we want our octree to hold geometry, not just images.</span>
+<span class="sd">    Geometry such as points and meshes. For geometry a sparse octree might</span>
+<span class="sd">    make more sense than this full/complete region octree.</span>
+
+<span class="sd">    With geometry there might be lots of empty space in between small dense</span>
+<span class="sd">    pockets of geometry. Some parts of tree might need to be very deep, but</span>
+<span class="sd">    it would be a waste for the tree to be that deep everywhere.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    slice_id : int:</span>
+<span class="sd">        The id of the slice this octree is in.</span>
+<span class="sd">    data</span>
+<span class="sd">        The underlying multi-scale data.</span>
+<span class="sd">    meta : OctreeMetadata</span>
+<span class="sd">        The base shape and other information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">OctreeMetadata</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span> <span class="o">=</span> <span class="n">slice_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">meta</span>
+
+        <span class="n">_check_downscale_ratio</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># We expect a ratio of 2.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span><span class="n">slice_id</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">meta</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
+            <span class="c1"># Probably we will allow empty trees, but for now raise:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Data of shape </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> resulted &quot;</span> <span class="s2">&quot;no octree levels?&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Multiscale data has </span><span class="si">%d</span><span class="s2"> levels.&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">))</span>
+
+        <span class="c1"># If root level contains more than one tile, add extra levels</span>
+        <span class="c1"># until the root does consist of a single tile. We have to do this</span>
+        <span class="c1"># because we cannot draw tiles larger than the standard size right now.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_extra_levels</span><span class="p">())</span>
+
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Octree now has </span><span class="si">%d</span><span class="s2"> total levels:&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">))</span>
+        <span class="n">log_levels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+
+        <span class="c1"># Now the root should definitely contain only a single tile.</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">num_tiles</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="c1"># This is now the total number of levels, including the extra ones.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Octree.get_level"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_level">[docs]</a>    <span class="k">def</span> <span class="nf">get_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OctreeLevel</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the given OctreeLevel.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        level_index : int</span>
+<span class="sd">            Get the OctreeLevel with this index.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        OctreeLevel</span>
+<span class="sd">            The requested level.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level_index</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">IndexError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Level </span><span class="si">{</span><span class="n">level_index</span><span class="si">}</span><span class="s2"> is not in range(0, </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span></div>
+
+<div class="viewcode-block" id="Octree.get_chunk_at_location"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_chunk_at_location">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunk_at_location</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">OctreeLocation</span><span class="p">,</span> <span class="n">create</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get chunk get this location, create if needed if create=True.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        location : OctreeLocation</span>
+<span class="sd">            Get chunk at this location.</span>
+<span class="sd">        create : bool</span>
+<span class="sd">            If True create the chunk if it doesn&#39;t exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">.</span><span class="n">level_index</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Octree.get_chunk"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">get_chunk</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get chunk at this location, create if needed if create=True</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        level_index : int</span>
+<span class="sd">            Get chunk from this level.</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Get chunk at this row.</span>
+<span class="sd">        col : int</span>
+<span class="sd">            Get chunk at this col.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">level</span><span class="p">:</span> <span class="n">OctreeLevel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_level</span><span class="p">(</span><span class="n">level_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">level</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Octree.get_parent"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_parent">[docs]</a>    <span class="k">def</span> <span class="nf">get_parent</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">octree_chunk</span><span class="p">:</span> <span class="n">OctreeChunk</span><span class="p">,</span>
+        <span class="n">create</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return the parent of this octree_chunk.</span>
+
+<span class="sd">        If the chunk at the root level, then this always return None.</span>
+<span class="sd">        Otherwise it returns the parent if it exists, or if create=True</span>
+<span class="sd">        it creates the parent and returns it.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        octree_chunk : OctreeChunk</span>
+<span class="sd">            Return the parent of this chunk.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        Optional[OctreeChunk]</span>
+<span class="sd">            The parent of the chunk if there was one or we created it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ancestors</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Octree.get_ancestors"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_ancestors">[docs]</a>    <span class="k">def</span> <span class="nf">get_ancestors</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">octree_chunk</span><span class="p">:</span> <span class="n">OctreeChunk</span><span class="p">,</span> <span class="n">num_levels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return the num_levels nearest ancestors.</span>
+
+<span class="sd">        If create=False only returns the ancestors if they exist. If</span>
+<span class="sd">        create=True it will create the ancestors as needed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        octree_chunk : OctreeChunk</span>
+<span class="sd">            Return the nearest ancestors of this chunk.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        List[OctreeChunk]</span>
+<span class="sd">            Up to num_level nearest ancestors of the given chunk. Sorted so the</span>
+<span class="sd">            most-distant ancestor comes first.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ancestors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">location</span>
+
+        <span class="c1"># Starting point, we look up from here.</span>
+        <span class="n">level_index</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">level_index</span>
+        <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">row</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">col</span>
+
+        <span class="n">stop_level</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_levels</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">level_index</span> <span class="o">+</span> <span class="n">num_levels</span><span class="p">)</span>
+
+        <span class="c1"># Search up one level at a time.</span>
+        <span class="k">while</span> <span class="n">level_index</span> <span class="o">&lt;</span> <span class="n">stop_level</span><span class="p">:</span>
+
+            <span class="c1"># Get the next level up. Coords are halved each level.</span>
+            <span class="n">level_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">col</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="c1"># Get chunk at this location.</span>
+            <span class="n">ancestor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">level_index</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">ancestor</span>  <span class="c1"># Since create=True</span>
+            <span class="n">ancestors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ancestor</span><span class="p">)</span>
+
+        <span class="c1"># Reverse to provide the most distant ancestor first.</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">ancestors</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Octree.get_children"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.get_children">[docs]</a>    <span class="k">def</span> <span class="nf">get_children</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">octree_chunk</span><span class="p">:</span> <span class="n">OctreeChunk</span><span class="p">,</span>
+        <span class="n">create</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">in_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeChunk</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return the children of this octree_chunk.</span>
+
+<span class="sd">        If create is False then we only return children that exist, so we will</span>
+<span class="sd">        return between 0 and 4 children. If create is True then we will create</span>
+<span class="sd">        any children that don&#39;t exist. If octree_chunk is in level 0 then</span>
+<span class="sd">        we will always return 0 children.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        octree_chunk : OctreeChunk</span>
+<span class="sd">            Return the children of this chunk.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        List[OctreeChunk]</span>
+<span class="sd">            The children of the given chunk.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">location</span>
+
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">level_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># This is the base level so no children.</span>
+
+        <span class="n">child_level_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">level_index</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">child_level</span><span class="p">:</span> <span class="n">OctreeLevel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">child_level_index</span><span class="p">]</span>
+
+        <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">row</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">col</span> <span class="o">*</span> <span class="mi">2</span>
+
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">child_level</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">),</span>
+            <span class="n">child_level</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">),</span>
+            <span class="n">child_level</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">),</span>
+            <span class="n">child_level</span><span class="o">.</span><span class="n">get_chunk</span><span class="p">(</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">create</span><span class="o">=</span><span class="n">create</span><span class="p">),</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Keep non-None children, and if requested in-memory ones.</span>
+        <span class="k">def</span> <span class="nf">keep_chunk</span><span class="p">(</span><span class="n">octree_chunk</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">octree_chunk</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">in_memory</span> <span class="ow">or</span> <span class="n">octree_chunk</span><span class="o">.</span><span class="n">in_memory</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="n">keep_chunk</span><span class="p">,</span> <span class="n">children</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_extra_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Compute the extra levels and return them.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        List[OctreeLevel]</span>
+<span class="sd">            The extra levels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">block_timer</span><span class="p">(</span><span class="s2">&quot;_create_extra_levels&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="n">extra_levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_extra_levels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slice_id</span><span class="p">)</span>
+
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Created </span><span class="si">%d</span><span class="s2"> additional levels in </span><span class="si">%.3f</span><span class="s2">ms&quot;</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">extra_levels</span><span class="p">),</span>
+            <span class="n">timer</span><span class="o">.</span><span class="n">duration_ms</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">extra_levels</span>
+
+    <span class="k">def</span> <span class="nf">_create_extra_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slice_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">OctreeLevel</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Add additional levels to the octree.</span>
+
+<span class="sd">        Keep adding levels until we each a root level where the image</span>
+<span class="sd">        data fits inside a single tile.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        slice_id : int</span>
+<span class="sd">            The id of the slice this octree is in.</span>
+<span class="sd">        tile_size : int</span>
+<span class="sd">            Keep creating levels until one fits with a tile of this size.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        List[OctreeLevels]</span>
+<span class="sd">            The new downsampled levels we created.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        If we created this octree data, the root/highest level would</span>
+<span class="sd">        consist of a single tile. However, if we are reading someone</span>
+<span class="sd">        else&#39;s multiscale data, they did not know our tile size. Or they</span>
+<span class="sd">        might not have imagined someone using tiled rendering at all.</span>
+<span class="sd">        So their root level might be pretty large. We&#39;ve seen root</span>
+<span class="sd">        levels larger than 8000x8000 pixels.</span>
+
+<span class="sd">        It would be nice in this case if our root level could use a</span>
+<span class="sd">        really large tile size as a special case. So small tiles for most</span>
+<span class="sd">        levels, but then one big tile as the root.</span>
+
+<span class="sd">        However, today our TiledImageVisual can&#39;t handle that. It can&#39;t</span>
+<span class="sd">        handle a mix of tile sizes, and TextureAtlas2D can&#39;t even</span>
+<span class="sd">        allocate multiple textures!</span>
+
+<span class="sd">        So for now, we compute/downsample additional levels ourselves and</span>
+<span class="sd">        add them to the data. We do this until we reach a level that does</span>
+<span class="sd">        fit within a single tile.</span>
+
+<span class="sd">        For example for that 8000x8000 pixel root level, if we are using</span>
+<span class="sd">        256x256 tiles we&#39;ll keep adding levels until we get to a level</span>
+<span class="sd">        that fits within 256x256.</span>
+
+<span class="sd">        Unfortunately, we can&#39;t be sure our downsampling approach will</span>
+<span class="sd">        match the rest of the data. The levels we add might be more/less</span>
+<span class="sd">        blurry than the original ones, or have different downsampling</span>
+<span class="sd">        artifacts. That&#39;s probably okay because these are low-resolution</span>
+<span class="sd">        levels, but still it would be better to show their root level</span>
+<span class="sd">        verbatim on a single large tiles.</span>
+
+<span class="sd">        Also, this is slow due to the downsampling, but also slow due to</span>
+<span class="sd">        having to load the full root level into memory. If we had a root</span>
+<span class="sd">        level that was tile sized, then we could load that very quickly.</span>
+<span class="sd">        That issue does not go away even if we have a special large-size</span>
+<span class="sd">        root tile. For best performance multiscale data should be built</span>
+<span class="sd">        down to a very small root tile, the extra storage is negligible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create additional data levels so that the root level</span>
+        <span class="c1"># consists of only a single tile, using our standard/only</span>
+        <span class="c1"># tile size.</span>
+        <span class="n">tile_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">tile_size</span>
+        <span class="n">new_levels</span> <span class="o">=</span> <span class="n">create_downsampled_levels</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">tile_size</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Add the data.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new_levels</span><span class="p">)</span>
+
+        <span class="c1"># Return an OctreeLevel for each new data level.</span>
+        <span class="n">num_current</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">OctreeLevel</span><span class="p">(</span>
+                <span class="n">slice_id</span><span class="p">,</span>
+                <span class="n">new_data</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+                <span class="n">num_current</span> <span class="o">+</span> <span class="n">index</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">new_data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_levels</span><span class="p">)</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="Octree.print_info"><a class="viewcode-back" href="../../../../../api/napari.layers.image.experimental.html#napari.layers.image.experimental.octree.Octree.print_info">[docs]</a>    <span class="k">def</span> <span class="nf">print_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print information about our tiles.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">:</span>
+            <span class="n">level</span><span class="o">.</span><span class="n">print_info</span><span class="p">()</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_check_downscale_ratio</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Raise exception if downscale ratio is not 2.</span>
+
+<span class="sd">    For now we only support downscale ratios of 2. We could support other</span>
+<span class="sd">    ratios, but the assumption that each octree level is half the size of</span>
+<span class="sd">    the previous one is baked in pretty deeply right now.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If downscale ratio is not 2.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span>  <span class="c1"># There aren&#39;t even two levels.</span>
+
+    <span class="c1"># _dump_levels(data)</span>
+
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="c1"># Really should be exact, but it will most likely be off by a ton</span>
+    <span class="c1"># if its off, so allow a small fudge factor.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">rel_tol</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Multiscale data has downsampling ratio of </span><span class="si">{</span><span class="n">ratio</span><span class="si">}</span><span class="s2">, expected 2.&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_dump_levels</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Print the levels and the size of the levels.&quot;&quot;&quot;</span>
+    <span class="n">last_size</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">last_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">downscale</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">last_size</span> <span class="o">/</span> <span class="n">level</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;size=</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> shape=</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> downscale=</span><span class="si">{</span><span class="n">downscale</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;size=</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> shape=</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> base level&quot;</span><span class="p">)</span>
+        <span class="n">last_size</span> <span class="o">=</span> <span class="n">level</span><span class="o">.</span><span class="n">size</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, napari contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

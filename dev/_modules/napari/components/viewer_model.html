@@ -267,18 +267,21 @@
     <span class="n">Optional</span><span class="p">,</span>
     <span class="n">Sequence</span><span class="p">,</span>
     <span class="n">Set</span><span class="p">,</span>
+    <span class="n">Tuple</span><span class="p">,</span>
     <span class="n">Union</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">Extra</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">validator</span>
 
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">layers</span>
+<span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
 <span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span>
 <span class="kn">from</span> <span class="nn">..utils._register</span> <span class="kn">import</span> <span class="n">create_func</span> <span class="k">as</span> <span class="n">create_add_method</span>
 <span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap</span>
-<span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span><span class="p">,</span> <span class="n">disconnect_events</span>
+<span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">EventedModel</span><span class="p">,</span> <span class="n">disconnect_events</span>
 <span class="kn">from</span> <span class="nn">..utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">is_sequence</span>
 <span class="kn">from</span> <span class="nn">..utils.mouse_bindings</span> <span class="kn">import</span> <span class="n">MousemapProvider</span>
@@ -293,12 +296,23 @@
 <span class="kn">from</span> <span class="nn">.scale_bar</span> <span class="kn">import</span> <span class="n">ScaleBar</span>
 
 <span class="n">DEFAULT_THEME</span> <span class="o">=</span> <span class="s1">'dark'</span>
+<span class="n">EXCLUDE_DICT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'keymap'</span><span class="p">,</span>
+    <span class="s1">'_mouse_wheel_gen'</span><span class="p">,</span>
+    <span class="s1">'_mouse_drag_gen'</span><span class="p">,</span>
+    <span class="s1">'_persisted_mouse_event'</span><span class="p">,</span>
+    <span class="s1">'mouse_move_callbacks'</span><span class="p">,</span>
+    <span class="s1">'mouse_drag_callbacks'</span><span class="p">,</span>
+    <span class="s1">'mouse_wheel_callbacks'</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">EXCLUDE_JSON</span> <span class="o">=</span> <span class="n">EXCLUDE_DICT</span><span class="o">.</span><span class="n">union</span><span class="p">({</span><span class="s1">'layers'</span><span class="p">,</span> <span class="s1">'active_layer'</span><span class="p">})</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">FullLayerData</span><span class="p">,</span> <span class="n">LayerData</span>
 
 
-<div class="viewcode-block" id="ViewerModel"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel">[docs]</a><span class="k">class</span> <span class="nc">ViewerModel</span><span class="p">(</span><span class="n">KeymapProvider</span><span class="p">,</span> <span class="n">MousemapProvider</span><span class="p">):</span>
+<span class="c1"># KeymapProvider &amp; MousemapProvider should eventually be moved off the ViewerModel</span>
+<div class="viewcode-block" id="ViewerModel"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel">[docs]</a><span class="k">class</span> <span class="nc">ViewerModel</span><span class="p">(</span><span class="n">KeymapProvider</span><span class="p">,</span> <span class="n">MousemapProvider</span><span class="p">,</span> <span class="n">EventedModel</span><span class="p">):</span>
     <span class="sd">"""Viewer containing the rendered scene, layers, and controlling elements</span>
 <span class="sd">    including dimension sliders, and control bars for color limits.</span>
 
@@ -325,41 +339,46 @@
 <span class="sd">        Contains axes, indices, dimensions and sliders.</span>
 <span class="sd">    """</span>
 
+    <span class="c1"># After https://github.com/samuelcolvin/pydantic/pull/2196 is released</span>
+    <span class="c1"># make all of these fields with allow_mutation=False</span>
+    <span class="n">axes</span><span class="p">:</span> <span class="n">Axes</span> <span class="o">=</span> <span class="n">Axes</span><span class="p">()</span>
+    <span class="n">camera</span><span class="p">:</span> <span class="n">Camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">()</span>
+    <span class="n">cursor</span><span class="p">:</span> <span class="n">Cursor</span> <span class="o">=</span> <span class="n">Cursor</span><span class="p">()</span>
+    <span class="n">dims</span><span class="p">:</span> <span class="n">Dims</span> <span class="o">=</span> <span class="n">Dims</span><span class="p">()</span>
+    <span class="n">grid</span><span class="p">:</span> <span class="n">GridCanvas</span> <span class="o">=</span> <span class="n">GridCanvas</span><span class="p">()</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">LayerList</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="n">LayerList</span>
+    <span class="p">)</span>  <span class="c1"># Need to create custom JSON encoder for layer!</span>
+    <span class="n">scale_bar</span><span class="p">:</span> <span class="n">ScaleBar</span> <span class="o">=</span> <span class="n">ScaleBar</span><span class="p">()</span>
+
+    <span class="n">active_layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+        <span class="n">Layer</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Would be nice to remove this/ make it layer name instead of layer?</span>
+    <span class="n">help</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'Ready'</span>
+    <span class="n">theme</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_THEME</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'napari'</span>
+
+    <span class="c1"># 2-tuple indicating height and width</span>
+    <span class="n">_canvas_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">600</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">'napari'</span><span class="p">,</span> <span class="n">ndisplay</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">(),</span> <span class="n">axis_labels</span><span class="o">=</span><span class="p">()):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
-            <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-            <span class="n">auto_connect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">status</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">title</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">reset_view</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">active_layer</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">theme</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">layers_change</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+        <span class="c1"># allow extra attributes during model initialization, useful for mixins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__config__</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="n">Extra</span><span class="o">.</span><span class="n">allow</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+            <span class="n">dims</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'axis_labels'</span><span class="p">:</span> <span class="n">axis_labels</span><span class="p">,</span>
+                <span class="s1">'ndisplay'</span><span class="p">:</span> <span class="n">ndisplay</span><span class="p">,</span>
+                <span class="s1">'order'</span><span class="p">:</span> <span class="n">order</span><span class="p">,</span>
+            <span class="p">},</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__config__</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="n">Extra</span><span class="o">.</span><span class="n">ignore</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">Dims</span><span class="p">(</span>
-            <span class="n">ndisplay</span><span class="o">=</span><span class="n">ndisplay</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">axis_labels</span><span class="o">=</span><span class="n">axis_labels</span>
-        <span class="p">)</span>
+        <span class="c1"># Add extra events - ideally these will be removed too!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">layers_change</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">reset_view</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="n">LayerList</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">Cursor</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">Axes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">scale_bar</span> <span class="o">=</span> <span class="n">ScaleBar</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="s1">'Ready'</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_help</span> <span class="o">=</span> <span class="s1">''</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_title</span> <span class="o">=</span> <span class="n">title</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_theme</span> <span class="o">=</span> <span class="n">DEFAULT_THEME</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">GridCanvas</span><span class="p">()</span>
-        <span class="c1"># 2-tuple indicating height and width</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_canvas_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">600</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
-
+        <span class="c1"># Connect events</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reset_view</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_grid_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">ndisplay</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_layers</span><span class="p">)</span>
@@ -373,81 +392,44 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reordered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_grid_change</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reordered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">)</span>
 
+        <span class="c1"># Add mouse callback</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mouse_wheel_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dims_scroll</span><span class="p">)</span>
+
+    <span class="nd">@validator</span><span class="p">(</span><span class="s1">'theme'</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_valid_theme</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="n">themes</span> <span class="o">=</span> <span class="n">available_themes</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_themes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Theme '</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">' not found; "</span> <span class="sa">f</span><span class="s2">"options are </span><span class="si">{</span><span class="n">themes</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="ViewerModel.json"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.json">[docs]</a>    <span class="k">def</span> <span class="nf">json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">"""Serialize to json."""</span>
+        <span class="c1"># Manually exclude the layer list and active layer which cannot be serialized at this point</span>
+        <span class="c1"># and mouse and keybindings don't belong on model</span>
+        <span class="c1"># https://github.com/samuelcolvin/pydantic/pull/2231</span>
+        <span class="c1"># https://github.com/samuelcolvin/pydantic/issues/660#issuecomment-642211017</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'exclude'</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">exclude</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">EXCLUDE_JSON</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ViewerModel.dict"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.dict">[docs]</a>    <span class="k">def</span> <span class="nf">dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">"""Convert to a dictionaty."""</span>
+        <span class="c1"># Manually exclude the layer list and active layer which cannot be serialized at this point</span>
+        <span class="c1"># and mouse and keybindings don't belong on model</span>
+        <span class="c1"># https://github.com/samuelcolvin/pydantic/pull/2231</span>
+        <span class="c1"># https://github.com/samuelcolvin/pydantic/issues/660#issuecomment-642211017</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'exclude'</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">exclude</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">EXCLUDE_DICT</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Simple string representation"""</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">'napari.Viewer: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s1">'</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">theme</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""string or None : Color theme."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme</span>
-
-    <span class="nd">@theme</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">theme</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theme</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">theme</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span><span class="p">:</span>
-            <span class="k">return</span>
-
-        <span class="k">if</span> <span class="n">theme</span> <span class="ow">in</span> <span class="n">available_themes</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_theme</span> <span class="o">=</span> <span class="n">theme</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Theme '</span><span class="si">{</span><span class="n">theme</span><span class="si">}</span><span class="s2">' not found; "</span>
-                <span class="sa">f</span><span class="s2">"options are </span><span class="si">{</span><span class="n">available_themes</span><span class="p">()</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">theme</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">theme</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""string: Status string"""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_status</span>
-
-    <span class="nd">@status</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">status</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_status</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""string: String that can be displayed to the</span>
-<span class="sd">        user in the status bar with helpful usage tips.</span>
-<span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_help</span>
-
-    <span class="nd">@help</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">help</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">help</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">help</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_help</span> <span class="o">=</span> <span class="n">help</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_help</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">title</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""string: String that is displayed in window title."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_title</span>
-
-    <span class="nd">@title</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">title</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">title</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_title</span> <span class="o">=</span> <span class="n">title</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_title</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">active_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""int: index of active_layer"""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span>
-
-    <span class="nd">@active_layer</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">active_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_layer</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">active_layer</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_layer</span><span class="p">:</span>
-            <span class="k">return</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span> <span class="o">=</span> <span class="n">active_layer</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">active_layer</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_layer</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_sliced_extent_world</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -716,7 +698,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_layers_change</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_grid_change</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ViewerModel.add_layer"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.add_layer">[docs]</a>    <span class="k">def</span> <span class="nf">add_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">:</span>
+<div class="viewcode-block" id="ViewerModel.add_layer"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.add_layer">[docs]</a>    <span class="k">def</span> <span class="nf">add_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">Layer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Layer</span><span class="p">:</span>
         <span class="sd">"""Add a layer to the viewer.</span>
 
 <span class="sd">        Parameters</span>
@@ -760,7 +742,7 @@
         <span class="n">blending</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Image</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Image</span><span class="p">]]:</span>
         <span class="sd">"""Add an image layer to the layer list.</span>
 
 <span class="sd">        Parameters</span>
@@ -953,7 +935,7 @@
         <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">layer_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]:</span>
         <span class="sd">"""Open a path or list of paths with plugins, and add layers to viewer.</span>
 
 <span class="sd">        A list of paths will be handed one-by-one to the napari_get_reader hook</span>
@@ -1001,7 +983,7 @@
                 <span class="n">paths</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">,</span> <span class="n">layer_type</span><span class="o">=</span><span class="n">layer_type</span>
             <span class="p">)</span>
 
-        <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
+        <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
         <span class="k">for</span> <span class="n">_path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
             <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_add_layers_with_plugins</span><span class="p">(</span>
@@ -1017,7 +999,7 @@
         <span class="n">kwargs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">layer_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]:</span>
         <span class="sd">"""Load a path or a list of paths into the viewer using plugins.</span>
 
 <span class="sd">        This function is mostly called from self.open_path, where the ``stack``</span>
@@ -1045,7 +1027,7 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        List[layers.Layer]</span>
+<span class="sd">        List[Layer]</span>
 <span class="sd">            A list of any layers that were added to the viewer.</span>
 <span class="sd">        """</span>
         <span class="kn">from</span> <span class="nn">..plugins.io</span> <span class="kn">import</span> <span class="n">read_data_with_plugins</span>
@@ -1067,7 +1049,7 @@
                 <span class="n">filenames</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
         <span class="c1"># add each layer to the viewer</span>
-        <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
+        <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
         <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">filenames</span><span class="p">):</span>
             <span class="n">basename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
             <span class="n">_data</span> <span class="o">=</span> <span class="n">_unify_data_and_user_kwargs</span><span class="p">(</span>
@@ -1082,7 +1064,7 @@
 
     <span class="k">def</span> <span class="nf">_add_layer_from_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">layers</span><span class="o">.</span><span class="n">Layer</span><span class="p">]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Layer</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]]:</span>
         <span class="sd">"""Add arbitrary layer data to the viewer.</span>
 
 <span class="sd">        Primarily intended for usage by reader plugin hooks.</span>
@@ -1160,14 +1142,14 @@
         <span class="k">return</span> <span class="n">layer</span></div>
 
 
-<span class="k">def</span> <span class="nf">_get_image_class</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_get_image_class</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
     <span class="sd">"""Return Image or OctreeImage based config settings."""</span>
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_octree</span><span class="p">:</span>
         <span class="kn">from</span> <span class="nn">..layers.image.experimental.octree_image</span> <span class="kn">import</span> <span class="n">OctreeImage</span>
 
         <span class="k">return</span> <span class="n">OctreeImage</span>
 
-    <span class="k">return</span> <span class="n">layers</span><span class="o">.</span><span class="n">Image</span>
+    <span class="k">return</span> <span class="n">Image</span>
 
 
 <span class="k">def</span> <span class="nf">_normalize_layer_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="s1">'LayerData'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">'FullLayerData'</span><span class="p">:</span>

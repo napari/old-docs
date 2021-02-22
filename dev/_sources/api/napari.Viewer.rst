@@ -42,16 +42,49 @@ napari.Viewer
       ~Viewer.add_vectors
    
    
+      ~Viewer.asdict
+   
+   
       ~Viewer.bind_key
    
    
       ~Viewer.close
    
    
+      ~Viewer.construct
+   
+   
+      ~Viewer.copy
+   
+   
+      ~Viewer.dict
+   
+   
+      ~Viewer.from_orm
+   
+   
+      ~Viewer.json
+   
+   
       ~Viewer.open
    
    
+      ~Viewer.parse_file
+   
+   
+      ~Viewer.parse_obj
+   
+   
+      ~Viewer.parse_raw
+   
+   
       ~Viewer.reset_view
+   
+   
+      ~Viewer.schema
+   
+   
+      ~Viewer.schema_json
    
    
       ~Viewer.screenshot
@@ -60,7 +93,19 @@ napari.Viewer
       ~Viewer.show
    
    
+      ~Viewer.to_string
+   
+   
+      ~Viewer.update
+   
+   
       ~Viewer.update_console
+   
+   
+      ~Viewer.update_forward_refs
+   
+   
+      ~Viewer.validate
    
    
    
@@ -72,12 +117,10 @@ napari.Viewer
    .. autosummary::
       :inherited-members:
    
-      ~Viewer.active_layer
       ~Viewer.class_keymap
+      ~Viewer.events
       ~Viewer.experimental
-      ~Viewer.help
-      ~Viewer.status
-      ~Viewer.theme
-      ~Viewer.title
+      ~Viewer.fields
+      ~Viewer.window
    
    

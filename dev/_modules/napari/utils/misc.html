@@ -261,10 +261,12 @@
 <span class="kn">import</span> <span class="nn">collections.abc</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">EnumMeta</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">PathLike</span><span class="p">,</span> <span class="n">fspath</span><span class="p">,</span> <span class="n">path</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">TYPE_CHECKING</span><span class="p">,</span>
     <span class="n">Any</span><span class="p">,</span>
@@ -273,6 +275,7 @@
     <span class="n">Sequence</span><span class="p">,</span>
     <span class="n">Type</span><span class="p">,</span>
     <span class="n">TypeVar</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -679,6 +682,32 @@
         <span class="k">pass</span>
 
     <span class="k">return</span> <span class="n">operator</span><span class="o">.</span><span class="n">eq</span>
+
+
+<span class="k">def</span> <span class="nf">dir_hash</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ignore_hidden</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">"""Compute the hash of a directory, based on structure and contents."""</span>
+    <span class="kn">import</span> <span class="nn">hashlib</span>
+
+    <span class="n">hashfunc</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a directory."</span><span class="p">)</span>
+
+    <span class="n">_hash</span> <span class="o">=</span> <span class="n">hashfunc</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">fname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span> <span class="ow">and</span> <span class="n">ignore_hidden</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c1"># update the hash with the file contents</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">fname</span>
+            <span class="n">_hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span>
+
+            <span class="k">if</span> <span class="n">include_paths</span><span class="p">:</span>
+                <span class="c1"># update the hash with the filename</span>
+                <span class="n">fparts</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+                <span class="n">_hash</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s1">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fparts</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">_hash</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 </pre></div>
       </article>
       <footer>

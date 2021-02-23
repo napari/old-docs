@@ -269,6 +269,7 @@
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
 <span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">ExceptionHandler</span>
+<span class="kn">from</span> <span class="nn">.qt_resources</span> <span class="kn">import</span> <span class="n">_register_napari_resources</span>
 <span class="kn">from</span> <span class="nn">.qthreading</span> <span class="kn">import</span> <span class="n">wait_for_workers_to_quit</span>
 
 <span class="n">NAPARI_ICON_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
@@ -352,6 +353,7 @@
     <span class="c1"># then they are all used.</span>
     <span class="n">set_values</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span><span class="p">}</span>
     <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span> <span class="k">if</span> <span class="n">set_values</span> <span class="k">else</span> <span class="n">_defaults</span>
+    <span class="k">global</span> <span class="n">_app_ref</span>
 
     <span class="n">app</span> <span class="o">=</span> <span class="n">QApplication</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">app</span><span class="p">:</span>
@@ -378,9 +380,6 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">app</span> <span class="o">=</span> <span class="n">QApplication</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
 
-        <span class="k">global</span> <span class="n">_app_ref</span>
-        <span class="n">_app_ref</span> <span class="o">=</span> <span class="n">app</span>  <span class="c1"># prevent garbage collection</span>
-
         <span class="c1"># if this is the first time the Qt app is being instantiated, we set</span>
         <span class="c1"># the name and metadata</span>
         <span class="n">app</span><span class="o">.</span><span class="n">setApplicationName</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'app_name'</span><span class="p">))</span>
@@ -394,10 +393,16 @@
         <span class="c1"># Will patch based on config file.</span>
         <span class="n">perf_config</span><span class="o">.</span><span class="n">patch_callables</span><span class="p">()</span>
 
-    <span class="c1"># see docstring of `wait_for_workers_to_quit` for caveats on killing</span>
-    <span class="c1"># workers at shutdown.</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">aboutToQuit</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">wait_for_workers_to_quit</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_app_ref</span><span class="p">:</span>  <span class="c1"># running get_app for the first time</span>
+        <span class="c1"># see docstring of `wait_for_workers_to_quit` for caveats on killing</span>
+        <span class="c1"># workers at shutdown.</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">aboutToQuit</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">wait_for_workers_to_quit</span><span class="p">)</span>
 
+        <span class="c1"># this will register all of our resources (icons) with Qt, so that they</span>
+        <span class="c1"># can be used in qss files and elsewhere.</span>
+        <span class="n">_register_napari_resources</span><span class="p">()</span>
+
+    <span class="n">_app_ref</span> <span class="o">=</span> <span class="n">app</span>  <span class="c1"># prevent garbage collection</span>
     <span class="k">return</span> <span class="n">app</span>
 
 

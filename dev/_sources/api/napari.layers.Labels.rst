@@ -89,6 +89,7 @@ napari.layers.Labels
       ~Labels.colormap
       ~Labels.colormaps
       ~Labels.contiguous
+      ~Labels.contour
       ~Labels.contrast_limits
       ~Labels.contrast_limits_range
       ~Labels.coordinates

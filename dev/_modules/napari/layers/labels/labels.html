@@ -363,6 +363,8 @@
 <span class="sd">        If `True`, the fill bucket changes only connected pixels of same label.</span>
 <span class="sd">    n_dimensional : bool</span>
 <span class="sd">        If `True`, paint and fill edit labels across all dimensions.</span>
+<span class="sd">    contour : bool</span>
+<span class="sd">        If `True`, displays contours of labels instead of shaded regions</span>
 <span class="sd">    brush_size : float</span>
 <span class="sd">        Size of the paint brush in data coordinates.</span>
 <span class="sd">    selected_label : int</span>
@@ -430,6 +432,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_brush_shape</span> <span class="o">=</span> <span class="n">LabelBrushShape</span><span class="o">.</span><span class="n">CIRCLE</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_show_selected_label</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_contour</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span> <span class="o">=</span> <span class="p">{}</span>
@@ -476,6 +479,7 @@
             <span class="n">selected_label</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">color_mode</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">brush_shape</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">contour</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span> <span class="o">=</span> <span class="kc">False</span>
@@ -518,6 +522,17 @@
     <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_dimensional</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span> <span class="o">=</span> <span class="n">n_dimensional</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">n_dimensional</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">contour</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""bool: displays contours of labels instead of shaded regions."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contour</span>
+
+    <span class="nd">@contour</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">contour</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contour</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_contour</span> <span class="o">=</span> <span class="n">contour</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contour</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">brush_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -905,6 +920,17 @@
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Unsupported Color Mode"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contour</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+            <span class="n">struct_elem</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">generate_binary_structure</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">boundaries</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">grey_dilation</span><span class="p">(</span>
+                <span class="n">raw</span><span class="p">,</span> <span class="n">footprint</span><span class="o">=</span><span class="n">struct_elem</span>
+            <span class="p">)</span> <span class="o">!=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">grey_erosion</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">footprint</span><span class="o">=</span><span class="n">struct_elem</span><span class="p">)</span>
+            <span class="n">image</span><span class="p">[</span><span class="n">boundaries</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">boundaries</span><span class="p">]</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">raw</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">low_discrepancy_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span><span class="p">),</span> <span class="mi">0</span>
+            <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">image</span>
 

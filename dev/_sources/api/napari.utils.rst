@@ -21,6 +21,7 @@
       :toctree:
    
       Colormap
+      nbscreenshot
    
    
 
@@ -29,7 +30,6 @@
    .. rubric:: Functions
 
    
-   .. autofunction:: nbscreenshot
    .. autofunction:: resize_dask_cache
    .. autofunction:: sys_info
    

@@ -28,6 +28,11 @@
 
    
    
+   .. rubric:: Functions
+
+   
+   .. autofunction:: isabstract
+   
    
 
    

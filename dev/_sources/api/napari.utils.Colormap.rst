@@ -54,6 +54,9 @@ napari.utils.Colormap
       ~Colormap.schema_json
    
    
+      ~Colormap.to_string
+   
+   
       ~Colormap.update
    
    
@@ -74,5 +77,6 @@ napari.utils.Colormap
    
       ~Colormap.colorbar
       ~Colormap.events
+      ~Colormap.fields
    
    

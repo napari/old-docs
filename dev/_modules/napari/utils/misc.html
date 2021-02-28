@@ -3,9 +3,9 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
-    <meta name="generator" content="sphinx-3.5.1, furo 2021.02.27.beta26"/>
+    <meta name="generator" content="sphinx-3.5.1, furo 2021.02.28.beta28"/>
         <title>napari.utils.misc - napari</title>
-      <link rel="stylesheet" href="../../../_static/styles/furo.css?digest=8304b39bb3b7aeb8294a71b3712567f018b3dac4">
+      <link rel="stylesheet" href="../../../_static/styles/furo.css?digest=be5985a4059b5c2cd56ed0804790452beca62674">
     <link rel="stylesheet" href="../../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../../_static/pygments_dark.css">
     
@@ -659,29 +659,19 @@
 
     <span class="n">type_</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="k">else</span> <span class="n">obj</span>
 
-    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span>
-
-    <span class="kn">import</span> <span class="nn">dask.array</span>
-
-    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">Array</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">operator</span><span class="o">.</span><span class="n">is_</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span> <span class="nn">zarr.core</span>
-
-        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">zarr</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Array</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">operator</span><span class="o">.</span><span class="n">is_</span>
-    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">pass</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span> <span class="nn">xarray.core.dataarray</span>
-
-        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">xarray</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span>
-    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">pass</span>
+    <span class="c1"># yes, it's a little riskier, but we are checking namespaces instead of</span>
+    <span class="c1"># actual `issubclass` here to avoid slow import times</span>
+    <span class="n">_known_arrays</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">'numpy.ndarray'</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">,</span>  <span class="c1"># numpy.ndarray</span>
+        <span class="s1">'dask.Array'</span><span class="p">:</span> <span class="n">operator</span><span class="o">.</span><span class="n">is_</span><span class="p">,</span>  <span class="c1"># dask.array.core.Array</span>
+        <span class="s1">'zarr.Array'</span><span class="p">:</span> <span class="n">operator</span><span class="o">.</span><span class="n">is_</span><span class="p">,</span>  <span class="c1"># zarr.core.Array</span>
+        <span class="s1">'xarray.DataArray'</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">,</span>  <span class="c1"># xarray.core.dataarray.DataArray</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">base</span> <span class="ow">in</span> <span class="n">type_</span><span class="o">.</span><span class="n">mro</span><span class="p">():</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">base</span><span class="o">.</span><span class="vm">__module__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">base</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">'</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">_known_arrays</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">func</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span>
 
     <span class="k">return</span> <span class="n">operator</span><span class="o">.</span><span class="n">eq</span>
 
@@ -745,7 +735,7 @@
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
     <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
-    <script src="../../../_static/sphinx-book-theme.d31b09fe5c1d09cb49b26a786de4a05d.js"></script>
+    <script src="../../../_static/sphinx-book-theme.7d483ff0a819d6edff12ce0b1ead3928.js"></script>
     <script async="async" src="https://unpkg.com/thebelab@latest/lib/index.js"></script>
     <script >
         const thebe_selector = ".thebe"

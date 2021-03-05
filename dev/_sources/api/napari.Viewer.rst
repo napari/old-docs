@@ -93,9 +93,6 @@ napari.Viewer
       ~Viewer.show
    
    
-      ~Viewer.to_string
-   
-   
       ~Viewer.update
    
    
@@ -120,7 +117,6 @@ napari.Viewer
       ~Viewer.class_keymap
       ~Viewer.events
       ~Viewer.experimental
-      ~Viewer.fields
       ~Viewer.window
    
    

@@ -51,9 +51,6 @@ napari.components.Camera
       ~Camera.schema_json
    
    
-      ~Camera.to_string
-   
-   
       ~Camera.update
    
    
@@ -73,6 +70,5 @@ napari.components.Camera
       :inherited-members:
    
       ~Camera.events
-      ~Camera.fields
    
    

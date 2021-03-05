@@ -66,9 +66,6 @@ napari.components.Dims
       ~Dims.set_range
    
    
-      ~Dims.to_string
-   
-   
       ~Dims.update
    
    
@@ -90,7 +87,6 @@ napari.components.Dims
       ~Dims.displayed
       ~Dims.displayed_order
       ~Dims.events
-      ~Dims.fields
       ~Dims.not_displayed
       ~Dims.nsteps
       ~Dims.point

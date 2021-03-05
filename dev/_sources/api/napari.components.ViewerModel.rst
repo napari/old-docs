@@ -84,9 +84,6 @@ napari.components.ViewerModel
       ~ViewerModel.schema_json
    
    
-      ~ViewerModel.to_string
-   
-   
       ~ViewerModel.update
    
    
@@ -108,6 +105,5 @@ napari.components.ViewerModel
       ~ViewerModel.class_keymap
       ~ViewerModel.events
       ~ViewerModel.experimental
-      ~ViewerModel.fields
    
    

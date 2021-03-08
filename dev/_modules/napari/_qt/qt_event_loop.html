@@ -268,10 +268,11 @@
 <span class="kn">from</span> <span class="nn">qtpy.QtWidgets</span> <span class="kn">import</span> <span class="n">QApplication</span>
 
 <span class="kn">from</span> <span class="nn">napari</span> <span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span> <span class="nn">napari.utils.notifications</span> <span class="kn">import</span> <span class="n">notification_manager</span>
 
 <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">perf</span>
 <span class="kn">from</span> <span class="nn">..utils.perf</span> <span class="kn">import</span> <span class="n">perf_config</span>
-<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">ExceptionHandler</span>
+<span class="kn">from</span> <span class="nn">.dialogs.qt_notification</span> <span class="kn">import</span> <span class="n">NapariQtNotification</span>
 <span class="kn">from</span> <span class="nn">.qt_resources</span> <span class="kn">import</span> <span class="n">_register_napari_resources</span>
 <span class="kn">from</span> <span class="nn">.qthreading</span> <span class="kn">import</span> <span class="n">wait_for_workers_to_quit</span>
 
@@ -392,6 +393,12 @@
         <span class="n">app</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QIcon</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'icon'</span><span class="p">)))</span>
         <span class="n">set_app_id</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'app_id'</span><span class="p">))</span>
 
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">"NAPARI_CATCH_ERRORS"</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'0'</span><span class="p">,</span> <span class="s1">'False'</span><span class="p">):</span>
+
+            <span class="n">notification_manager</span><span class="o">.</span><span class="n">notification_ready</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                <span class="n">NapariQtNotification</span><span class="o">.</span><span class="n">show_notification</span>
+            <span class="p">)</span>
+
     <span class="k">if</span> <span class="n">perf_config</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">perf_config</span><span class="o">.</span><span class="n">patched</span><span class="p">:</span>
         <span class="c1"># Will patch based on config file.</span>
         <span class="n">perf_config</span><span class="o">.</span><span class="n">patch_callables</span><span class="p">()</span>
@@ -475,8 +482,10 @@
 
         <span class="n">splash</span> <span class="o">=</span> <span class="n">NapariSplashScreen</span><span class="p">()</span>
         <span class="n">splash</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-    <span class="k">yield</span> <span class="n">app</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">app</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">notification_manager</span><span class="o">.</span><span class="n">receive_error</span><span class="p">(</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
     <span class="n">run</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span> <span class="n">gui_exceptions</span><span class="o">=</span><span class="n">gui_exceptions</span><span class="p">,</span> <span class="n">_func_name</span><span class="o">=</span><span class="s1">'gui_qt'</span><span class="p">)</span></div>
 
 
@@ -554,24 +563,8 @@
         <span class="p">)</span>
         <span class="k">return</span>
 
-    <span class="k">with</span> <span class="n">_install_hooks</span><span class="p">(</span><span class="n">gui_exceptions</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">notification_manager</span><span class="p">:</span>
         <span class="n">app</span><span class="o">.</span><span class="n">exec_</span><span class="p">()</span></div>
-
-
-<span class="nd">@contextmanager</span>
-<span class="k">def</span> <span class="nf">_install_hooks</span><span class="p">(</span><span class="n">gui_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-    <span class="sd">"""Install ExceptionHandler as sys.excepthook.</span>
-
-<span class="sd">    probably temporary until https://github.com/napari/napari/pull/2205</span>
-<span class="sd">    """</span>
-    <span class="c1"># instantiate the exception handler</span>
-    <span class="n">exception_handler</span> <span class="o">=</span> <span class="n">ExceptionHandler</span><span class="p">(</span><span class="n">gui_exceptions</span><span class="o">=</span><span class="n">gui_exceptions</span><span class="p">)</span>
-    <span class="n">orighook</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span><span class="p">,</span> <span class="n">exception_handler</span><span class="o">.</span><span class="n">handle</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">yield</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span> <span class="o">=</span> <span class="n">orighook</span>
-        <span class="n">exception_handler</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
 </pre></div>
       </article>
       <footer>

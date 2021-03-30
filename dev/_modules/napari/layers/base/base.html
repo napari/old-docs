@@ -273,6 +273,7 @@
 
 <span class="kn">from</span> <span class="nn">...utils.dask_utils</span> <span class="kn">import</span> <span class="n">configure_dask</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
 <span class="kn">from</span> <span class="nn">...utils.mouse_bindings</span> <span class="kn">import</span> <span class="n">MousemapProvider</span>
@@ -387,8 +388,6 @@
 <span class="sd">        Cursor position in world coordinates.</span>
 <span class="sd">    ndim : int</span>
 <span class="sd">        Dimensionality of the layer.</span>
-<span class="sd">    selected : bool</span>
-<span class="sd">        Flag if layer is selected in the viewer or not.</span>
 <span class="sd">    thumbnail : (N, M, 4) array</span>
 <span class="sd">        Array of thumbnail data for the layer.</span>
 <span class="sd">    status : str</span>
@@ -444,7 +443,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_blending</span> <span class="o">=</span> <span class="n">Blending</span><span class="p">(</span><span class="n">blending</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_visible</span> <span class="o">=</span> <span class="n">visible</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_freeze</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="s1">'Ready'</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_help</span> <span class="o">=</span> <span class="s1">''</span>
@@ -525,8 +523,6 @@
             <span class="n">blending</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">opacity</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">select</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">deselect</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">translate</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">rotate</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
@@ -543,6 +539,20 @@
             <span class="n">editable</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">loaded</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">_ndisplay</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">select</span><span class="o">=</span><span class="n">WarningEmitter</span><span class="p">(</span>
+                <span class="s2">"'layer.events.select' is deprecated and will be "</span>
+                <span class="s2">"removed in napari v0.4.9, use "</span>
+                <span class="s2">"'viewer.layers.selection.events.changed' instead, and inspect"</span>
+                <span class="s2">" the 'added' attribute on the event."</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s1">'select'</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">deselect</span><span class="o">=</span><span class="n">WarningEmitter</span><span class="p">(</span>
+                <span class="s2">"'layer.events.deselect' is deprecated and will be "</span>
+                <span class="s2">"removed in napari v0.4.9, use "</span>
+                <span class="s2">"'viewer.layers.selection.events.changed' instead, and inspect"</span>
+                <span class="s2">" the 'removed' attribute on the event."</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s1">'deselect'</span><span class="p">,</span>
+            <span class="p">),</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 
@@ -992,18 +1002,32 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""bool: Whether this layer is selected or not."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. "</span>
+            <span class="s2">"Please use `layer in viewer.layers.selection`"</span><span class="p">,</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">layers</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">'_deprecated_layerlist'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">layers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">selection</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="nd">@selected</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">selected</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span> <span class="o">=</span> <span class="n">selected</span>
-
-        <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">deselect</span><span class="p">()</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. "</span>
+            <span class="s2">"Please use `viewer.layers.selection.add(layer)` or "</span>
+            <span class="s2">"`viewer.layers.selection.remove(layer)`"</span><span class="p">,</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">layers</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">'_deprecated_layerlist'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">layers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
+                <span class="n">layers</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">layers</span><span class="o">.</span><span class="n">selection</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1339,7 +1363,19 @@
 <span class="sd">        """</span>
         <span class="kn">from</span> <span class="nn">...plugins.io</span> <span class="kn">import</span> <span class="n">save_layers</span>
 
-        <span class="k">return</span> <span class="n">save_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">save_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_on_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="c1"># This method is a temporary workaround to the fact that the Points</span>
+        <span class="c1"># layer needs to know when its selection state changes so that it can</span>
+        <span class="c1"># update the highlight state.  This, along with the events.select and</span>
+        <span class="c1"># events.deselect emitters, (and the LayerList._on_selection_event</span>
+        <span class="c1"># method) can be removed once highlighting logic has been removed from</span>
+        <span class="c1"># the layer model.</span>
+        <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">deselect</span><span class="p">()</span></div>
 </pre></div>
       </article>
       <footer>

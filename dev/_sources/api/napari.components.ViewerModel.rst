@@ -66,6 +66,9 @@ napari.components.ViewerModel
       ~ViewerModel.open
    
    
+      ~ViewerModel.open_sample
+   
+   
       ~ViewerModel.parse_file
    
    

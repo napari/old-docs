@@ -209,7 +209,10 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/napari.types.html">napari.types</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" type="checkbox"/><label for="toctree-checkbox-9"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/napari.types.ArrayBase.html">napari.types.ArrayBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/napari.types.Path.html">napari.types.Path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/napari.types.SampleDict.html">napari.types.SampleDict</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/napari.types.TracebackType.html">napari.types.TracebackType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/napari.types.TypedDict.html">napari.types.TypedDict</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/napari.utils.html">napari.utils</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" type="checkbox"/><label for="toctree-checkbox-10"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -220,7 +223,9 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/napari.plugins.html">napari.plugins</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" type="checkbox"/><label for="toctree-checkbox-11"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/napari.plugins.FunctionType.html">napari.plugins.FunctionType</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/napari.plugins.HookImplementation.html">napari.plugins.HookImplementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/napari.plugins.Path.html">napari.plugins.Path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/napari.plugins.PluginManager.html">napari.plugins.PluginManager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/napari.plugins.SampleDict.html">napari.plugins.SampleDict</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/napari.components.html">napari.components</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" type="checkbox"/><label for="toctree-checkbox-12"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -263,11 +268,14 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for napari.components.viewer_model</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">TYPE_CHECKING</span><span class="p">,</span>
     <span class="n">Any</span><span class="p">,</span>
@@ -287,6 +295,7 @@
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
 <span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">PathOrPaths</span>
 <span class="kn">from</span> <span class="nn">..utils._register</span> <span class="kn">import</span> <span class="n">create_func</span> <span class="k">as</span> <span class="n">create_add_method</span>
 <span class="kn">from</span> <span class="nn">..utils.colormaps</span> <span class="kn">import</span> <span class="n">ensure_colormap</span>
 <span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">EventedModel</span><span class="p">,</span> <span class="n">disconnect_events</span>
@@ -295,6 +304,7 @@
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">is_sequence</span>
 <span class="kn">from</span> <span class="nn">..utils.mouse_bindings</span> <span class="kn">import</span> <span class="n">MousemapProvider</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">available_themes</span>
+<span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">._viewer_mouse_bindings</span> <span class="kn">import</span> <span class="n">dims_scroll</span>
 <span class="kn">from</span> <span class="nn">.axes</span> <span class="kn">import</span> <span class="n">Axes</span>
 <span class="kn">from</span> <span class="nn">.camera</span> <span class="kn">import</span> <span class="n">Camera</span>
@@ -923,9 +933,70 @@
 
             <span class="k">return</span> <span class="n">layer_list</span></div>
 
+<div class="viewcode-block" id="ViewerModel.open_sample"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.open_sample">[docs]</a>    <span class="k">def</span> <span class="nf">open_sample</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">plugin</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">sample</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">reader_plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Open `sample` from `plugin` and add it to the viewer.</span>
+
+<span class="sd">        To see all available samples registered by plugins, use</span>
+<span class="sd">        :func:`napari.plugins.available_samples`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        plugin : str</span>
+<span class="sd">            name of a plugin providing a sample</span>
+<span class="sd">        sample : str</span>
+<span class="sd">            name of the sample</span>
+<span class="sd">        reader_plugin : str, optional</span>
+<span class="sd">            reader plugin to pass to viewer.open (only used if the sample data</span>
+<span class="sd">            is a string).  by default None.</span>
+
+<span class="sd">        **kwargs:</span>
+<span class="sd">            additional kwargs will be passed to the sample data loader provided</span>
+<span class="sd">            by `plugin`.  Use of **kwargs may raise an error if the kwargs do</span>
+<span class="sd">            not match the sample data loader.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        KeyError</span>
+<span class="sd">            If `plugin` does not provide a sample named `sample`.</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span> <span class="nn">..plugins</span> <span class="kn">import</span> <span class="n">_sample_data</span><span class="p">,</span> <span class="n">available_samples</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">_sample_data</span><span class="p">[</span><span class="n">plugin</span><span class="p">][</span><span class="n">sample</span><span class="p">][</span><span class="s1">'data'</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">available_samples</span><span class="p">()</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Plugin </span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s2"> does not provide sample data "</span>
+                <span class="sa">f</span><span class="s2">"named </span><span class="si">{</span><span class="n">sample</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">samples</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'Available samples include: </span><span class="si">{samples}</span><span class="s1">'</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">samples</span><span class="o">=</span><span class="n">samples</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s2">"No plugin samples have been registered."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">datum</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">datum</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">reader_plugin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">'Got unexpected type for sample '</span>
+                <span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s1">, </span><span class="si">{</span><span class="n">sample</span><span class="si">!r}</span><span class="s1">): </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span>
+            <span class="p">)</span></div>
+
 <div class="viewcode-block" id="ViewerModel.open"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">path</span><span class="p">:</span> <span class="n">PathOrPaths</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">stack</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -967,7 +1038,7 @@
 <span class="sd">        layers : list</span>
 <span class="sd">            A list of any layers that were added to the viewer.</span>
 <span class="sd">        """</span>
-        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">path</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">(</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span> <span class="k">else</span> <span class="n">path</span>
         <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">]</span>  <span class="c1"># PathObjects -&gt; str</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>

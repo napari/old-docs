@@ -69,6 +69,9 @@ napari.view\_layers.Viewer
       ~Viewer.open
    
    
+      ~Viewer.open_sample
+   
+   
       ~Viewer.parse_file
    
    

@@ -24,6 +24,9 @@ napari.plugins.PluginManager
       ~PluginManager.add_hookspecs
    
    
+      ~PluginManager.call_order
+   
+   
       ~PluginManager.check_pending
    
    
@@ -73,6 +76,9 @@ napari.plugins.PluginManager
    
    
       ~PluginManager.set_blocked
+   
+   
+      ~PluginManager.set_call_order
    
    
       ~PluginManager.unregister

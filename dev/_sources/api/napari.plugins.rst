@@ -23,8 +23,10 @@
       FunctionType
       HookImplementation
       Path
+      PluginHookOption
       PluginManager
       SampleDict
+      TypedDict
    
    
 
@@ -39,6 +41,7 @@
    .. autofunction:: discover_sample_data
    .. autofunction:: get_plugin_widget
    .. autofunction:: isin
+   .. autofunction:: load_settings_plugin_defaults
    .. autofunction:: magicgui
    .. autofunction:: register_dock_widget
    .. autofunction:: register_function_widget

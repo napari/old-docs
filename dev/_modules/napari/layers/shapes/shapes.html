@@ -319,7 +319,12 @@
     <span class="n">vertex_insert</span><span class="p">,</span>
     <span class="n">vertex_remove</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">._shapes_utils</span> <span class="kn">import</span> <span class="n">create_box</span><span class="p">,</span> <span class="n">get_shape_ndim</span><span class="p">,</span> <span class="n">number_of_shapes</span>
+<span class="kn">from</span> <span class="nn">._shapes_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">create_box</span><span class="p">,</span>
+    <span class="n">extract_shape_type</span><span class="p">,</span>
+    <span class="n">get_shape_ndim</span><span class="p">,</span>
+    <span class="n">number_of_shapes</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">DEFAULT_COLOR_CYCLE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
 
@@ -598,6 +603,7 @@
                 <span class="n">ndim</span> <span class="o">=</span> <span class="mi">2</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ndim</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span> <span class="o">=</span> <span class="n">extract_shape_type</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span><span class="p">)</span>
             <span class="n">data_ndim</span> <span class="o">=</span> <span class="n">get_shape_ndim</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">ndim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ndim</span> <span class="o">!=</span> <span class="n">data_ndim</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -808,10 +814,55 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">data</span>
 
     <span class="nd">@data</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span><span class="o">=</span><span class="s1">'rectangle'</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_finish_drawing</span><span class="p">()</span>
+
+        <span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span> <span class="o">=</span> <span class="n">extract_shape_type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">n_new_shapes</span> <span class="o">=</span> <span class="n">number_of_shapes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># not given a shape_type through data</span>
+        <span class="k">if</span> <span class="n">shape_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">shape_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_type</span>
+
+        <span class="n">edge_widths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_widths</span>
+        <span class="n">edge_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_color</span>
+        <span class="n">face_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">face_color</span>
+        <span class="n">z_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">z_indices</span>
+
+        <span class="c1"># fewer shapes, trim attributes</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nshapes</span> <span class="o">&gt;</span> <span class="n">n_new_shapes</span><span class="p">:</span>
+            <span class="n">shape_type</span> <span class="o">=</span> <span class="n">shape_type</span><span class="p">[:</span><span class="n">n_new_shapes</span><span class="p">]</span>
+            <span class="n">edge_widths</span> <span class="o">=</span> <span class="n">edge_widths</span><span class="p">[:</span><span class="n">n_new_shapes</span><span class="p">]</span>
+            <span class="n">z_indices</span> <span class="o">=</span> <span class="n">z_indices</span><span class="p">[:</span><span class="n">n_new_shapes</span><span class="p">]</span>
+            <span class="n">edge_color</span> <span class="o">=</span> <span class="n">edge_color</span><span class="p">[:</span><span class="n">n_new_shapes</span><span class="p">]</span>
+            <span class="n">face_color</span> <span class="o">=</span> <span class="n">face_color</span><span class="p">[:</span><span class="n">n_new_shapes</span><span class="p">]</span>
+        <span class="c1"># more shapes, add attributes</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nshapes</span> <span class="o">&lt;</span> <span class="n">n_new_shapes</span><span class="p">:</span>
+            <span class="n">n_shapes_difference</span> <span class="o">=</span> <span class="n">n_new_shapes</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nshapes</span>
+            <span class="n">shape_type</span> <span class="o">=</span> <span class="n">shape_type</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"rectangle"</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_shapes_difference</span>
+            <span class="n">edge_widths</span> <span class="o">=</span> <span class="n">edge_widths</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_shapes_difference</span>
+            <span class="n">z_indices</span> <span class="o">=</span> <span class="n">z_indices</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_shapes_difference</span>
+            <span class="n">edge_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="n">edge_color</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_get_new_shape_color</span><span class="p">(</span><span class="n">n_shapes_difference</span><span class="p">,</span> <span class="s1">'edge'</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">face_color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="n">face_color</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_get_new_shape_color</span><span class="p">(</span><span class="n">n_shapes_difference</span><span class="p">,</span> <span class="s1">'face'</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">ShapeList</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span><span class="o">=</span><span class="n">shape_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="n">shape_type</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_widths</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_indices</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">data</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
@@ -952,6 +1003,25 @@
     <span class="k">def</span> <span class="nf">shape_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""list of str: name of shape type for each shape."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">shape_types</span>
+
+    <span class="nd">@shape_type</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">shape_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape_type</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finish_drawing</span><span class="p">()</span>
+
+        <span class="n">new_data_view</span> <span class="o">=</span> <span class="n">ShapeList</span><span class="p">()</span>
+        <span class="n">shape_inputs</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">shape_type</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_widths</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">z_indices</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_shapes_to_view</span><span class="p">(</span><span class="n">shape_inputs</span><span class="p">,</span> <span class="n">new_data_view</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span> <span class="o">=</span> <span class="n">new_data_view</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1711,16 +1781,18 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        data : list or array</span>
-<span class="sd">            List of shape data, where each element is an (N, D) array of the</span>
-<span class="sd">            N vertices of a shape in D dimensions. Can be an 3-dimensional</span>
-<span class="sd">            array if each shape has the same number of vertices.</span>
+<span class="sd">        data : Array | Tuple(Array,str) | List[Array | Tuple(Array, str)] | Tuple(List[Array], str)</span>
+<span class="sd">            List of shape data, where each element is either an (N, D) array of the</span>
+<span class="sd">            N vertices of a shape in D dimensions or a tuple containing an array of</span>
+<span class="sd">            the N vertices and the shape_type string. When a shape_type is present,</span>
+<span class="sd">            it overrides keyword arg shape_type. Can be an 3-dimensional array</span>
+<span class="sd">            if each shape has the same number of vertices.</span>
 <span class="sd">        shape_type : string | list</span>
 <span class="sd">            String of shape shape_type, must be one of "{'line', 'rectangle',</span>
 <span class="sd">            'ellipse', 'path', 'polygon'}". If a list is supplied it must be</span>
 <span class="sd">            the same length as the length of `data` and each element will be</span>
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
-<span class="sd">            shapes.</span>
+<span class="sd">            shapes. Overriden by data shape_type, if present.</span>
 <span class="sd">        edge_width : float | list</span>
 <span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
 <span class="sd">            same length as the length of `data` and each element will be</span>
@@ -1745,6 +1817,8 @@
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
 <span class="sd">            shapes.</span>
 <span class="sd">        """</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span> <span class="o">=</span> <span class="n">extract_shape_type</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">shape_type</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">edge_width</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">edge_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_edge_width</span>
 
@@ -1818,16 +1892,18 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        data : list or array</span>
-<span class="sd">            List of shape data, where each element is an (N, D) array of the</span>
-<span class="sd">            N vertices of a shape in D dimensions. Can be an 3-dimensional</span>
-<span class="sd">            array if each shape has the same number of vertices.</span>
+<span class="sd">        data : Array | Tuple(Array,str) | List[Array | Tuple(Array, str)] | Tuple(List[Array], str)</span>
+<span class="sd">            List of shape data, where each element is either an (N, D) array of the</span>
+<span class="sd">            N vertices of a shape in D dimensions or a tuple containing an array of</span>
+<span class="sd">            the N vertices and the shape_type string. When a shape_type is present,</span>
+<span class="sd">            it overrides keyword arg shape_type. Can be an 3-dimensional array</span>
+<span class="sd">            if each shape has the same number of vertices.</span>
 <span class="sd">        shape_type : string | list</span>
 <span class="sd">            String of shape shape_type, must be one of "{'line', 'rectangle',</span>
 <span class="sd">            'ellipse', 'path', 'polygon'}". If a list is supplied it must be</span>
 <span class="sd">            the same length as the length of `data` and each element will be</span>
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
-<span class="sd">            shapes.</span>
+<span class="sd">            shapes. Overriden by data shape_type, if present.</span>
 <span class="sd">        edge_width : float | list</span>
 <span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
 <span class="sd">            same length as the length of `data` and each element will be</span>
@@ -1905,16 +1981,18 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        data : list or array</span>
-<span class="sd">            List of shape data, where each element is an (N, D) array of the</span>
-<span class="sd">            N vertices of a shape in D dimensions. Can be an 3-dimensional</span>
-<span class="sd">            array if each shape has the same number of vertices.</span>
+<span class="sd">        data : Array | Tuple(Array,str) | List[Array | Tuple(Array, str)] | Tuple(List[Array], str)</span>
+<span class="sd">            List of shape data, where each element is either an (N, D) array of the</span>
+<span class="sd">            N vertices of a shape in D dimensions or a tuple containing an array of</span>
+<span class="sd">            the N vertices and the shape_type string. When a shape_type is present,</span>
+<span class="sd">            it overrides keyword arg shape_type. Can be an 3-dimensional array</span>
+<span class="sd">            if each shape has the same number of vertices.</span>
 <span class="sd">        shape_type : string | list</span>
 <span class="sd">            String of shape shape_type, must be one of "{'line', 'rectangle',</span>
 <span class="sd">            'ellipse', 'path', 'polygon'}". If a list is supplied it must be</span>
 <span class="sd">            the same length as the length of `data` and each element will be</span>
 <span class="sd">            applied to each shape otherwise the same value will be used for all</span>
-<span class="sd">            shapes.</span>
+<span class="sd">            shapes. Overriden by data shape_type, if present.</span>
 <span class="sd">        edge_width : float | list</span>
 <span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
 <span class="sd">            same length as the length of `data` and each element will be</span>
@@ -1991,27 +2069,28 @@
                 <span class="n">ensure_iterable</span><span class="p">(</span><span class="n">z_index</span><span class="p">),</span>
             <span class="p">)</span>
 
-            <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">ec</span><span class="p">,</span> <span class="n">fc</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">shape_inputs</span><span class="p">:</span>
-
-                <span class="c1"># A False slice_key means the shape is invalid as it is not</span>
-                <span class="c1"># confined to a single plane</span>
-                <span class="n">shape_cls</span> <span class="o">=</span> <span class="n">shape_classes</span><span class="p">[</span><span class="n">ShapeType</span><span class="p">(</span><span class="n">st</span><span class="p">)]</span>
-                <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_cls</span><span class="p">(</span>
-                    <span class="n">d</span><span class="p">,</span>
-                    <span class="n">edge_width</span><span class="o">=</span><span class="n">ew</span><span class="p">,</span>
-                    <span class="n">z_index</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
-                    <span class="n">dims_order</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">,</span>
-                    <span class="n">ndisplay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span><span class="p">,</span>
-                <span class="p">)</span>
-
-                <span class="c1"># Add shape</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-                    <span class="n">shape</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">,</span> <span class="n">z_refresh</span><span class="o">=</span><span class="n">z_refresh</span>
-                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_shapes_to_view</span><span class="p">(</span><span class="n">shape_inputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_display_order_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_add_shapes_to_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape_inputs</span><span class="p">,</span> <span class="n">data_view</span><span class="p">):</span>
+        <span class="sd">"""Build new shapes and add them to the _data_view"""</span>
+        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">ec</span><span class="p">,</span> <span class="n">fc</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">shape_inputs</span><span class="p">:</span>
+
+            <span class="n">shape_cls</span> <span class="o">=</span> <span class="n">shape_classes</span><span class="p">[</span><span class="n">ShapeType</span><span class="p">(</span><span class="n">st</span><span class="p">)]</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_cls</span><span class="p">(</span>
+                <span class="n">d</span><span class="p">,</span>
+                <span class="n">edge_width</span><span class="o">=</span><span class="n">ew</span><span class="p">,</span>
+                <span class="n">z_index</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                <span class="n">dims_order</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">,</span>
+                <span class="n">ndisplay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Add shape</span>
+            <span class="n">data_view</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">edge_color</span><span class="o">=</span><span class="n">ec</span><span class="p">,</span> <span class="n">face_color</span><span class="o">=</span><span class="n">fc</span><span class="p">,</span> <span class="n">z_refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">data_view</span><span class="o">.</span><span class="n">_update_z_order</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">n_shapes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>

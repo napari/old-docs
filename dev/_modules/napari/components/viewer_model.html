@@ -296,6 +296,7 @@
 
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">layers</span>
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">..layers._source</span> <span class="kn">import</span> <span class="n">layer_source</span>
 <span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
 <span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">PathOrPaths</span>
@@ -942,7 +943,7 @@
         <span class="n">sample</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">reader_plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]:</span>
         <span class="sd">"""Open `sample` from `plugin` and add it to the viewer.</span>
 
 <span class="sd">        To see all available samples registered by plugins, use</span>
@@ -961,6 +962,11 @@
 <span class="sd">            additional kwargs will be passed to the sample data loader provided</span>
 <span class="sd">            by `plugin`.  Use of **kwargs may raise an error if the kwargs do</span>
 <span class="sd">            not match the sample data loader.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        layers : list</span>
+<span class="sd">            A list of any layers that were added to the viewer.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -985,16 +991,19 @@
                 <span class="n">msg</span> <span class="o">+=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s2">"No plugin samples have been registered."</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">datum</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">datum</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">reader_plugin</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s1">'Got unexpected type for sample '</span>
-                <span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s1">, </span><span class="si">{</span><span class="n">sample</span><span class="si">!r}</span><span class="s1">): </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span>
-            <span class="p">)</span></div>
+        <span class="k">with</span> <span class="n">layer_source</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">sample</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">added</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">datum</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                    <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">datum</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">added</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">reader_plugin</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">'Got unexpected type for sample '</span>
+                    <span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s1">, </span><span class="si">{</span><span class="n">sample</span><span class="si">!r}</span><span class="s1">): </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span>
+                <span class="p">)</span></div>
 
 <div class="viewcode-block" id="ViewerModel.open"><a class="viewcode-back" href="../../../api/napari.components.ViewerModel.html#napari.components.ViewerModel.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1100,7 +1109,9 @@
 <span class="sd">        """</span>
         <span class="kn">from</span> <span class="nn">..plugins.io</span> <span class="kn">import</span> <span class="n">read_data_with_plugins</span>
 
-        <span class="n">layer_data</span> <span class="o">=</span> <span class="n">read_data_with_plugins</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="n">layer_data</span><span class="p">,</span> <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">read_data_with_plugins</span><span class="p">(</span>
+            <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span>
+        <span class="p">)</span>
 
         <span class="c1"># glean layer names from filename. These will be used as *fallback*</span>
         <span class="c1"># names, if the plugin does not return a name kwarg in their meta dict.</span>
@@ -1118,21 +1129,20 @@
 
         <span class="c1"># add each layer to the viewer</span>
         <span class="n">added</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for layers that get added</span>
+        <span class="n">plugin</span> <span class="o">=</span> <span class="n">hookimpl</span><span class="o">.</span><span class="n">plugin_name</span> <span class="k">if</span> <span class="n">hookimpl</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">filenames</span><span class="p">):</span>
             <span class="n">basename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
             <span class="n">_data</span> <span class="o">=</span> <span class="n">_unify_data_and_user_kwargs</span><span class="p">(</span>
                 <span class="n">data</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">,</span> <span class="n">fallback_name</span><span class="o">=</span><span class="n">basename</span>
             <span class="p">)</span>
             <span class="c1"># actually add the layer</span>
-            <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">_data</span><span class="p">)</span>
-            <span class="c1"># some add_* methods return a List[Layer], others just a Layer</span>
-            <span class="c1"># we want to always return a list</span>
-            <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">new</span><span class="p">])</span>
+            <span class="k">with</span> <span class="n">layer_source</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">reader_plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">):</span>
+                <span class="n">added</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_layer_from_data</span><span class="p">(</span><span class="o">*</span><span class="n">_data</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">added</span>
 
     <span class="k">def</span> <span class="nf">_add_layer_from_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">layer_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Layer</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]:</span>
         <span class="sd">"""Add arbitrary layer data to the viewer.</span>
 
 <span class="sd">        Primarily intended for usage by reader plugin hooks.</span>
@@ -1151,6 +1161,11 @@
 <span class="sd">            on the viewer instance.  If not provided, the layer is assumed to</span>
 <span class="sd">            be "image", unless data.dtype is one of (np.int32, np.uint32,</span>
 <span class="sd">            np.int64, np.uint64), in which case it is assumed to be "labels".</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        layers : list of layers</span>
+<span class="sd">            A list of layers added to the viewer.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1189,25 +1204,17 @@
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">add_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">'add_'</span> <span class="o">+</span> <span class="n">layer_type</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Sorry! </span><span class="si">{</span><span class="n">layer_type</span><span class="si">}</span><span class="s2"> is a valid layer type, but there is no "</span>
-                <span class="sa">f</span><span class="s2">"viewer.add_</span><span class="si">{</span><span class="n">layer_type</span><span class="si">}</span><span class="s2"> available yet."</span>
-            <span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
             <span class="n">layer</span> <span class="o">=</span> <span class="n">add_method</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">meta</span> <span class="ow">or</span> <span class="p">{}))</span>
         <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">'unexpected keyword argument'</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">):</span>
-                <span class="n">bad_key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'keyword argument '</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                    <span class="s2">"_add_layer_from_data received an unexpected keyword "</span>
-                    <span class="sa">f</span><span class="s2">"argument (</span><span class="si">{</span><span class="n">bad_key</span><span class="si">}</span><span class="s2">) for layer type </span><span class="si">{</span><span class="n">layer_type</span><span class="si">}</span><span class="s2">"</span>
-                <span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span>
-            <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">'unexpected keyword argument'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="n">exc</span>
+            <span class="n">bad_key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'keyword argument '</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">'_add_layer_from_data received an unexpected keyword argument'</span>
+                <span class="sa">f</span><span class="s1">' (</span><span class="si">{</span><span class="n">bad_key</span><span class="si">}</span><span class="s1">) for layer type </span><span class="si">{</span><span class="n">layer_type</span><span class="si">}</span><span class="s1">'</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span>
 
-        <span class="k">return</span> <span class="n">layer</span></div>
+        <span class="k">return</span> <span class="n">layer</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">layer</span><span class="p">]</span></div>
 
 
 <span class="k">def</span> <span class="nf">_normalize_layer_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="s1">'LayerData'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">'FullLayerData'</span><span class="p">:</span>

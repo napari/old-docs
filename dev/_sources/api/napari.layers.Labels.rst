@@ -126,6 +126,7 @@ napari.layers.Labels
       ~Labels.selected_label
       ~Labels.shear
       ~Labels.show_selected_label
+      ~Labels.source
       ~Labels.thumbnail
       ~Labels.translate
       ~Labels.translate_grid

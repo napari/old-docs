@@ -273,7 +273,7 @@
         <h1>Source code for napari.plugins.io</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">HookImplementation</span><span class="p">,</span>
@@ -293,7 +293,7 @@
     <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">plugin_manager</span><span class="p">:</span> <span class="n">PluginManager</span> <span class="o">=</span> <span class="n">napari_plugin_manager</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">LayerData</span><span class="p">]],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HookImplementation</span><span class="p">]]:</span>
     <span class="sd">"""Iterate reader hooks and return first non-None LayerData or None.</span>
 
 <span class="sd">    This function returns as soon as the path has been read successfully,</span>
@@ -333,6 +333,7 @@
 <span class="sd">    """</span>
     <span class="n">hook_caller</span> <span class="o">=</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_get_reader</span>
 
+    <span class="n">hookimpl</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HookImplementation</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">plugin</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">plugin</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plugin_manager</span><span class="o">.</span><span class="n">plugins</span><span class="p">:</span>
             <span class="n">names</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">plugin_name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">get_hookimpls</span><span class="p">()}</span>
@@ -343,12 +344,13 @@
         <span class="n">reader</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">_call_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">reader</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Plugin </span><span class="si">{</span><span class="n">plugin</span><span class="si">!r}</span><span class="s1"> does not support file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">hook_caller</span><span class="o">.</span><span class="n">get_plugin_implementation</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
         <span class="n">layer_data</span> <span class="o">=</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="c1"># if the reader returns a "null layer" sentinel indicating an empty</span>
         <span class="c1"># file, return an empty list, otherwise return the result or None</span>
         <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">):</span>
-            <span class="k">return</span> <span class="p">[]</span>
-        <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="p">[],</span> <span class="n">hookimpl</span>
+        <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">hookimpl</span>
 
     <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">PluginCallError</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">abspath_or_url</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -365,6 +367,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">layer_data</span> <span class="o">=</span> <span class="n">reader</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># try to read data</span>
             <span class="k">if</span> <span class="n">layer_data</span><span class="p">:</span>
+                <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">implementation</span>
                 <span class="k">break</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="c1"># collect the error and log it, but don't raise it.</span>
@@ -394,9 +397,8 @@
 
     <span class="c1"># if the reader returns a "null layer" sentinel indicating an empty file,</span>
     <span class="c1"># return an empty list, otherwise return the result or None</span>
-    <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">[]</span>
-    <span class="k">return</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="n">_data</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">layer_data</span><span class="p">)</span> <span class="k">else</span> <span class="n">layer_data</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">_data</span><span class="p">,</span> <span class="n">hookimpl</span>
 
 
 <div class="viewcode-block" id="save_layers"><a class="viewcode-back" href="../../../api/napari.html#napari.save_layers">[docs]</a><span class="k">def</span> <span class="nf">save_layers</span><span class="p">(</span>

@@ -23,7 +23,6 @@
       FunctionType
       HookImplementation
       Path
-      PluginHookOption
       PluginManager
       SampleDict
       TypedDict

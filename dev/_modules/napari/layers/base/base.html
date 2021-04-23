@@ -288,6 +288,7 @@
 <span class="kn">from</span> <span class="nn">...utils.naming</span> <span class="kn">import</span> <span class="n">magic_name</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">generate_layer_status</span>
 <span class="kn">from</span> <span class="nn">...utils.transforms</span> <span class="kn">import</span> <span class="n">Affine</span><span class="p">,</span> <span class="n">TransformChain</span>
+<span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">.._source</span> <span class="kn">import</span> <span class="n">current_source</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">compute_multiscale_level_and_corners</span><span class="p">,</span>
@@ -503,9 +504,11 @@
             <span class="n">data2world_transform</span> <span class="o">=</span> <span class="n">affine</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s1">'affine input not recognized. '</span>
-                <span class="s1">'must be either napari.utils.transforms.Affine, '</span>
-                <span class="sa">f</span><span class="s1">'ndarray, or None. Got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">affine</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s1">'affine input not recognized. must be either napari.utils.transforms.Affine, ndarray, or None. Got </span><span class="si">{dtype}</span><span class="s1">'</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">affine</span><span class="p">),</span>
+                <span class="p">)</span>
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="n">TransformChain</span><span class="p">(</span>
@@ -550,17 +553,17 @@
             <span class="n">loaded</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">_ndisplay</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">select</span><span class="o">=</span><span class="n">WarningEmitter</span><span class="p">(</span>
-                <span class="s2">"'layer.events.select' is deprecated and will be "</span>
-                <span class="s2">"removed in napari v0.4.9, use "</span>
-                <span class="s2">"'viewer.layers.selection.events.changed' instead, and inspect"</span>
-                <span class="s2">" the 'added' attribute on the event."</span><span class="p">,</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"'layer.events.select' is deprecated and will be removed in napari v0.4.9, use 'viewer.layers.selection.events.changed' instead, and inspect the 'added' attribute on the event."</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">),</span>
                 <span class="nb">type</span><span class="o">=</span><span class="s1">'select'</span><span class="p">,</span>
             <span class="p">),</span>
             <span class="n">deselect</span><span class="o">=</span><span class="n">WarningEmitter</span><span class="p">(</span>
-                <span class="s2">"'layer.events.deselect' is deprecated and will be "</span>
-                <span class="s2">"removed in napari v0.4.9, use "</span>
-                <span class="s2">"'viewer.layers.selection.events.changed' instead, and inspect"</span>
-                <span class="s2">" the 'removed' attribute on the event."</span><span class="p">,</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"'layer.events.deselect' is deprecated and will be removed in napari v0.4.9, use 'viewer.layers.selection.events.changed' instead, and inspect the 'removed' attribute on the event."</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">),</span>
                 <span class="nb">type</span><span class="o">=</span><span class="s1">'deselect'</span><span class="p">,</span>
             <span class="p">),</span>
         <span class="p">)</span>
@@ -614,7 +617,11 @@
     <span class="k">def</span> <span class="nf">opacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opacity</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">opacity</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">'opacity must be between 0.0 and 1.0; '</span> <span class="sa">f</span><span class="s1">'got </span><span class="si">{</span><span class="n">opacity</span><span class="si">}</span><span class="s1">'</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s1">'opacity must be between 0.0 and 1.0; got </span><span class="si">{opacity}</span><span class="s1">'</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
+                <span class="p">)</span>
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_opacity</span> <span class="o">=</span> <span class="n">opacity</span>
@@ -731,9 +738,11 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="s1">'data2world'</span><span class="p">]</span> <span class="o">=</span> <span class="n">affine</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s1">'affine input not recognized. '</span>
-                <span class="s1">'must be either napari.utils.transforms.Affine '</span>
-                <span class="sa">f</span><span class="s1">'or ndarray. Got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">affine</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s1">'affine input not recognized. must be either napari.utils.transforms.Affine or ndarray. Got </span><span class="si">{dtype}</span><span class="s1">'</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">affine</span><span class="p">),</span>
+                <span class="p">)</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">affine</span><span class="p">()</span>
@@ -754,10 +763,10 @@
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""tuple: Cursor position in world slice coordinates."""</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"layer.position is deprecated and will be removed in version 0.4.9."</span>
-            <span class="s2">" It should no longer be used as layers should no longer know where the"</span>
-            <span class="s2">" cursor position is. You can get the cursor position in world coordinates"</span>
-            <span class="s2">" from viewer.cursor.position."</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"layer.position is deprecated and will be removed in version 0.4.9. It should no longer be used as layers should no longer know where the cursor position is. You can get the cursor position in world coordinates from viewer.cursor.position."</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -766,10 +775,10 @@
     <span class="nd">@position</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"layer.position is deprecated and will be removed in version 0.4.9."</span>
-            <span class="s2">" It should no longer be used as layers should no longer know where the"</span>
-            <span class="s2">" cursor position is. You can get the cursor position in world coordinates"</span>
-            <span class="s2">" from viewer.cursor.position."</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"layer.position is deprecated and will be removed in version 0.4.9. It should no longer be used as layers should no longer know where the cursor position is. You can get the cursor position in world coordinates from viewer.cursor.position."</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -917,9 +926,10 @@
             <span class="c1"># Check that displayed subspace is null</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">displayed_mapped_subspace</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                    <span class="s1">'Non-orthogonal slicing is being requested, but'</span>
-                    <span class="s1">' is not fully supported. Data is displayed without'</span>
-                    <span class="s1">' applying an out-of-slice rotation or shear component.'</span><span class="p">,</span>
+                    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                        <span class="s1">'Non-orthogonal slicing is being requested, but is not fully supported. Data is displayed without applying an out-of-slice rotation or shear component.'</span><span class="p">,</span>
+                        <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">),</span>
                     <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span>
                 <span class="p">)</span>
 
@@ -1017,8 +1027,10 @@
     <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""bool: Whether this layer is selected or not."""</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. "</span>
-            <span class="s2">"Please use `layer in viewer.layers.selection`"</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. Please use `layer in viewer.layers.selection`"</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1030,9 +1042,10 @@
     <span class="nd">@selected</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected</span><span class="p">):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. "</span>
-            <span class="s2">"Please use `viewer.layers.selection.add(layer)` or "</span>
-            <span class="s2">"`viewer.layers.selection.remove(layer)`"</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"'layer.selected' is deprecated and will be removed in v0.4.9. Please use `viewer.layers.selection.add(layer)` or `viewer.layers.selection.remove(layer)`"</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1238,11 +1251,10 @@
     <span class="k">def</span> <span class="nf">coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Cursor position in data coordinates."""</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"layer.coordinates is deprecated and will be removed in version 0.4.9."</span>
-            <span class="s2">" It should no longer be used as layers should no longer know where the"</span>
-            <span class="s2">" cursor position is. You can get the cursor position in world coordinates"</span>
-            <span class="s2">" from viewer.cursor.position. You can then transform that into data"</span>
-            <span class="s2">" coordinates using the layer.world_to_data method."</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"layer.coordinates is deprecated and will be removed in version 0.4.9. It should no longer be used as layers should no longer know where the cursor position is. You can get the cursor position in world coordinates from viewer.cursor.position. You can then transform that into data coordinates using the layer.world_to_data method."</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1327,10 +1339,10 @@
 <span class="sd">        `[layer.coordinates[d] for d in viewer.dims.displayed]</span>
 <span class="sd">        """</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"displayed_coordinates is deprecated and will be removed in version 0.4.9."</span>
-            <span class="s2">" It should no longer be used as layers should will soon not know"</span>
-            <span class="s2">" which dimensions are displayed. Instead you should use"</span>
-            <span class="s2">" [layer.coordinates[d] for d in viewer.dims.displayed]"</span><span class="p">,</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"displayed_coordinates is deprecated and will be removed in version 0.4.9. It should no longer be used as layers should will soon not know which dimensions are displayed. Instead you should use [layer.coordinates[d] for d in viewer.dims.displayed]"</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">),</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1425,7 +1437,7 @@
     <script src="../../../../_static/clipboard.min.js"></script>
     <script src="../../../../_static/copybutton.js"></script>
     <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
-    <script src="../../../../_static/sphinx-book-theme.7d483ff0a819d6edff12ce0b1ead3928.js"></script>
+    <script src="../../../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
     <script async="async" src="https://unpkg.com/thebelab@latest/lib/index.js"></script>
     <script >
         const thebe_selector = ".thebe"

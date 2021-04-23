@@ -280,6 +280,8 @@
 <span class="kn">import</span> <span class="nn">toolz</span> <span class="k">as</span> <span class="nn">tz</span>
 <span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">QRunnable</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">QThreadPool</span><span class="p">,</span> <span class="n">Signal</span><span class="p">,</span> <span class="n">Slot</span>
 
+<span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
+
 
 <span class="k">def</span> <span class="nf">as_generator_function</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
     <span class="sd">"""Turns a regular function (single return) into a generator function."""</span>
@@ -403,7 +405,10 @@
                     <span class="c1"># error that will cause segfault if we try to do much other</span>
                     <span class="c1"># than simply notify the user.</span>
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">"RuntimeError in aborted thread: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                        <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                            <span class="s2">"RuntimeError in aborted thread: </span><span class="si">{result}</span><span class="s2">"</span><span class="p">,</span>
+                            <span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">,</span>
+                        <span class="p">),</span>
                         <span class="ne">RuntimeWarning</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="k">return</span>
@@ -442,7 +447,11 @@
 <span class="sd">                        time.sleep(0.5)</span>
 <span class="sd">        """</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">'"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">" failed to define work() method'</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s1">'"</span><span class="si">{name}</span><span class="s1">" failed to define work() method'</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="WorkerBase.start"><a class="viewcode-back" href="../../../api/napari.qt.threading.WorkerBase.html#napari.qt.threading.WorkerBase.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -460,7 +469,12 @@
 <span class="sd">           worker.start -&gt; worker.run -&gt; worker.work</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span> <span class="ow">in</span> <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">'This worker is already started!'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s1">'This worker is already started!'</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
 
         <span class="c1"># This will raise a RunTimeError if the worker is already deleted</span>
         <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
@@ -498,8 +512,11 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgeneratorfunction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Generator function </span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2"> cannot be used with "</span>
-                <span class="s2">"FunctionWorker, use GeneratorWorker instead"</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"Generator function </span><span class="si">{func}</span><span class="s2"> cannot be used with FunctionWorker, use GeneratorWorker instead"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span>
+                <span class="p">)</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
@@ -548,8 +565,11 @@
     <span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgeneratorfunction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Regular function </span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2"> cannot be used with "</span>
-                <span class="s2">"GeneratorWorker, use FunctionWorker instead"</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"Regular function </span><span class="si">{func}</span><span class="s2"> cannot be used with GeneratorWorker, use FunctionWorker instead"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span>
+                <span class="p">)</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">SignalsClass</span><span class="o">=</span><span class="n">SignalsClass</span><span class="p">)</span>
 
@@ -701,7 +721,11 @@
     <span class="n">msecs</span> <span class="o">=</span> <span class="n">msecs</span> <span class="k">if</span> <span class="n">msecs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">QThreadPool</span><span class="o">.</span><span class="n">globalInstance</span><span class="p">()</span><span class="o">.</span><span class="n">waitForDone</span><span class="p">(</span><span class="n">msecs</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Workers did not quit gracefully in the time allotted (</span><span class="si">{</span><span class="n">msecs</span><span class="si">}</span><span class="s2"> ms)"</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"Workers did not quit gracefully in the time allotted (</span><span class="si">{msecs}</span><span class="s2"> ms)"</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">msecs</span><span class="o">=</span><span class="n">msecs</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="p">)</span>
 
 
@@ -789,14 +813,23 @@
         <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">_worker_class</span><span class="p">,</span> <span class="n">WorkerBase</span><span class="p">)</span>
     <span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">'Worker </span><span class="si">{</span><span class="n">_worker_class</span><span class="si">}</span><span class="s1"> must be a subclass of WorkerBase'</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s1">'Worker </span><span class="si">{_worker_class}</span><span class="s1"> must be a subclass of WorkerBase'</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">_worker_class</span><span class="o">=</span><span class="n">_worker_class</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="p">)</span>
 
     <span class="n">worker</span> <span class="o">=</span> <span class="n">_worker_class</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">_connect</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_connect</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The '_connect' argument must be a dict"</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"The '_connect' argument must be a dict"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">_start_thread</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">_start_thread</span> <span class="o">=</span> <span class="kc">True</span>
@@ -806,8 +839,11 @@
             <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">_val</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s1">'"_connect[</span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s1">]" must be a function or '</span>
-                        <span class="s1">'sequence of functions'</span>
+                        <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                            <span class="s1">'"_connect[</span><span class="si">{key!r}</span><span class="s1">]" must be a function or sequence of functions'</span><span class="p">,</span>
+                            <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                        <span class="p">)</span>
                     <span class="p">)</span>
                 <span class="nb">getattr</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
 
@@ -1050,7 +1086,9 @@
 <span class="sd">    """</span>
 
     <span class="k">if</span> <span class="n">_connect</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_connect</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">'_connect parameter must be a dict'</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'_connect parameter must be a dict'</span><span class="p">,</span> <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
 
     <span class="n">thread</span> <span class="o">=</span> <span class="n">QThread</span><span class="p">()</span>
     <span class="n">worker</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -1101,7 +1139,7 @@
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
     <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
-    <script src="../../../_static/sphinx-book-theme.7d483ff0a819d6edff12ce0b1ead3928.js"></script>
+    <script src="../../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
     <script async="async" src="https://unpkg.com/thebelab@latest/lib/index.js"></script>
     <script >
         const thebe_selector = ".thebe"

@@ -111,6 +111,7 @@ napari.layers.Labels
       ~Labels.loaded
       ~Labels.mode
       ~Labels.n_dimensional
+      ~Labels.n_edit_dimensions
       ~Labels.name
       ~Labels.ndim
       ~Labels.num_colors

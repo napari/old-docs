@@ -272,11 +272,19 @@
 <span></span><span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">wraps</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">toolz</span> <span class="k">as</span> <span class="nn">tz</span>
-<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">QRunnable</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">QThreadPool</span><span class="p">,</span> <span class="n">Signal</span><span class="p">,</span> <span class="n">Slot</span>
+<span class="kn">from</span> <span class="nn">qtpy.QtCore</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">QObject</span><span class="p">,</span>
+    <span class="n">QRunnable</span><span class="p">,</span>
+    <span class="n">QThread</span><span class="p">,</span>
+    <span class="n">QThreadPool</span><span class="p">,</span>
+    <span class="n">QTimer</span><span class="p">,</span>
+    <span class="n">Signal</span><span class="p">,</span>
+    <span class="n">Slot</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 
@@ -297,7 +305,8 @@
     <span class="n">started</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>  <span class="c1"># emitted when the work is started</span>
     <span class="n">finished</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>  <span class="c1"># emitted when the work is finished</span>
     <span class="n">returned</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted with return value</span>
-    <span class="n">errored</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted with error object on Exception</span></div>
+    <span class="n">errored</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted with error object on Exception</span>
+    <span class="n">warned</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>  <span class="c1"># emitted with showwarning args on warning</span></div>
 
 
 <div class="viewcode-block" id="WorkerBase"><a class="viewcode-back" href="../../../api/napari.qt.threading.WorkerBase.html#napari.qt.threading.WorkerBase">[docs]</a><span class="k">class</span> <span class="nc">WorkerBase</span><span class="p">(</span><span class="n">QRunnable</span><span class="p">):</span>
@@ -327,6 +336,19 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_abort_requested</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">SignalsClass</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">errored</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_relay_error</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">warned</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_relay_warning</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_relay_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">..utils.notifications</span> <span class="kn">import</span> <span class="n">notification_manager</span>
+
+        <span class="n">notification_manager</span><span class="o">.</span><span class="n">receive_error</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">exc</span><span class="p">,</span> <span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_relay_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show_warn_args</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">..utils.notifications</span> <span class="kn">import</span> <span class="n">notification_manager</span>
+
+        <span class="n">notification_manager</span><span class="o">.</span><span class="n">receive_warning</span><span class="p">(</span><span class="o">*</span><span class="n">show_warn_args</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
         <span class="sd">"""Pass through attr requests to signals to simplify connection API.</span>
@@ -395,7 +417,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"always"</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">showwarning</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">w</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">warned</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">()</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
                     <span class="c1"># The Worker object has likely been deleted.</span>
@@ -479,7 +504,8 @@
 
         <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="n">QThreadPool</span><span class="o">.</span><span class="n">globalInstance</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
+        <span class="n">start_</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">QThreadPool</span><span class="o">.</span><span class="n">globalInstance</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="n">QTimer</span><span class="o">.</span><span class="n">singleShot</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">start_</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="FunctionWorker"><a class="viewcode-back" href="../../../api/napari.qt.threading.FunctionWorker.html#napari.qt.threading.FunctionWorker">[docs]</a><span class="k">class</span> <span class="nc">FunctionWorker</span><span class="p">(</span><span class="n">WorkerBase</span><span class="p">):</span>

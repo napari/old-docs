@@ -278,6 +278,7 @@
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..intensity_mixin</span> <span class="kn">import</span> <span class="n">IntensityVisualizationMixin</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">calc_data_range</span>
+<span class="kn">from</span> <span class="nn">._surface_constants</span> <span class="kn">import</span> <span class="n">Shading</span>
 
 
 <span class="c1"># Mixin must come before Layer</span>
@@ -336,6 +337,15 @@
 <span class="sd">        One of a list of preset blending modes that determines how RGB and</span>
 <span class="sd">        alpha values of the layer visual get mixed. Allowed values are</span>
 <span class="sd">        {'opaque', 'translucent', and 'additive'}.</span>
+<span class="sd">    shading: str, Shading</span>
+<span class="sd">        One of a list of preset shading modes that determine the lighting model</span>
+<span class="sd">        using when rendering the surface.</span>
+<span class="sd">            * Shading.NONE</span>
+<span class="sd">                Corresponds to shading='none'.</span>
+<span class="sd">            * Shading.FLAT</span>
+<span class="sd">                Corresponds to shading='flat'.</span>
+<span class="sd">            * Shading.SMOOTH</span>
+<span class="sd">                Corresponds to shading='smooth'.</span>
 <span class="sd">    visible : bool</span>
 <span class="sd">        Whether the layer visual is currently being displayed.</span>
 
@@ -364,6 +374,12 @@
 <span class="sd">        Color limits to be used for determining the colormap bounds for</span>
 <span class="sd">        luminance images. If not passed is calculated as the min and max of</span>
 <span class="sd">        the image.</span>
+<span class="sd">    shading: str</span>
+<span class="sd">        One of a list of preset shading modes that determine the lighting model</span>
+<span class="sd">        using when rendering the surface.</span>
+<span class="sd">            * 'none'</span>
+<span class="sd">            * 'flat'</span>
+<span class="sd">            * 'smooth'</span>
 <span class="sd">    gamma : float</span>
 <span class="sd">        Gamma correction for determining colormap linearity.</span>
 
@@ -396,6 +412,7 @@
         <span class="n">affine</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">blending</span><span class="o">=</span><span class="s1">'translucent'</span><span class="p">,</span>
+        <span class="n">shading</span><span class="o">=</span><span class="s1">'flat'</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 
@@ -416,7 +433,7 @@
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">interpolation</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">rendering</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">interpolation</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">rendering</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">shading</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
 
         <span class="c1"># assign mesh data and establish default behavior</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
@@ -451,6 +468,9 @@
 
         <span class="c1"># Trigger generation of view slice and thumbnail</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+
+        <span class="c1"># Shading mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shading</span> <span class="o">=</span> <span class="n">shading</span>
 
     <span class="k">def</span> <span class="nf">_calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">calc_data_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertex_values</span><span class="p">)</span>
@@ -553,6 +573,18 @@
             <span class="n">extrema</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">mins</span><span class="p">,</span> <span class="n">maxs</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">extrema</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shading</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shading</span><span class="p">)</span>
+
+    <span class="nd">@shading</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">shading</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shading</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shading</span><span class="p">,</span> <span class="n">Shading</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_shading</span> <span class="o">=</span> <span class="n">shading</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_shading</span> <span class="o">=</span> <span class="n">Shading</span><span class="p">(</span><span class="n">shading</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">shading</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_shading</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Get dictionary of layer state.</span>
 
@@ -567,6 +599,7 @@
                 <span class="s1">'colormap'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                 <span class="s1">'contrast_limits'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits</span><span class="p">,</span>
                 <span class="s1">'gamma'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span>
+                <span class="s1">'shading'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shading</span><span class="p">,</span>
                 <span class="s1">'data'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>

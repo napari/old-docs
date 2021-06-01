@@ -1021,34 +1021,36 @@
 <span class="sd">            Value of selected label to color, by default None</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="n">selected_label</span><span class="p">:</span>
-            <span class="n">selected_color</span> <span class="o">=</span> <span class="n">low_discrepancy_image</span><span class="p">(</span><span class="n">selected_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">selected_label</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span> <span class="o">=</span> <span class="n">low_discrepancy_image</span><span class="p">(</span>
-                    <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">selected_label</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_color_lookup_func</span><span class="p">(</span>
+                    <span class="n">im</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">im</span><span class="p">),</span> <span class="n">selected_label</span><span class="p">)</span>
                 <span class="p">)</span>
-            <span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">))</span>
-            <span class="n">colors</span><span class="p">[</span><span class="n">selected_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_color</span>
-            <span class="n">image</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">im</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span>
+                <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_with_low_discrepancy_image</span>
+            <span class="p">):</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">selected_label</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">)</span>
+                <span class="n">colors</span><span class="p">[</span><span class="n">selected_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">low_discrepancy_image</span><span class="p">(</span>
+                    <span class="n">selected_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span>
+                <span class="p">)</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">im</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">[</span><span class="n">im</span><span class="p">]</span>
             <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-                <span class="n">max_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">im</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_color_lookup_func</span><span class="p">(</span>
-                    <span class="n">im</span><span class="p">,</span> <span class="n">max_val</span>
+                    <span class="n">im</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">im</span><span class="p">)</span>
                 <span class="p">)</span>
                 <span class="k">if</span> <span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span>
-                    <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_with_low_discrepancy_image</span>
+                    <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_with_low_discrepancy_image</span>
                 <span class="p">):</span>
                     <span class="c1"># revert to "classic" mode converting all pixels since we</span>
                     <span class="c1"># encountered a large value in the raw labels image</span>
                     <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_color_lookup_func</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">selected_label</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span> <span class="o">=</span> <span class="n">low_discrepancy_image</span><span class="p">(</span>
-                        <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">max_val</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span>
-                    <span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
                     <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">[</span><span class="n">im</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">image</span>
 
@@ -1082,6 +1084,11 @@
         <span class="k">if</span> <span class="n">max_label_val</span> <span class="o">*</span> <span class="n">nbytes_low_discrepancy</span> <span class="o">&gt;</span> <span class="n">max_nbytes</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_with_low_discrepancy_image</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">max_label_val</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span> <span class="o">=</span> <span class="n">low_discrepancy_image</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">max_label_val</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_all_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_with_index</span>
 
     <span class="k">def</span> <span class="nf">_raw_to_displayed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>

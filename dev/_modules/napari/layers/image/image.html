@@ -272,8 +272,11 @@
         <h1>Source code for napari.layers.image.image</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""Image class.</span>
 <span class="sd">"""</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span> <span class="nn">types</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
@@ -290,13 +293,8 @@
 <span class="kn">from</span> <span class="nn">._image_slice_data</span> <span class="kn">import</span> <span class="n">ImageSliceData</span>
 <span class="kn">from</span> <span class="nn">._image_utils</span> <span class="kn">import</span> <span class="n">guess_multiscale</span><span class="p">,</span> <span class="n">guess_rgb</span>
 
-<span class="c1"># Use special ChunkedSlideData for async.</span>
-<span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">.experimental._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
-
-    <span class="n">SliceDataClass</span> <span class="o">=</span> <span class="n">ChunkedSliceData</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">SliceDataClass</span> <span class="o">=</span> <span class="n">ImageSliceData</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">...components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkRequest</span>
 
 
 <span class="c1"># It is important to contain at least one abstractmethod to properly exclude this class</span>
@@ -864,10 +862,21 @@
             <span class="n">thumbnail_source</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># Load our images, might be sync or async.</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">SliceDataClass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_indices</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">thumbnail_source</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SliceDataClass</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">image_indices</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">thumbnail_source</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_slice</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_load_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">SliceDataClass</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_SliceDataClass</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Use special ChunkedSlideData for async.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">.experimental._chunked_slice_data</span> <span class="kn">import</span> <span class="n">ChunkedSliceData</span>
+
+            <span class="k">return</span> <span class="n">ChunkedSliceData</span>
+        <span class="k">return</span> <span class="n">ImageSliceData</span>
+
+    <span class="k">def</span> <span class="nf">_load_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ImageSliceData</span><span class="p">):</span>
         <span class="sd">"""Load the image and maybe thumbnail source.</span>
 
 <span class="sd">        Parameters</span>
@@ -882,7 +891,7 @@
             <span class="c1"># property is now false, since the load is in progress.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">loaded</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">SliceDataClass</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_on_data_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">ImageSliceData</span><span class="p">,</span> <span class="n">sync</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">"""The given data a was loaded, use it now.</span>
 
 <span class="sd">        This routine is called synchronously from _load_async() above, or</span>
@@ -1027,7 +1036,6 @@
 
     <span class="c1"># For async we add an on_chunk_loaded() method.</span>
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">async_loading</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">...components.experimental.chunk</span> <span class="kn">import</span> <span class="n">ChunkRequest</span>
 
         <span class="k">def</span> <span class="nf">on_chunk_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">ChunkRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
             <span class="sd">"""An asynchronous ChunkRequest was loaded.</span>
@@ -1038,7 +1046,7 @@
 <span class="sd">                This request was loaded.</span>
 <span class="sd">            """</span>
             <span class="c1"># Convert the ChunkRequest to SliceData and use it.</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">SliceDataClass</span><span class="o">.</span><span class="n">from_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SliceDataClass</span><span class="o">.</span><span class="n">from_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_on_data_loaded</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 

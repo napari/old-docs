@@ -306,6 +306,7 @@
 <span class="kn">from</span> <span class="nn">..utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">is_sequence</span>
 <span class="kn">from</span> <span class="nn">..utils.mouse_bindings</span> <span class="kn">import</span> <span class="n">MousemapProvider</span>
+<span class="kn">from</span> <span class="nn">..utils.settings</span> <span class="kn">import</span> <span class="n">SETTINGS</span>
 <span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">available_themes</span>
 <span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">._viewer_mouse_bindings</span> <span class="kn">import</span> <span class="n">dims_scroll</span>
@@ -317,6 +318,7 @@
 <span class="kn">from</span> <span class="nn">.layerlist</span> <span class="kn">import</span> <span class="n">LayerList</span>
 <span class="kn">from</span> <span class="nn">.scale_bar</span> <span class="kn">import</span> <span class="n">ScaleBar</span>
 <span class="kn">from</span> <span class="nn">.text_overlay</span> <span class="kn">import</span> <span class="n">TextOverlay</span>
+<span class="kn">from</span> <span class="nn">.tooltip</span> <span class="kn">import</span> <span class="n">Tooltip</span>
 
 <span class="n">DEFAULT_THEME</span> <span class="o">=</span> <span class="s1">'dark'</span>
 <span class="n">EXCLUDE_DICT</span> <span class="o">=</span> <span class="p">{</span>
@@ -382,6 +384,7 @@
 
     <span class="n">help</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span>
     <span class="n">status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'Ready'</span>
+    <span class="n">tooltip</span><span class="p">:</span> <span class="n">Tooltip</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">Tooltip</span><span class="p">,</span> <span class="n">allow_mutation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">theme</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_THEME</span>
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'napari'</span>
 
@@ -400,6 +403,10 @@
             <span class="p">},</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__config__</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="n">Extra</span><span class="o">.</span><span class="n">ignore</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="n">SETTINGS</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">layer_tooltip_visibility</span>
+        <span class="n">SETTINGS</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">layer_tooltip_visibility</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tooltip_visible_update</span>
+        <span class="p">)</span>
 
         <span class="c1"># Add extra events - ideally these will be removed too!</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">layers_change</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">reset_view</span><span class="o">=</span><span class="n">Event</span><span class="p">)</span>
@@ -432,6 +439,9 @@
                 <span class="nb">type</span><span class="o">=</span><span class="s1">'active_layer'</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_tooltip_visible_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span>
 
     <span class="nd">@validator</span><span class="p">(</span><span class="s1">'theme'</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">_valid_theme</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
@@ -640,6 +650,10 @@
         <span class="k">if</span> <span class="n">active</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">active</span><span class="o">.</span><span class="n">get_status</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">active</span><span class="o">.</span><span class="n">help</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">visible</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">active</span><span class="o">.</span><span class="n">_get_tooltip_text</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_on_grid_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">"""Arrange the current layers is a 2D grid."""</span>

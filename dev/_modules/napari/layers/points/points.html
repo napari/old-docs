@@ -381,7 +381,7 @@
 <span class="sd">    affine : n-D array or napari.utils.transforms.Affine</span>
 <span class="sd">        (N+1, N+1) affine transformation matrix in homogeneous coordinates.</span>
 <span class="sd">        The first (N, N) entries correspond to a linear transform and</span>
-<span class="sd">        the final column is a lenght N translation vector and a 1 or a napari</span>
+<span class="sd">        the final column is a length N translation vector and a 1 or a napari</span>
 <span class="sd">        AffineTransform object. If provided then translate, scale, rotate, and</span>
 <span class="sd">        shear values are ignored.</span>
 <span class="sd">    opacity : float</span>
@@ -669,21 +669,23 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
 
-        <span class="c1"># set the current_properties</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">()</span>
+
+        <span class="c1"># Trigger generation of view slice and thumbnail</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_current_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
             <span class="p">}</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
                 <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
             <span class="p">}</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="c1"># Trigger generation of view slice and thumbnail</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -804,6 +806,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_properties</span><span class="p">(</span>
             <span class="n">properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span>
         <span class="p">)</span>
+        <span class="c1"># Updating current_properties can modify properties, so block to avoid</span>
+        <span class="c1"># infinite recursion when explicitly setting the properties.</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_color_manager</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span>
@@ -1231,7 +1237,7 @@
 <span class="sd">            it should be one of: 'direct', 'cycle', or 'colormap'</span>
 <span class="sd">        attribute : str in {'edge', 'face'}</span>
 <span class="sd">            The name of the attribute to set the color of.</span>
-<span class="sd">            Should be 'edge' for edge_colo_moder or 'face' for face_color_mode.</span>
+<span class="sd">            Should be 'edge' for edge_color_mode or 'face' for face_color_mode.</span>
 <span class="sd">        """</span>
         <span class="n">color_mode</span> <span class="o">=</span> <span class="n">ColorMode</span><span class="p">(</span><span class="n">color_mode</span><span class="p">)</span>
         <span class="n">color_manager</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'_</span><span class="si">{</span><span class="n">attribute</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>

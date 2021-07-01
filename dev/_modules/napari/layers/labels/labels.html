@@ -612,8 +612,8 @@
         <span class="c1"># Convert from brush size in data coordinates to</span>
         <span class="c1"># cursor size in world coordinates</span>
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_to_world</span><span class="o">.</span><span class="n">scale</span>
-        <span class="n">average_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">scale</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">])</span>
-        <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">*</span> <span class="n">average_scale</span><span class="p">)</span>
+        <span class="n">min_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">scale</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">])</span>
+        <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">*</span> <span class="n">min_scale</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">seed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1388,6 +1388,9 @@
         <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
         <span class="n">dims_to_paint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="p">:]</span>
         <span class="n">dims_not_painted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span><span class="p">]</span>
+        <span class="n">paint_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dims_to_paint</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_brush_shape</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"square"</span><span class="p">:</span>
             <span class="n">brush_size_dims</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
@@ -1419,11 +1422,10 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">coord_paint</span> <span class="o">=</span> <span class="n">coord</span>
 
-            <span class="n">sphere_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coord_paint</span><span class="p">)</span>
             <span class="c1"># Ensure circle doesn't have spurious point</span>
             <span class="c1"># on edge by keeping radius as ##.5</span>
             <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">brush_size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span>
-            <span class="n">mask_indices</span> <span class="o">=</span> <span class="n">sphere_indices</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">sphere_dims</span><span class="p">)</span>
+            <span class="n">mask_indices</span> <span class="o">=</span> <span class="n">sphere_indices</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">paint_scale</span><span class="p">))</span>
 
             <span class="n">mask_indices</span> <span class="o">=</span> <span class="n">mask_indices</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span>
                 <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord_paint</span><span class="p">)</span>

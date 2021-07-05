@@ -286,12 +286,13 @@
     <span class="n">rgb_to_hex</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..utils._color_manager_constants</span> <span class="kn">import</span> <span class="n">ColorMode</span>
 <span class="kn">from</span> <span class="nn">..utils.color_manager</span> <span class="kn">import</span> <span class="n">ColorManager</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">ColorType</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">dataframe_to_properties</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">get_current_properties</span><span class="p">,</span> <span class="n">prepare_properties</span>
 <span class="kn">from</span> <span class="nn">..utils.text_manager</span> <span class="kn">import</span> <span class="n">TextManager</span>
 <span class="kn">from</span> <span class="nn">._points_constants</span> <span class="kn">import</span> <span class="n">SYMBOL_ALIAS</span><span class="p">,</span> <span class="n">Mode</span><span class="p">,</span> <span class="n">Symbol</span>
 <span class="kn">from</span> <span class="nn">._points_mouse_bindings</span> <span class="kn">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">highlight</span><span class="p">,</span> <span class="n">select</span>
@@ -317,6 +318,8 @@
 <span class="sd">    properties : dict {str: array (N,)}, DataFrame</span>
 <span class="sd">        Properties for each point. Each property should be an array of length N,</span>
 <span class="sd">        where N is the number of points.</span>
+<span class="sd">    property_choices : dict {str: array (N,)}</span>
+<span class="sd">        possible values for each property.</span>
 <span class="sd">    text : str, dict</span>
 <span class="sd">        Text to be displayed with the points. If text is set to a key in properties,</span>
 <span class="sd">        the value of that property will be displayed. Multiple properties can be</span>
@@ -392,8 +395,6 @@
 <span class="sd">        {'opaque', 'translucent', and 'additive'}.</span>
 <span class="sd">    visible : bool</span>
 <span class="sd">        Whether the layer visual is currently being displayed.</span>
-<span class="sd">    property_choices : dict {str: array (N,)}</span>
-<span class="sd">        possible values for each property.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -482,7 +483,6 @@
 <span class="sd">    -----</span>
 <span class="sd">    _property_choices : dict {str: array (N,)}</span>
 <span class="sd">        Possible values for the properties in Points.properties.</span>
-<span class="sd">        If properties is not provided, it will be {} (empty dictionary).</span>
 <span class="sd">    _view_data : array (M, 2)</span>
 <span class="sd">        2D coordinates of points in the currently viewed slice.</span>
 <span class="sd">    _view_size : array (M, )</span>
@@ -579,18 +579,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
         <span class="c1"># Save the properties</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">properties</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                    <span class="s2">"Property choices should be passed as property_choices, not properties. This warning will become an error in version 0.4.11."</span><span class="p">,</span>
-                <span class="p">),</span>
-                <span class="ne">DeprecationWarning</span><span class="p">,</span>
-                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">property_choices</span> <span class="o">=</span> <span class="n">properties</span>
-            <span class="n">properties</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_properties</span><span class="p">(</span>
-            <span class="n">properties</span><span class="p">,</span> <span class="n">property_choices</span><span class="p">,</span> <span class="n">save_choices</span><span class="o">=</span><span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span> <span class="o">=</span> <span class="n">prepare_properties</span><span class="p">(</span>
+            <span class="n">properties</span><span class="p">,</span> <span class="n">property_choices</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">save_choices</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span>
 
         <span class="c1"># make the text</span>
@@ -653,7 +643,7 @@
             <span class="n">contrast_limits</span><span class="o">=</span><span class="n">edge_contrast_limits</span><span class="p">,</span>
             <span class="n">categorical_colormap</span><span class="o">=</span><span class="n">edge_color_cycle</span><span class="p">,</span>
             <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">size</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span>
             <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_face</span> <span class="o">=</span> <span class="n">ColorManager</span><span class="o">.</span><span class="n">_from_layer_kwargs</span><span class="p">(</span>
@@ -663,29 +653,18 @@
             <span class="n">contrast_limits</span><span class="o">=</span><span class="n">face_contrast_limits</span><span class="p">,</span>
             <span class="n">categorical_colormap</span><span class="o">=</span><span class="n">face_color_cycle</span><span class="p">,</span>
             <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">size</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span>
             <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="n">get_current_properties</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">)</span>
 
         <span class="c1"># Trigger generation of view slice and thumbnail</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_dims</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_update_current_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="p">}</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="p">}</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -801,15 +780,17 @@
 
     <span class="nd">@properties</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="s1">'DataFrame'</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">],</span> <span class="s1">'DataFrame'</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
     <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_properties</span><span class="p">(</span>
-            <span class="n">properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span> <span class="o">=</span> <span class="n">prepare_properties</span><span class="p">(</span>
+            <span class="n">properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="c1"># Updating current_properties can modify properties, so block to avoid</span>
         <span class="c1"># infinite recursion when explicitly setting the properties.</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_update_properties</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="n">get_current_properties</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_color_manager</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span>
@@ -826,62 +807,6 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">refresh_text</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">properties</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_prepare_properties</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">properties</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
-            <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">list</span><span class="p">]],</span> <span class="s1">'DataFrame'</span><span class="p">,</span> <span class="kc">None</span>
-        <span class="p">],</span>
-        <span class="n">property_choices</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">save_choices</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
-        <span class="sd">"""Return properties in a normalized dict-of-columns format.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        properties : Union[dict, DataFrame]</span>
-<span class="sd">            properties to be transformed</span>
-<span class="sd">        property_choices : Dict[str, np.ndarray]</span>
-<span class="sd">            previous choices</span>
-<span class="sd">        save_choices : bool</span>
-<span class="sd">            preserve property choices that are not available in input columns.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        properties (dict):</span>
-<span class="sd">            properties dictionary</span>
-<span class="sd">        """</span>
-        <span class="k">if</span> <span class="n">property_choices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">property_choices</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">properties</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">properties</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">properties</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dataframe_to_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-
-        <span class="n">new_choices</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">v</span><span class="p">,</span> <span class="n">property_choices</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[]))))</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="p">}</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">new_choices</span><span class="p">:</span>
-            <span class="c1"># case of set empty properties when have available choices list</span>
-            <span class="n">new_choices</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">property_choices</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="p">}</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">properties</span> <span class="ow">and</span> <span class="n">new_choices</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-                <span class="n">properties</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="n">k</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">new_choices</span>
-                <span class="p">}</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">properties</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">new_choices</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="p">}</span>
-        <span class="k">if</span> <span class="n">save_choices</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">property_choices</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new_choices</span><span class="p">:</span>
-                    <span class="n">new_choices</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-                    <span class="n">properties</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">),</span> <span class="n">new_choices</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">current_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
@@ -905,24 +830,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">(</span><span class="n">current_properties</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="o">.</span><span class="n">_update_current_properties</span><span class="p">(</span><span class="n">current_properties</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">current_properties</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-        <span class="sd">"""Validates the type and size of the properties"""</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                        <span class="s1">'the number of properties must equal the number of points'</span><span class="p">,</span>
-                        <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                    <span class="p">)</span>
-                <span class="p">)</span>
-            <span class="c1"># ensure the property values are a numpy array</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-                <span class="n">properties</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">properties</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">text</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TextManager</span><span class="p">:</span>

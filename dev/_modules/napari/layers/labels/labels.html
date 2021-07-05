@@ -274,7 +274,7 @@
         <h1>Source code for napari.layers.labels.labels</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span> <span class="k">as</span> <span class="n">ndi</span>
@@ -287,12 +287,13 @@
     <span class="n">low_discrepancy_image</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
+<span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
 <span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">..image._image_utils</span> <span class="kn">import</span> <span class="n">guess_multiscale</span>
 <span class="kn">from</span> <span class="nn">..image.image</span> <span class="kn">import</span> <span class="n">_ImageBase</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">transform_color</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">dataframe_to_properties</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">validate_properties</span>
 <span class="kn">from</span> <span class="nn">._labels_constants</span> <span class="kn">import</span> <span class="n">LabelBrushShape</span><span class="p">,</span> <span class="n">LabelColorMode</span><span class="p">,</span> <span class="n">Mode</span>
 <span class="kn">from</span> <span class="nn">._labels_mouse_bindings</span> <span class="kn">import</span> <span class="n">draw</span><span class="p">,</span> <span class="n">pick</span>
 <span class="kn">from</span> <span class="nn">._labels_utils</span> <span class="kn">import</span> <span class="n">indices_in_shape</span><span class="p">,</span> <span class="n">sphere_indices</span>
@@ -662,46 +663,23 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span>
 
     <span class="nd">@properties</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">]):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_properties</span><span class="p">(</span>
             <span class="n">properties</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">properties</span><span class="p">()</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_prepare_properties</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-        <span class="sd">"""Convert an input properties value to a standard dict-of-columns format.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        properties : dict or DataFrame</span>
-<span class="sd">            properties to be transformed</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        properties : dict</span>
-<span class="sd">            properties dictionary</span>
-<span class="sd">        index: dict</span>
-<span class="sd">            index mapping dictionary</span>
-<span class="sd">        """</span>
-        <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">properties</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-        <span class="p">):</span>
-            <span class="c1"># None or empty dict properties</span>
-            <span class="k">return</span> <span class="p">{},</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">properties</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">properties</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-            <span class="n">label_index</span> <span class="o">=</span> <span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"index"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">label_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># got array of indexes</span>
-                <span class="n">label_index</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">label_index</span><span class="p">)}</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># assume that properties is a DataFrame.</span>
-            <span class="n">properties</span><span class="p">,</span> <span class="n">label_index</span> <span class="o">=</span> <span class="n">dataframe_to_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-            <span class="n">properties</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">label_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">label_index</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_map_index</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
-
+    <span class="k">def</span> <span class="nf">_prepare_properties</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+        <span class="n">properties</span> <span class="o">=</span> <span class="n">validate_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
+        <span class="n">label_index</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="s1">'index'</span> <span class="ow">in</span> <span class="n">properties</span><span class="p">:</span>
+            <span class="n">label_index</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">properties</span><span class="p">[</span><span class="s1">'index'</span><span class="p">])}</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="n">label_index</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_len</span><span class="p">)}</span>
         <span class="k">return</span> <span class="n">properties</span><span class="p">,</span> <span class="n">label_index</span>
 
     <span class="nd">@property</span>
@@ -756,34 +734,6 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">looks_multiscale</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">data</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_validate_properties</span><span class="p">(</span>
-        <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-        <span class="sd">"""Validate the type and size of properties."""</span>
-        <span class="n">lens</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">lens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-                <span class="n">properties</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span> <span class="o">!=</span> <span class="n">lens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">lens</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                    <span class="s2">"the number of items must be equal for all properties"</span><span class="p">,</span>
-                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="n">properties</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_map_index</span><span class="p">(</span><span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">"""Map rows in given properties to label indices"""</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">properties</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{}</span>
-        <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
-        <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_len</span><span class="p">)}</span>
 
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Get dictionary of layer state.</span>

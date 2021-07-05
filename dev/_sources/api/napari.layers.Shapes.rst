@@ -122,6 +122,7 @@ napari.layers.Shapes
       ~Shapes.opacity
       ~Shapes.position
       ~Shapes.properties
+      ~Shapes.property_choices
       ~Shapes.rotate
       ~Shapes.scale
       ~Shapes.selected

@@ -82,6 +82,7 @@ napari.layers.Vectors
       ~Vectors.opacity
       ~Vectors.position
       ~Vectors.properties
+      ~Vectors.property_choices
       ~Vectors.rotate
       ~Vectors.scale
       ~Vectors.selected

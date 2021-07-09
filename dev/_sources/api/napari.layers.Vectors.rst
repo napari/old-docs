@@ -27,6 +27,9 @@ napari.layers.Vectors
       ~Vectors.block_update_properties
    
    
+      ~Vectors.create
+   
+   
       ~Vectors.get_status
    
    

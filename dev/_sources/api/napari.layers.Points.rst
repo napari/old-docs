@@ -30,6 +30,9 @@ napari.layers.Points
       ~Points.block_update_properties
    
    
+      ~Points.create
+   
+   
       ~Points.get_status
    
    

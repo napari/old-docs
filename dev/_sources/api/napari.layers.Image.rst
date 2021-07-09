@@ -27,6 +27,9 @@ napari.layers.Image
       ~Image.block_update_properties
    
    
+      ~Image.create
+   
+   
       ~Image.get_status
    
    

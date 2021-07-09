@@ -27,6 +27,9 @@ napari.layers.Labels
       ~Labels.block_update_properties
    
    
+      ~Labels.create
+   
+   
       ~Labels.fill
    
    

@@ -27,6 +27,9 @@ napari.layers.Tracks
       ~Tracks.block_update_properties
    
    
+      ~Tracks.create
+   
+   
       ~Tracks.get_status
    
    

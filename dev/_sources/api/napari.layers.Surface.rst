@@ -27,6 +27,9 @@ napari.layers.Surface
       ~Surface.block_update_properties
    
    
+      ~Surface.create
+   
+   
       ~Surface.get_status
    
    

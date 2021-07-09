@@ -33,6 +33,9 @@ napari.layers.Shapes
       ~Shapes.block_update_properties
    
    
+      ~Shapes.create
+   
+   
       ~Shapes.expand_shape
    
    

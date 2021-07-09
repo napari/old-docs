@@ -27,6 +27,9 @@ napari.layers.Layer
       ~Layer.block_update_properties
    
    
+      ~Layer.create
+   
+   
       ~Layer.get_status
    
    

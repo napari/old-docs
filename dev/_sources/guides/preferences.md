@@ -115,6 +115,26 @@ Main application settings.
 
 * <small>Default: `[]`.</small>
 
+#### Playback frames per second
+
+*Playback speed in frames per second.*
+
+* <small>Access programmatically with `SETTINGS.application.playback_fps`.</small>
+
+* <small>Type: `builtins.int`.</small>
+
+* <small>Default: `10`.</small>
+* <small>UI: This setting can be configured via the preferences dialog.</small>
+#### Playback loop mode
+
+*Loop mode for playback.*
+
+* <small>Access programmatically with `SETTINGS.application.playback_mode`.</small>
+
+* <small>Type: `napari.utils.settings._constants.LoopMode`.</small>
+
+* <small>Default: `<LoopMode.LOOP: 'loop'>`.</small>
+* <small>UI: This setting can be configured via the preferences dialog.</small>
 #### Preferences size
 
 *Last saved width and height for the preferences dialog. This setting is managed by the application.*

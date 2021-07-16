@@ -84,7 +84,6 @@ napari.layers.Labels
       ~Labels.affine
       ~Labels.attenuation
       ~Labels.blending
-      ~Labels.brush_shape
       ~Labels.brush_size
       ~Labels.class_keymap
       ~Labels.color

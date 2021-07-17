@@ -290,6 +290,7 @@
 <span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
 <span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
+<span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">no_op</span>
 <span class="kn">from</span> <span class="nn">..image._image_utils</span> <span class="kn">import</span> <span class="n">guess_multiscale</span>
 <span class="kn">from</span> <span class="nn">..image.image</span> <span class="kn">import</span> <span class="n">_ImageBase</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">transform_color</span>
@@ -297,6 +298,28 @@
 <span class="kn">from</span> <span class="nn">._labels_constants</span> <span class="kn">import</span> <span class="n">LabelColorMode</span><span class="p">,</span> <span class="n">Mode</span>
 <span class="kn">from</span> <span class="nn">._labels_mouse_bindings</span> <span class="kn">import</span> <span class="n">draw</span><span class="p">,</span> <span class="n">pick</span>
 <span class="kn">from</span> <span class="nn">._labels_utils</span> <span class="kn">import</span> <span class="n">indices_in_shape</span><span class="p">,</span> <span class="n">sphere_indices</span>
+
+<span class="n">_REV_SHAPE_HELP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'enter paint or fill mode to edit labels'</span><span class="p">):</span> <span class="p">{</span><span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">},</span>
+    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'hold &lt;space&gt; to pan/zoom, click to pick a label'</span><span class="p">):</span> <span class="p">{</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+        <span class="s1">'hold &lt;space&gt; to pan/zoom, hold &lt;shift&gt; to toggle preserve_labels, hold &lt;control&gt; to fill, hold &lt;alt&gt; to erase, drag to paint a label'</span>
+    <span class="p">):</span> <span class="p">{</span><span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">},</span>
+    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'hold &lt;space&gt; to pan/zoom, drag to erase a label'</span><span class="p">):</span> <span class="p">{</span><span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="c1"># This avoid duplicating the trans._ help messages above</span>
+<span class="c1"># as some modes have the same help.</span>
+<span class="c1"># while most tooling will recognise identical messages,</span>
+<span class="c1"># this can lead to human error.</span>
+<span class="n">_FWD_SHAPE_HELP</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">modes</span> <span class="ow">in</span> <span class="n">_REV_SHAPE_HELP</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+        <span class="n">_FWD_SHAPE_HELP</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span>
 
 
 <span class="k">class</span> <span class="nc">Labels</span><span class="p">(</span><span class="n">_ImageBase</span><span class="p">):</span>
@@ -854,59 +877,39 @@
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
 
+    <span class="n">_drag_modes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">:</span> <span class="n">pick</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">:</span> <span class="n">draw</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">:</span> <span class="n">draw</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">:</span> <span class="n">draw</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">_move_modes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">_cursor_modes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span> <span class="s1">'standard'</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">:</span> <span class="s1">'cross'</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">:</span> <span class="s1">'circle'</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">:</span> <span class="s1">'cross'</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">:</span> <span class="s1">'circle'</span><span class="p">,</span>
+    <span class="p">}</span>
+
     <span class="nd">@mode</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mode</span><span class="p">]):</span>
-        <span class="n">mode</span> <span class="o">=</span> <span class="n">Mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
-            <span class="n">mode</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span>
-
-        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">:</span>
+        <span class="n">mode</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_setter_helper</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">Mode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">changed</span><span class="p">:</span>
             <span class="k">return</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pick</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">,</span> <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">,</span> <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">_FWD_SHAPE_HELP</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="s1">'standard'</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'enter paint or fill mode to edit labels'</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PICK</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="s1">'cross'</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'hold &lt;space&gt; to pan/zoom, click to pick a label'</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pick</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="s1">'circle'</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">,</span> <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_cursor_size</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'hold &lt;space&gt; to pan/zoom, hold &lt;shift&gt; to toggle preserve_labels, hold &lt;control&gt; to fill, hold &lt;alt&gt; to erase, drag to paint a label'</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">FILL</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="s1">'cross'</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'hold &lt;space&gt; to pan/zoom, click to fill a label'</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="s1">'circle'</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cursor_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_cursor_size</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'hold &lt;space&gt; to pan/zoom, drag to erase a label'</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mouse_drag_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s2">"Mode not recognized"</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">mode</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>

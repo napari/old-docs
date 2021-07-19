@@ -30,6 +30,9 @@ napari.components.Camera
       ~Camera.dict
    
    
+      ~Camera.enums_as_values
+   
+   
       ~Camera.from_orm
    
    

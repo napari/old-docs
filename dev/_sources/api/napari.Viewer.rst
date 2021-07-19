@@ -60,6 +60,9 @@ napari.Viewer
       ~Viewer.dict
    
    
+      ~Viewer.enums_as_values
+   
+   
       ~Viewer.from_orm
    
    

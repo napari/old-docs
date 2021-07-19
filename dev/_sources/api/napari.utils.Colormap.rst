@@ -30,6 +30,9 @@ napari.utils.Colormap
       ~Colormap.dict
    
    
+      ~Colormap.enums_as_values
+   
+   
       ~Colormap.from_orm
    
    

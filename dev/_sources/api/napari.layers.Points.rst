@@ -33,6 +33,9 @@ napari.layers.Points
       ~Points.create
    
    
+      ~Points.get_ray_intersections
+   
+   
       ~Points.get_status
    
    

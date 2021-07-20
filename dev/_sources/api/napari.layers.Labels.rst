@@ -36,6 +36,9 @@ napari.layers.Labels
       ~Labels.get_color
    
    
+      ~Labels.get_ray_intersections
+   
+   
       ~Labels.get_status
    
    

@@ -39,6 +39,9 @@ napari.layers.Shapes
       ~Shapes.expand_shape
    
    
+      ~Shapes.get_ray_intersections
+   
+   
       ~Shapes.get_status
    
    

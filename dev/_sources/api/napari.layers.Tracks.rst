@@ -30,6 +30,9 @@ napari.layers.Tracks
       ~Tracks.create
    
    
+      ~Tracks.get_ray_intersections
+   
+   
       ~Tracks.get_status
    
    

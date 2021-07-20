@@ -30,6 +30,9 @@ napari.layers.Image
       ~Image.create
    
    
+      ~Image.get_ray_intersections
+   
+   
       ~Image.get_status
    
    

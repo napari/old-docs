@@ -292,6 +292,7 @@
 
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">HookImplementation</span>
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">PluginManager</span> <span class="k">as</span> <span class="n">PluginManager</span>
+<span class="kn">from</span> <span class="nn">napari_plugin_engine.hooks</span> <span class="kn">import</span> <span class="n">HookCaller</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">TypedDict</span>
 
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">AugmentedWidget</span><span class="p">,</span> <span class="n">LayerData</span><span class="p">,</span> <span class="n">SampleDict</span><span class="p">,</span> <span class="n">WidgetCallable</span>
@@ -346,13 +347,15 @@
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">discovery_blocked</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_hookspecs</span><span class="p">(</span><span class="n">hook_specifications</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sample_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SampleDict</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># dicts to store maps from extension -&gt; plugin_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension2reader</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension2writer</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sample_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SampleDict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dock_widgets</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span>
             <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">WidgetCallable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span>
-        <span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_function_widgets</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span>
-            <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
-        <span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_function_widgets</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'linux'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">running_as_bundled_app</span><span class="p">():</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">user_site_packages</span><span class="p">())</span>
@@ -364,6 +367,12 @@
                 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_skimage_data</span>
 
                 <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">_skimage_data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">'scikit-image'</span><span class="p">)</span>
+
+            <span class="kn">from</span> <span class="nn">..utils.settings</span> <span class="kn">import</span> <span class="n">SETTINGS</span>
+
+            <span class="c1"># dicts to store maps from extension -&gt; plugin_name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension2reader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">SETTINGS</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">extension2reader</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension2writer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">SETTINGS</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">extension2writer</span><span class="p">)</span>
 
 <div class="viewcode-block" id="NapariPluginManager.register"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.register">[docs]</a>    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">namespace</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -767,7 +776,125 @@
                 <span class="p">)</span>
                 <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">plg_wdgs</span><span class="p">[</span><span class="n">widget_name</span><span class="p">]</span></div></div>
+        <span class="k">return</span> <span class="n">plg_wdgs</span><span class="p">[</span><span class="n">widget_name</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.get_reader_for_extension"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.get_reader_for_extension">[docs]</a>    <span class="k">def</span> <span class="nf">get_reader_for_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">"""Return reader plugin assigned to `extension`, or None."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_plugin_for_extension</span><span class="p">(</span><span class="n">extension</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">'reader'</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.assign_reader_to_extensions"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.assign_reader_to_extensions">[docs]</a>    <span class="k">def</span> <span class="nf">assign_reader_to_extensions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">reader</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extensions</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""Assign a specific reader plugin to `extensions`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        reader : str</span>
+<span class="sd">            Name of a plugin offering a reader hook.</span>
+<span class="sd">        extensions : Union[str, Iterable[str]]</span>
+<span class="sd">            Name(s) of extensions to always write with `reader`</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span> <span class="nn">..utils.settings</span> <span class="kn">import</span> <span class="n">SETTINGS</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assign_plugin_to_extensions</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">extensions</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">'reader'</span><span class="p">)</span>
+        <span class="n">SETTINGS</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">extension2reader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension2reader</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.get_writer_for_extension"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.get_writer_for_extension">[docs]</a>    <span class="k">def</span> <span class="nf">get_writer_for_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">"""Return writer plugin assigned to `extension`, or None."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_plugin_for_extension</span><span class="p">(</span><span class="n">extension</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">'writer'</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.assign_writer_to_extensions"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.assign_writer_to_extensions">[docs]</a>    <span class="k">def</span> <span class="nf">assign_writer_to_extensions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extensions</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""Assign a specific writer plugin to `extensions`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        writer : str</span>
+<span class="sd">            Name of a plugin offering a writer hook.</span>
+<span class="sd">        extensions : Union[str, Iterable[str]]</span>
+<span class="sd">            Name(s) of extensions to always write with `writer`</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span> <span class="nn">..utils.settings</span> <span class="kn">import</span> <span class="n">SETTINGS</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assign_plugin_to_extensions</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">extensions</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">'writer'</span><span class="p">)</span>
+        <span class="n">SETTINGS</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">extension2writer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension2writer</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_plugin_for_extension</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">type_</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">"""helper method for public get_&lt;type_&gt;_for_extension functions."""</span>
+        <span class="n">ext_map</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'_extension2</span><span class="si">{</span><span class="n">type_</span><span class="si">}</span><span class="s1">'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ext_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"invalid plugin type: </span><span class="si">{type_!r}</span><span class="s2">"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">type_</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">extension</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"."</span><span class="p">):</span>
+            <span class="n">extension</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">extension</span><span class="si">}</span><span class="s2">"</span>
+
+        <span class="n">plugin</span> <span class="o">=</span> <span class="n">ext_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
+        <span class="c1"># make sure it's still an active plugin</span>
+        <span class="k">if</span> <span class="n">plugin</span> <span class="ow">and</span> <span class="p">(</span><span class="n">plugin</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">):</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext_map</span><span class="p">[</span><span class="n">plugin</span><span class="p">]</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">plugin</span>
+
+    <span class="k">def</span> <span class="nf">_assign_plugin_to_extensions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">plugin</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">extensions</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">type_</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""helper method for public assign_&lt;type_&gt;_to_extensions functions."""</span>
+        <span class="n">caller</span><span class="p">:</span> <span class="n">HookCaller</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'napari_get_</span><span class="si">{</span><span class="n">type_</span><span class="si">}</span><span class="s1">'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">caller</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"invalid plugin type: </span><span class="si">{type_!r}</span><span class="s2">"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">type_</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">plugins</span> <span class="o">=</span> <span class="n">caller</span><span class="o">.</span><span class="n">get_hookimpls</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">plugin</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="n">p</span><span class="o">.</span><span class="n">plugin_name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">plugins</span><span class="p">}:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s2">"</span><span class="si">{plugin!r}</span><span class="s2"> is not a valid </span><span class="si">{type_}</span><span class="s2"> plugin name"</span><span class="p">,</span>
+                <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">,</span>
+                <span class="n">type_</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">ext_map</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'_extension2</span><span class="si">{</span><span class="n">type_</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extensions</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">extensions</span> <span class="o">=</span> <span class="p">[</span><span class="n">extensions</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extensions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ext</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"."</span><span class="p">):</span>
+                <span class="n">ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">ext</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">ext_map</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="n">plugin</span>
+
+            <span class="c1"># give warning that plugin *may* not be able to read that extension</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="n">caller</span><span class="o">.</span><span class="n">_call_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="sa">f</span><span class="s1">'_testing_</span><span class="si">{</span><span class="n">ext</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s1">'plugin </span><span class="si">{plugin!r}</span><span class="s1"> did not return a </span><span class="si">{type_}</span><span class="s1"> function when '</span>
+                    <span class="s1">'provided a path ending in </span><span class="si">{ext!r}</span><span class="s1">.  This *may* '</span>
+                    <span class="s1">'indicate a typo?'</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">plugin</span><span class="o">=</span><span class="n">plugin</span><span class="p">,</span>
+                    <span class="n">type_</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span>
+                    <span class="n">ext</span><span class="o">=</span><span class="n">ext</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
 </pre></div>
       </article>
       <footer>

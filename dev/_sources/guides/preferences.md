@@ -261,6 +261,26 @@ Plugins settings.
 
 * <small>Default: `set()`.</small>
 
+#### Reader plugin extension association.
+
+*Assign file extensions to specific reader plugins*
+
+* <small>Access programmatically with `SETTINGS.plugins.extension2reader`.</small>
+
+* <small>Type: `builtins.str`.</small>
+
+* <small>Default: `{}`.</small>
+
+#### Writer plugin extension association.
+
+*Assign file extensions to specific writer plugins*
+
+* <small>Access programmatically with `SETTINGS.plugins.extension2writer`.</small>
+
+* <small>Type: `builtins.str`.</small>
+
+* <small>Default: `{}`.</small>
+
 
 ### SHORTCUTS
 

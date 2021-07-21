@@ -24,6 +24,12 @@ napari.plugins.NapariPluginManager
       ~NapariPluginManager.add_hookspecs
    
    
+      ~NapariPluginManager.assign_reader_to_extensions
+   
+   
+      ~NapariPluginManager.assign_writer_to_extensions
+   
+   
       ~NapariPluginManager.available_samples
    
    
@@ -60,10 +66,16 @@ napari.plugins.NapariPluginManager
       ~NapariPluginManager.get_name
    
    
+      ~NapariPluginManager.get_reader_for_extension
+   
+   
       ~NapariPluginManager.get_standard_metadata
    
    
       ~NapariPluginManager.get_widget
+   
+   
+      ~NapariPluginManager.get_writer_for_extension
    
    
       ~NapariPluginManager.is_blocked

@@ -327,6 +327,7 @@
     <span class="n">get_default_shape_type</span><span class="p">,</span>
     <span class="n">get_shape_ndim</span><span class="p">,</span>
     <span class="n">number_of_shapes</span><span class="p">,</span>
+    <span class="n">validate_num_vertices</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">DEFAULT_COLOR_CYCLE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
@@ -1847,6 +1848,288 @@
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span>
+
+<div class="viewcode-block" id="Shapes.add_rectangles"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add_rectangles">[docs]</a>    <span class="k">def</span> <span class="nf">add_rectangles</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Add rectangles to the current layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Array | List[Array]</span>
+<span class="sd">            List of rectangle data where each element is a (4, D) array of 4 vertices</span>
+<span class="sd">            in D dimensions, or a (2, D) array of 2 vertices in D dimensions, where</span>
+<span class="sd">            the vertices are top-left and bottom-right corners.</span>
+<span class="sd">            Can be a 3-dimensional array for multiple shapes, or list of 2 or 4</span>
+<span class="sd">            vertices for a single shape.</span>
+<span class="sd">        edge_width : float | list</span>
+<span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        edge_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        face_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        z_index : int | list</span>
+<span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
+<span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        """</span>
+        <span class="c1"># rectangles can have either 4 vertices or (top left, bottom right)</span>
+        <span class="n">valid_vertices_per_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">validate_num_vertices</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="s1">'rectangle'</span><span class="p">,</span> <span class="n">valid_vertices</span><span class="o">=</span><span class="n">valid_vertices_per_shape</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="s1">'rectangle'</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shapes.add_ellipses"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add_ellipses">[docs]</a>    <span class="k">def</span> <span class="nf">add_ellipses</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Add ellipses to the current layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Array | List[Array]</span>
+<span class="sd">            List of ellipse data where each element is a (4, D) array of 4 vertices</span>
+<span class="sd">            in D dimensions representing a bounding box, or a (2, D) array of</span>
+<span class="sd">            center position and radii magnitudes in D dimensions.</span>
+<span class="sd">            Can be a 3-dimensional array for multiple shapes, or list of 2 or 4</span>
+<span class="sd">            vertices for a single shape.</span>
+<span class="sd">        edge_width : float | list</span>
+<span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        edge_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        face_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        z_index : int | list</span>
+<span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
+<span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        """</span>
+
+        <span class="n">valid_elem_per_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">validate_num_vertices</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="s1">'ellipse'</span><span class="p">,</span> <span class="n">valid_vertices</span><span class="o">=</span><span class="n">valid_elem_per_shape</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="s1">'ellipse'</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shapes.add_polygons"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add_polygons">[docs]</a>    <span class="k">def</span> <span class="nf">add_polygons</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Add polygons to the current layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Array | List[Array]</span>
+<span class="sd">            List of polygon data where each element is a (V, D) array of V vertices</span>
+<span class="sd">            in D dimensions representing a polygon. Can be a 3-dimensional array if</span>
+<span class="sd">            polygons have same number of vertices, or a list of V vertices for a</span>
+<span class="sd">            single polygon.</span>
+<span class="sd">        edge_width : float | list</span>
+<span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        edge_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        face_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        z_index : int | list</span>
+<span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
+<span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        """</span>
+
+        <span class="n">min_vertices</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">validate_num_vertices</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'polygon'</span><span class="p">,</span> <span class="n">min_vertices</span><span class="o">=</span><span class="n">min_vertices</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="s1">'polygon'</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shapes.add_lines"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add_lines">[docs]</a>    <span class="k">def</span> <span class="nf">add_lines</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Add lines to the current layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Array | List[Array]</span>
+<span class="sd">            List of line data where each element is a (2, D) array of 2 vertices</span>
+<span class="sd">            in D dimensions representing a line. Can be a 3-dimensional array for</span>
+<span class="sd">            multiple shapes, or list of 2 vertices for a single shape.</span>
+<span class="sd">        edge_width : float | list</span>
+<span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        edge_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        face_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        z_index : int | list</span>
+<span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
+<span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        """</span>
+
+        <span class="n">valid_vertices_per_line</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,)</span>
+        <span class="n">validate_num_vertices</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="s1">'line'</span><span class="p">,</span> <span class="n">valid_vertices</span><span class="o">=</span><span class="n">valid_vertices_per_line</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="s1">'line'</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shapes.add_paths"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add_paths">[docs]</a>    <span class="k">def</span> <span class="nf">add_paths</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">edge_width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">edge_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">face_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Add paths to the current layer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Array | List[Array]</span>
+<span class="sd">            List of path data where each element is a (V, D) array of V vertices</span>
+<span class="sd">            in D dimensions representing a path. Can be a 3-dimensional array</span>
+<span class="sd">            if all paths have same number of vertices, or a list of V vertices</span>
+<span class="sd">            for a single path.</span>
+<span class="sd">        edge_width : float | list</span>
+<span class="sd">            thickness of lines and edges. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        edge_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        face_color : str | tuple | list</span>
+<span class="sd">            If string can be any color name recognized by vispy or hex value if</span>
+<span class="sd">            starting with `#`. If array-like must be 1-dimensional array with 3</span>
+<span class="sd">            or 4 elements. If a list is supplied it must be the same length as</span>
+<span class="sd">            the length of `data` and each element will be applied to each shape</span>
+<span class="sd">            otherwise the same value will be used for all shapes.</span>
+<span class="sd">        z_index : int | list</span>
+<span class="sd">            Specifier of z order priority. Shapes with higher z order are</span>
+<span class="sd">            displayed ontop of others. If a list is supplied it must be the</span>
+<span class="sd">            same length as the length of `data` and each element will be</span>
+<span class="sd">            applied to each shape otherwise the same value will be used for all</span>
+<span class="sd">            shapes.</span>
+<span class="sd">        """</span>
+
+        <span class="n">min_vertices_per_path</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">validate_num_vertices</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">,</span> <span class="n">min_vertices</span><span class="o">=</span><span class="n">min_vertices_per_path</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">shape_type</span><span class="o">=</span><span class="s1">'path'</span><span class="p">,</span>
+            <span class="n">edge_width</span><span class="o">=</span><span class="n">edge_width</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
+            <span class="n">face_color</span><span class="o">=</span><span class="n">face_color</span><span class="p">,</span>
+            <span class="n">z_index</span><span class="o">=</span><span class="n">z_index</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Shapes.add"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>

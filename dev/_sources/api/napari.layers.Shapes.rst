@@ -21,6 +21,21 @@ napari.layers.Shapes
       ~Shapes.add
    
    
+      ~Shapes.add_ellipses
+   
+   
+      ~Shapes.add_lines
+   
+   
+      ~Shapes.add_paths
+   
+   
+      ~Shapes.add_polygons
+   
+   
+      ~Shapes.add_rectangles
+   
+   
       ~Shapes.as_layer_data_tuple
    
    

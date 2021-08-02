@@ -21,6 +21,9 @@ napari.components.Camera
       ~Camera.asdict
    
    
+      ~Camera.calculate_nd_view_direction
+   
+   
       ~Camera.construct
    
    
@@ -73,5 +76,6 @@ napari.components.Camera
       :inherited-members:
    
       ~Camera.events
+      ~Camera.view_direction
    
    

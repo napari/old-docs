@@ -290,6 +290,7 @@
 <span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
 <span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.geometry</span> <span class="kn">import</span> <span class="n">clamp_point_to_bounding_box</span>
+<span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">generate_layer_status</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">no_op</span>
 <span class="kn">from</span> <span class="nn">..image._image_utils</span> <span class="kn">import</span> <span class="n">guess_multiscale</span>
@@ -311,7 +312,6 @@
     <span class="p">):</span> <span class="p">{</span><span class="n">Mode</span><span class="o">.</span><span class="n">PAINT</span><span class="p">},</span>
     <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'hold &lt;space&gt; to pan/zoom, drag to erase a label'</span><span class="p">):</span> <span class="p">{</span><span class="n">Mode</span><span class="o">.</span><span class="n">ERASE</span><span class="p">},</span>
 <span class="p">}</span>
-
 
 <span class="c1"># This avoid duplicating the trans._ help messages above</span>
 <span class="c1"># as some modes have the same help.</span>
@@ -932,7 +932,7 @@
     <span class="k">def</span> <span class="nf">_set_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">"""Set editable mode based on layer properties."""</span>
         <span class="k">if</span> <span class="n">editable</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiscale</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="kc">True</span>
@@ -1157,6 +1157,8 @@
 <span class="sd">            (n,) array containing the start point of the ray in data coordinates.</span>
 <span class="sd">        end_point : np.ndarray</span>
 <span class="sd">            (n,) array containing the end point of the ray in data coordinates.</span>
+<span class="sd">        dims_displayed : List[int]</span>
+<span class="sd">            The indices of the dimensions currently displayed in the viewer.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1164,6 +1166,8 @@
 <span class="sd">            The first non-zero value encountered along the ray. If none</span>
 <span class="sd">            was encountered or the viewer is in 2D mode, None is returned.</span>
 <span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">start_point</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">end_point</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="c1"># only use get_value_ray on 3D for now</span>
             <span class="c1"># we use dims_displayed because the image slice</span>
@@ -1188,6 +1192,38 @@
                 <span class="k">return</span> <span class="n">values</span><span class="p">[</span><span class="n">nonzero_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
 
         <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_get_value_3d</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">"""Get the first non-background value encountered along a ray.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            (n,) array containing the start point of the ray in data coordinates.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            (n,) array containing the end point of the ray in data coordinates.</span>
+<span class="sd">        dims_displayed : List[int]</span>
+<span class="sd">            The indices of the dimensions currently displayed in the viewer.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : int</span>
+<span class="sd">            The first non-zero value encountered along the ray. If a</span>
+<span class="sd">            non-zero value is not encountered, returns 0 (the background value).</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_value_ray</span><span class="p">(</span>
+                <span class="n">start_point</span><span class="o">=</span><span class="n">start_position</span><span class="p">,</span>
+                <span class="n">end_point</span><span class="o">=</span><span class="n">end_position</span><span class="p">,</span>
+                <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="ow">or</span> <span class="mi">0</span>
+        <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_reset_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_undo_history</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
@@ -1427,13 +1463,26 @@
         <span class="k">if</span> <span class="n">refresh</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Labels.get_status"><a class="viewcode-back" href="../../../../api/napari.layers.Labels.html#napari.layers.Labels.get_status">[docs]</a>    <span class="k">def</span> <span class="nf">get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Labels.get_status"><a class="viewcode-back" href="../../../../api/napari.layers.Labels.html#napari.layers.Labels.get_status">[docs]</a>    <span class="k">def</span> <span class="nf">get_status</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">position</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">world</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">"""Status message of the data at a coordinate position.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        position : tuple</span>
 <span class="sd">            Position in either data or world coordinates.</span>
+<span class="sd">        view_direction : Optional[np.ndarray]</span>
+<span class="sd">            A unit vector giving the direction of the ray in nD world coordinates.</span>
+<span class="sd">            The default value is None.</span>
+<span class="sd">        dims_displayed : Optional[List[int]]</span>
+<span class="sd">            A list of the dimensions currently being displayed in the viewer.</span>
+<span class="sd">            The default value is None.</span>
 <span class="sd">        world : bool</span>
 <span class="sd">            If True the position is taken to be in world coordinates</span>
 <span class="sd">            and converted into data coordinates. False by default.</span>
@@ -1443,7 +1492,13 @@
 <span class="sd">        msg : string</span>
 <span class="sd">            String containing a message that can be used as a status update.</span>
 <span class="sd">        """</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_status</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span>
+            <span class="n">position</span><span class="p">,</span>
+            <span class="n">view_direction</span><span class="o">=</span><span class="n">view_direction</span><span class="p">,</span>
+            <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+            <span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">generate_layer_status</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
         <span class="c1"># if this labels layer has properties</span>
         <span class="n">properties</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_properties</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">world</span><span class="p">)</span>

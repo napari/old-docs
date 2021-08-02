@@ -84,6 +84,7 @@ napari.layers.Tracks
       ~Tracks.help
       ~Tracks.interactive
       ~Tracks.loaded
+      ~Tracks.metadata
       ~Tracks.name
       ~Tracks.ndim
       ~Tracks.opacity

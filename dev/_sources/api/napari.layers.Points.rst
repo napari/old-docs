@@ -103,6 +103,7 @@ napari.layers.Points
       ~Points.help
       ~Points.interactive
       ~Points.loaded
+      ~Points.metadata
       ~Points.mode
       ~Points.n_dimensional
       ~Points.name

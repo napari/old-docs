@@ -86,6 +86,7 @@ napari.layers.Surface
       ~Surface.help
       ~Surface.interactive
       ~Surface.loaded
+      ~Surface.metadata
       ~Surface.name
       ~Surface.ndim
       ~Surface.opacity

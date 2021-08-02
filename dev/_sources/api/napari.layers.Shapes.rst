@@ -136,6 +136,7 @@ napari.layers.Shapes
       ~Shapes.help
       ~Shapes.interactive
       ~Shapes.loaded
+      ~Shapes.metadata
       ~Shapes.mode
       ~Shapes.name
       ~Shapes.ndim

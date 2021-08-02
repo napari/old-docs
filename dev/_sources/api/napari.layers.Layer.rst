@@ -73,6 +73,7 @@ napari.layers.Layer
       ~Layer.help
       ~Layer.interactive
       ~Layer.loaded
+      ~Layer.metadata
       ~Layer.name
       ~Layer.ndim
       ~Layer.opacity

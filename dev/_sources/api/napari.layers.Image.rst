@@ -91,6 +91,7 @@ napari.layers.Image
       ~Image.iso_threshold
       ~Image.level_shapes
       ~Image.loaded
+      ~Image.metadata
       ~Image.name
       ~Image.ndim
       ~Image.opacity

@@ -114,6 +114,7 @@ napari.layers.Labels
       ~Labels.iso_threshold
       ~Labels.level_shapes
       ~Labels.loaded
+      ~Labels.metadata
       ~Labels.mode
       ~Labels.n_dimensional
       ~Labels.n_edit_dimensions

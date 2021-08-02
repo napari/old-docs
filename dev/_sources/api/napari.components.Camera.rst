@@ -51,6 +51,9 @@ napari.components.Camera
       ~Camera.parse_raw
    
    
+      ~Camera.reset
+   
+   
       ~Camera.schema
    
    

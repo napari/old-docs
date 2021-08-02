@@ -51,6 +51,9 @@ napari.utils.Colormap
       ~Colormap.parse_raw
    
    
+      ~Colormap.reset
+   
+   
       ~Colormap.schema
    
    

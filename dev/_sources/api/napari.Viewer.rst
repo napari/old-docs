@@ -84,6 +84,9 @@ napari.Viewer
       ~Viewer.parse_raw
    
    
+      ~Viewer.reset
+   
+   
       ~Viewer.reset_view
    
    

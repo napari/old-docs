@@ -81,6 +81,9 @@ napari.components.ViewerModel
       ~ViewerModel.parse_raw
    
    
+      ~ViewerModel.reset
+   
+   
       ~ViewerModel.reset_view
    
    

@@ -84,6 +84,9 @@ napari.view\_layers.Viewer
       ~Viewer.parse_raw
    
    
+      ~Viewer.reset
+   
+   
       ~Viewer.reset_view
    
    

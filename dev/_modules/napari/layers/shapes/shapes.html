@@ -321,6 +321,7 @@
     <span class="n">add_path_polygon</span><span class="p">,</span>
     <span class="n">add_path_polygon_creating</span><span class="p">,</span>
     <span class="n">add_rectangle</span><span class="p">,</span>
+    <span class="n">finish_drawing_shape</span><span class="p">,</span>
     <span class="n">highlight</span><span class="p">,</span>
     <span class="n">select</span><span class="p">,</span>
     <span class="n">vertex_insert</span><span class="p">,</span>
@@ -346,7 +347,9 @@
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_ELLIPSE</span><span class="p">,</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_LINE</span><span class="p">,</span>
     <span class="p">},</span>
-    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'hold &lt;space&gt; to pan/zoom, press &lt;esc&gt; to finish drawing'</span><span class="p">):</span> <span class="p">{</span>
+    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+        <span class="s1">'hold &lt;space&gt; to pan/zoom, press &lt;esc&gt;, or double click to finish drawing'</span>
+    <span class="p">):</span> <span class="p">{</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_PATH</span><span class="p">,</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_POLYGON</span><span class="p">,</span>
     <span class="p">},</span>
@@ -637,6 +640,20 @@
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_PATH</span><span class="p">:</span> <span class="n">add_path_polygon_creating</span><span class="p">,</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_POLYGON</span><span class="p">:</span> <span class="n">add_path_polygon_creating</span><span class="p">,</span>
     <span class="p">}</span>
+
+    <span class="n">_double_click_modes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">SELECT</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">DIRECT</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">VERTEX_INSERT</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">VERTEX_REMOVE</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_RECTANGLE</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_ELLIPSE</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_LINE</span><span class="p">:</span> <span class="n">no_op</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_PATH</span><span class="p">:</span> <span class="n">finish_drawing_shape</span><span class="p">,</span>
+        <span class="n">Mode</span><span class="o">.</span><span class="n">ADD_POLYGON</span><span class="p">:</span> <span class="n">finish_drawing_shape</span><span class="p">,</span>
+    <span class="p">}</span>
+
     <span class="n">_cursor_modes</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span><span class="p">:</span> <span class="s1">'standard'</span><span class="p">,</span>
         <span class="n">Mode</span><span class="o">.</span><span class="n">SELECT</span><span class="p">:</span> <span class="s1">'pointing'</span><span class="p">,</span>
@@ -1825,6 +1842,16 @@
         <span class="n">mode</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_setter_helper</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">Mode</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">changed</span><span class="p">:</span>
             <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Mode</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"Mode not recognized: </span><span class="si">{mode}</span><span class="s2">"</span><span class="p">,</span> <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">old_mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">mode</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">help</span> <span class="o">=</span> <span class="n">_FWD_SHAPE_HELP</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span>
 

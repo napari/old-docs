@@ -122,6 +122,7 @@ napari.layers.Labels
       ~Labels.ndim
       ~Labels.num_colors
       ~Labels.opacity
+      ~Labels.plane
       ~Labels.position
       ~Labels.preserve_labels
       ~Labels.properties

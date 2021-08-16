@@ -133,13 +133,14 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../plugins/index.html">Plugins</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label for="toctree-checkbox-2"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../plugins/find-and-install-plugin.html">Finding and installing a napari plugin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../plugins/for_napari_developers.html">napari plugin architecture</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../plugins/for_plugin_developers.html">creating a napari plugin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../plugins/hook_specifications.html">napari hook specification reference</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../developers/index.html">Developer Resources</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label for="toctree-checkbox-3"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../developers/team.html">About Team</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../developers/team.html">About the Project and Team</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../developers/code_of_conduct.html">Code of Conduct</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../developers/code_of_conduct_reporting.html">Handling Code of Conduct Reports</a></li>
@@ -299,6 +300,7 @@
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..layers._source</span> <span class="kn">import</span> <span class="n">layer_source</span>
 <span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
+<span class="kn">from</span> <span class="nn">..layers.utils.plane_manager</span> <span class="kn">import</span> <span class="n">PlaneManager</span>
 <span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
 <span class="kn">from</span> <span class="nn">..settings</span> <span class="kn">import</span> <span class="n">get_settings</span>
 <span class="kn">from</span> <span class="nn">..utils._register</span> <span class="kn">import</span> <span class="n">create_func</span> <span class="k">as</span> <span class="n">create_add_method</span>
@@ -406,10 +408,22 @@
             <span class="p">},</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__config__</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="n">Extra</span><span class="o">.</span><span class="n">ignore</span>
+
         <span class="n">settings</span> <span class="o">=</span> <span class="n">get_settings</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">layer_tooltip_visibility</span>
         <span class="n">settings</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">layer_tooltip_visibility</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tooltip_visible_update</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_viewer_grid</span><span class="p">()</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">grid_stride</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_viewer_grid</span>
+        <span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">grid_width</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_viewer_grid</span>
+        <span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">grid_height</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_viewer_grid</span>
         <span class="p">)</span>
 
         <span class="c1"># Add extra events - ideally these will be removed too!</span>
@@ -446,6 +460,17 @@
 
     <span class="k">def</span> <span class="nf">_tooltip_visible_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tooltip</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_update_viewer_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">"""Keep viewer grid settings up to date with settings values."""</span>
+
+        <span class="n">settings</span> <span class="o">=</span> <span class="n">get_settings</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">grid_stride</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">grid_height</span><span class="p">,</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="nd">@validator</span><span class="p">(</span><span class="s1">'theme'</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">_valid_theme</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
@@ -621,7 +646,15 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">set_range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">world</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">world</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">ss</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
+
+        <span class="n">new_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="n">dim_diff</span> <span class="o">=</span> <span class="n">new_dim</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dim_diff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span><span class="p">[:</span><span class="n">new_dim</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">dim_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">position</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dim_diff</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">layers_change</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_update_interactive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -799,6 +832,7 @@
         <span class="n">blending</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">plane</span><span class="o">=</span><span class="n">PlaneManager</span><span class="p">(),</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Image</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Image</span><span class="p">]]:</span>
         <span class="sd">"""Add an image layer to the layer list.</span>
 
@@ -908,6 +942,10 @@
 <span class="sd">            should be the largest. Please note multiscale rendering is only</span>
 <span class="sd">            supported in 2D. In 3D, only the lowest resolution scale is</span>
 <span class="sd">            displayed.</span>
+<span class="sd">        plane : dict</span>
+<span class="sd">            Properties defining plane rendering in 3D. Properties are defined</span>
+<span class="sd">            in data coordinates. Valid dictionary keys are</span>
+<span class="sd">            {'position', 'normal_vector', 'thickness', and 'enabled'}.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -946,6 +984,7 @@
             <span class="s1">'blending'</span><span class="p">:</span> <span class="n">blending</span><span class="p">,</span>
             <span class="s1">'visible'</span><span class="p">:</span> <span class="n">visible</span><span class="p">,</span>
             <span class="s1">'multiscale'</span><span class="p">:</span> <span class="n">multiscale</span><span class="p">,</span>
+            <span class="s1">'plane'</span><span class="p">:</span> <span class="n">plane</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="c1"># these arguments are *already* iterables in the single-channel case.</span>

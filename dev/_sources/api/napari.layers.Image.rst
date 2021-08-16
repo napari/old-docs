@@ -95,6 +95,7 @@ napari.layers.Image
       ~Image.name
       ~Image.ndim
       ~Image.opacity
+      ~Image.plane
       ~Image.position
       ~Image.rendering
       ~Image.rotate

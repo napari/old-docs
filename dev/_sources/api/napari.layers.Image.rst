@@ -83,6 +83,7 @@ napari.layers.Image
       ~Image.downsample_factors
       ~Image.dtype
       ~Image.editable
+      ~Image.experimental_slicing_plane
       ~Image.extent
       ~Image.gamma
       ~Image.help

@@ -106,6 +106,7 @@ napari.layers.Labels
       ~Labels.downsample_factors
       ~Labels.dtype
       ~Labels.editable
+      ~Labels.experimental_slicing_plane
       ~Labels.extent
       ~Labels.gamma
       ~Labels.help

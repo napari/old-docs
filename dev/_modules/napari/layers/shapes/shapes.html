@@ -277,7 +277,7 @@
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">vispy.color</span> <span class="kn">import</span> <span class="n">get_color_names</span>
@@ -2981,6 +2981,145 @@
             <span class="n">value</span> <span class="o">=</span> <span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_get_value_3d</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="sd">"""Get the layer data value along a ray</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            The start position of the ray used to interrogate the data.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            The end position of the ray used to interrogate the data.</span>
+<span class="sd">        dims_displayed : List[int]</span>
+<span class="sd">            The indices of the dimensions currently displayed in the Viewer.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value</span>
+<span class="sd">            The data value along the supplied ray.</span>
+<span class="sd">        vertex : None</span>
+<span class="sd">            Index of vertex if any that is at the coordinates. Always returns `None`.</span>
+<span class="sd">        """</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_index_and_intersection</span><span class="p">(</span>
+            <span class="n">start_point</span><span class="o">=</span><span class="n">start_point</span><span class="p">,</span>
+            <span class="n">end_point</span><span class="o">=</span><span class="n">end_point</span><span class="p">,</span>
+            <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_index_and_intersection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="sd">"""Get the shape index and intersection point of the first shape</span>
+<span class="sd">        (i.e., closest to start_point) along the specified 3D line segment.</span>
+
+<span class="sd">        Note: this method is meant to be used for 3D intersection and returns</span>
+<span class="sd">        (None, None) when used in 2D (i.e., len(dims_displayed) is 2).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            The start position of the ray used to interrogate the data in</span>
+<span class="sd">            layer coordinates.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            The end position of the ray used to interrogate the data in</span>
+<span class="sd">            layer coordinates.</span>
+<span class="sd">        dims_displayed : List[int]</span>
+<span class="sd">            The indices of the dimensions currently displayed in the Viewer.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value</span>
+<span class="sd">            The data value along the supplied ray.</span>
+<span class="sd">        intersection_point : np.ndarray</span>
+<span class="sd">            (n,) array containing the point where the ray intersects the first shape</span>
+<span class="sd">            (i.e., the shape most in the foreground). The coordinate is in layer</span>
+<span class="sd">            coordinates.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">start_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">end_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="c1"># Get the normal vector of the click plane</span>
+                <span class="n">start_position_view</span> <span class="o">=</span> <span class="n">start_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span>
+                <span class="n">end_position_view</span> <span class="o">=</span> <span class="n">end_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span>
+                <span class="n">ray_direction</span> <span class="o">=</span> <span class="n">end_position_view</span> <span class="o">-</span> <span class="n">start_position_view</span>
+                <span class="n">ray_direction_normed</span> <span class="o">=</span> <span class="n">ray_direction</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
+                    <span class="n">ray_direction</span>
+                <span class="p">)</span>
+                <span class="c1"># step the start position back a little bit to be able to detect shapes</span>
+                <span class="c1"># that contain the start_position</span>
+                <span class="n">start_position_view</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">start_position_view</span> <span class="o">-</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">ray_direction_normed</span>
+                <span class="p">)</span>
+                <span class="n">value</span><span class="p">,</span> <span class="n">intersection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_view</span><span class="o">.</span><span class="n">_inside_3d</span><span class="p">(</span>
+                    <span class="n">start_position_view</span><span class="p">,</span> <span class="n">ray_direction_normed</span>
+                <span class="p">)</span>
+
+                <span class="c1"># add the full nD coords to intersection</span>
+                <span class="n">intersection_point</span> <span class="o">=</span> <span class="n">start_point</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">intersection_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">intersection</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">intersection_point</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">intersection_point</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">intersection_point</span>
+
+<div class="viewcode-block" id="Shapes.get_index_and_intersection"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.get_index_and_intersection">[docs]</a>    <span class="k">def</span> <span class="nf">get_index_and_intersection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="sd">"""Get the shape index and intersection point of the first shape</span>
+<span class="sd">        (i.e., closest to start_point) "under" a mouse click.</span>
+
+<span class="sd">        See examples/add_points_on_nD_shapes.py for example usage.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple</span>
+<span class="sd">            Position in either data or world coordinates.</span>
+<span class="sd">        view_direction : Optional[np.ndarray]</span>
+<span class="sd">            A unit vector giving the direction of the ray in nD world coordinates.</span>
+<span class="sd">            The default value is None.</span>
+<span class="sd">        dims_displayed : Optional[List[int]]</span>
+<span class="sd">            A list of the dimensions currently being displayed in the viewer.</span>
+<span class="sd">            The default value is None.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value</span>
+<span class="sd">            The data value along the supplied ray.</span>
+<span class="sd">        intersection_point : np.ndarray</span>
+<span class="sd">            (n,) array containing the point where the ray intersects the first shape</span>
+<span class="sd">            (i.e., the shape most in the foreground). The coordinate is in layer</span>
+<span class="sd">            coordinates.</span>
+<span class="sd">        """</span>
+        <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ray_intersections</span><span class="p">(</span>
+            <span class="n">position</span><span class="p">,</span> <span class="n">view_direction</span><span class="p">,</span> <span class="n">dims_displayed</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">start_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">end_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">shape_index</span><span class="p">,</span> <span class="n">intersection_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_index_and_intersection</span><span class="p">(</span>
+                <span class="n">start_point</span><span class="o">=</span><span class="n">start_point</span><span class="p">,</span>
+                <span class="n">end_point</span><span class="o">=</span><span class="n">end_point</span><span class="p">,</span>
+                <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shape_index</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,)</span>
+            <span class="n">intersection_point</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">shape_index</span><span class="p">,</span> <span class="n">intersection_point</span></div>
 
 <div class="viewcode-block" id="Shapes.move_to_front"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.move_to_front">[docs]</a>    <span class="k">def</span> <span class="nf">move_to_front</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Moves selected objects to be displayed in front of all others."""</span>

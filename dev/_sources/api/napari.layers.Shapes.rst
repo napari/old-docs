@@ -54,6 +54,9 @@ napari.layers.Shapes
       ~Shapes.expand_shape
    
    
+      ~Shapes.get_index_and_intersection
+   
+   
       ~Shapes.get_ray_intersections
    
    

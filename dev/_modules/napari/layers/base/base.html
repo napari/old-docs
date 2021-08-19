@@ -291,7 +291,7 @@
 <span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.geometry</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">find_front_back_face</span><span class="p">,</span>
-    <span class="n">intersect_ray_with_axis_aligned_bounding_box_3d</span><span class="p">,</span>
+    <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.key_bindings</span> <span class="kn">import</span> <span class="n">KeymapProvider</span>
 <span class="kn">from</span> <span class="nn">...utils.misc</span> <span class="kn">import</span> <span class="n">ROOT_DIR</span>
@@ -1317,22 +1317,22 @@
                 <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_data</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">dims_displayed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">position</span><span class="p">))</span>
 
                 <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
                     <span class="n">view_direction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data_ray</span><span class="p">(</span>
                         <span class="nb">list</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)</span>
                     <span class="p">)</span>
-                    <span class="n">start_pos</span><span class="p">,</span> <span class="n">end_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ray_intersections</span><span class="p">(</span>
+                    <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ray_intersections</span><span class="p">(</span>
                         <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
                         <span class="n">view_direction</span><span class="o">=</span><span class="n">view_direction</span><span class="p">,</span>
                         <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
                         <span class="n">world</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value_3d</span><span class="p">(</span>
-                        <span class="n">start_position</span><span class="o">=</span><span class="n">start_pos</span><span class="p">,</span>
-                        <span class="n">end_position</span><span class="o">=</span><span class="n">end_pos</span><span class="p">,</span>
+                        <span class="n">start_point</span><span class="o">=</span><span class="n">start_point</span><span class="p">,</span>
+                        <span class="n">end_point</span><span class="o">=</span><span class="n">end_point</span><span class="p">,</span>
                         <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
                     <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
@@ -1347,17 +1347,17 @@
 
     <span class="k">def</span> <span class="nf">_get_value_3d</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">start_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-        <span class="n">end_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">start_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="sd">"""Get the layer data value along a ray</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        start_position : np.ndarray</span>
+<span class="sd">        start_point : np.ndarray</span>
 <span class="sd">            The start position of the ray used to interrogate the data.</span>
-<span class="sd">        end_position : np.ndarray</span>
+<span class="sd">        end_point : np.ndarray</span>
 <span class="sd">            The end position of the ray used to interrogate the data.</span>
 <span class="sd">        dims_displayed : List[int]</span>
 <span class="sd">            The indices of the dimensions currently displayed in the Viewer.</span>
@@ -1496,13 +1496,13 @@
 <span class="sd">            intersects with. This is the point closest to the camera.</span>
 <span class="sd">            The point is the full nD coordinates of the layer data.</span>
 <span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
-<span class="sd">            an emtpy numpy array is returned (i.e., np.empty([]).</span>
+<span class="sd">            None is returned.</span>
 <span class="sd">        end_point : np.ndarray</span>
 <span class="sd">            The point on the axis-aligned data bounding box that the cursor click</span>
 <span class="sd">            intersects with. This is the point farthest from the camera.</span>
 <span class="sd">            The point is the full nD coordinates of the layer data.</span>
 <span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
-<span class="sd">            an emtpy numpy array is returned (i.e., np.empty([]).</span>
+<span class="sd">            None is returned.</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="c1"># create a mask to select the in view dimensions</span>
@@ -1537,12 +1537,12 @@
             <span class="c1"># Get the locations in the plane where the ray intersects</span>
             <span class="k">if</span> <span class="n">front_face_normal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">back_face_normal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">start_point_disp_dims</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">intersect_ray_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
+                    <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
                         <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">front_face_normal</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
                 <span class="n">end_point_disp_dims</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">intersect_ray_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
+                    <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
                         <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">back_face_normal</span>
                     <span class="p">)</span>
                 <span class="p">)</span>

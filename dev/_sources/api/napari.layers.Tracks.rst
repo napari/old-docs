@@ -81,6 +81,7 @@ napari.layers.Tracks
       ~Tracks.graph
       ~Tracks.graph_connex
       ~Tracks.graph_times
+      ~Tracks.head_length
       ~Tracks.help
       ~Tracks.interactive
       ~Tracks.loaded

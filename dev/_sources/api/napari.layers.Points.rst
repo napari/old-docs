@@ -63,6 +63,9 @@ napari.layers.Points
       ~Points.set_view_slice
    
    
+      ~Points.to_mask
+   
+   
       ~Points.world_to_data
    
    

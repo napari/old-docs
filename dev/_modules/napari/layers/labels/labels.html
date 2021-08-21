@@ -121,6 +121,7 @@
 </form><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../guides/index.html">Guides</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label for="toctree-checkbox-1"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../guides/3D_interactivity.html">3D interactivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../guides/event_loop.html">An Introduction to the Event Loop in napari</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../guides/connecting_events.html">Hooking up your own events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../guides/connecting_events.html#long-running-blocking-functions">Long-running, blocking functions</a></li>
@@ -391,10 +392,14 @@
 <span class="sd">        should be the largest. Please note multiscale rendering is only</span>
 <span class="sd">        supported in 2D. In 3D, only the lowest resolution scale is</span>
 <span class="sd">        displayed.</span>
-<span class="sd">    plane : dict</span>
+<span class="sd">    experimental_slicing_plane : dict or SlicingPlane</span>
 <span class="sd">        Properties defining plane rendering in 3D. Properties are defined in</span>
 <span class="sd">        data coordinates. Valid dictionary keys are</span>
-<span class="sd">        {'position', 'normal_vector', 'thickness', and 'enabled'}.</span>
+<span class="sd">        {'position', 'normal', 'thickness', and 'enabled'}.</span>
+<span class="sd">    experimental_clipping_planes : list of dicts, list of ClippingPlane, or ClippingPlaneList</span>
+<span class="sd">        Each dict defines a clipping plane in 3D in data coordinates.</span>
+<span class="sd">        Valid dictionary keys are {'position', 'normal', and 'enabled'}.</span>
+<span class="sd">        Values on the negative side of the normal are discarded if the plane is enabled.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -459,6 +464,10 @@
 
 <span class="sd">        In ERASE mode the cursor functions similarly to PAINT mode, but to</span>
 <span class="sd">        paint with background label, which effectively removes the label.</span>
+<span class="sd">    experimental_slicing_plane : SlicingPlane</span>
+<span class="sd">        Properties defining plane rendering in 3D.</span>
+<span class="sd">    experimental_clipping_planes : ClippingPlaneList</span>
+<span class="sd">        Clipping planes defined in data coordinates, used to clip the volume.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -491,7 +500,8 @@
         <span class="n">rendering</span><span class="o">=</span><span class="s1">'iso_categorical'</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">plane</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">experimental_slicing_plane</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">experimental_clipping_planes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_seed</span> <span class="o">=</span> <span class="n">seed</span>
@@ -532,7 +542,8 @@
             <span class="n">blending</span><span class="o">=</span><span class="n">blending</span><span class="p">,</span>
             <span class="n">visible</span><span class="o">=</span><span class="n">visible</span><span class="p">,</span>
             <span class="n">multiscale</span><span class="o">=</span><span class="n">multiscale</span><span class="p">,</span>
-            <span class="n">plane</span><span class="o">=</span><span class="n">plane</span><span class="p">,</span>
+            <span class="n">experimental_slicing_plane</span><span class="o">=</span><span class="n">experimental_slicing_plane</span><span class="p">,</span>
+            <span class="n">experimental_clipping_planes</span><span class="o">=</span><span class="n">experimental_clipping_planes</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
@@ -786,7 +797,10 @@
                 <span class="s1">'num_colors'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_colors</span><span class="p">,</span>
                 <span class="s1">'properties'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span>
                 <span class="s1">'rendering'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rendering</span><span class="p">,</span>
-                <span class="s1">'plane'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">experimental_slicing_plane</span><span class="o">.</span><span class="n">dict</span><span class="p">(),</span>
+                <span class="s1">'experimental_slicing_plane'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">experimental_slicing_plane</span><span class="o">.</span><span class="n">dict</span><span class="p">(),</span>
+                <span class="s1">'experimental_clipping_planes'</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="n">plane</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">plane</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">experimental_clipping_planes</span>
+                <span class="p">],</span>
                 <span class="s1">'seed'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
                 <span class="s1">'data'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
                 <span class="s1">'color'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">,</span>
@@ -1334,7 +1348,7 @@
         <span class="p">):</span>
             <span class="k">return</span>
 
-        <span class="n">dims_to_fill</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="p">:]</span>
+        <span class="n">dims_to_fill</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="p">:])</span>
         <span class="n">data_slice_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">int_coord</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">dims_to_fill</span><span class="p">:</span>
             <span class="n">data_slice_list</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
@@ -1368,7 +1382,11 @@
             <span class="n">match_indices</span> <span class="o">=</span> <span class="n">match_indices_local</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">(</span>
-            <span class="p">(</span><span class="n">match_indices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">match_indices</span><span class="p">],</span> <span class="n">new_label</span><span class="p">)</span>
+            <span class="p">(</span>
+                <span class="n">match_indices</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">match_indices</span><span class="p">],</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="n">new_label</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="p">)</span>
 
         <span class="c1"># Replace target pixels with new_label</span>
@@ -1393,8 +1411,8 @@
 <span class="sd">            calls.</span>
 <span class="sd">        """</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
-        <span class="n">dims_to_paint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="p">:]</span>
-        <span class="n">dims_not_painted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span><span class="p">]</span>
+        <span class="n">dims_to_paint</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="p">:])</span>
+        <span class="n">dims_not_painted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_order</span><span class="p">[:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span><span class="p">])</span>
         <span class="n">paint_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dims_to_paint</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
         <span class="p">)</span>
@@ -1455,7 +1473,13 @@
             <span class="n">slice_coord</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="n">keep_coords</span><span class="p">]</span> <span class="k">for</span> <span class="n">sc</span> <span class="ow">in</span> <span class="n">slice_coord</span><span class="p">)</span>
 
         <span class="c1"># save the existing values to the history</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">((</span><span class="n">slice_coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slice_coord</span><span class="p">],</span> <span class="n">new_label</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_history</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">slice_coord</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slice_coord</span><span class="p">],</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="n">new_label</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
 
         <span class="c1"># update the labels image</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slice_coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_label</span>

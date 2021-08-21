@@ -121,6 +121,7 @@
 </form><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../guides/index.html">Guides</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label for="toctree-checkbox-1"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../guides/3D_interactivity.html">3D interactivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/event_loop.html">An Introduction to the Event Loop in napari</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/connecting_events.html">Hooking up your own events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/connecting_events.html#long-running-blocking-functions">Long-running, blocking functions</a></li>
@@ -300,7 +301,6 @@
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..layers._source</span> <span class="kn">import</span> <span class="n">layer_source</span>
 <span class="kn">from</span> <span class="nn">..layers.image._image_utils</span> <span class="kn">import</span> <span class="n">guess_labels</span>
-<span class="kn">from</span> <span class="nn">..layers.utils.plane_manager</span> <span class="kn">import</span> <span class="n">PlaneManager</span>
 <span class="kn">from</span> <span class="nn">..layers.utils.stack_utils</span> <span class="kn">import</span> <span class="n">split_channels</span>
 <span class="kn">from</span> <span class="nn">..settings</span> <span class="kn">import</span> <span class="n">get_settings</span>
 <span class="kn">from</span> <span class="nn">..utils._register</span> <span class="kn">import</span> <span class="n">create_func</span> <span class="k">as</span> <span class="n">create_add_method</span>
@@ -832,7 +832,8 @@
         <span class="n">blending</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">multiscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">plane</span><span class="o">=</span><span class="n">PlaneManager</span><span class="p">(),</span>
+        <span class="n">experimental_slicing_plane</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">experimental_clipping_planes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Image</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Image</span><span class="p">]]:</span>
         <span class="sd">"""Add an image layer to the layer list.</span>
 
@@ -942,10 +943,14 @@
 <span class="sd">            should be the largest. Please note multiscale rendering is only</span>
 <span class="sd">            supported in 2D. In 3D, only the lowest resolution scale is</span>
 <span class="sd">            displayed.</span>
-<span class="sd">        plane : dict</span>
-<span class="sd">            Properties defining plane rendering in 3D. Properties are defined</span>
-<span class="sd">            in data coordinates. Valid dictionary keys are</span>
-<span class="sd">            {'position', 'normal_vector', 'thickness', and 'enabled'}.</span>
+<span class="sd">        experimental_slicing_plane : dict or SlicingPlane</span>
+<span class="sd">            Properties defining plane rendering in 3D. Properties are defined in</span>
+<span class="sd">            data coordinates. Valid dictionary keys are</span>
+<span class="sd">            {'position', 'normal', 'thickness', and 'enabled'}.</span>
+<span class="sd">        experimental_clipping_planes : list of dicts, list of ClippingPlane, or ClippingPlaneList</span>
+<span class="sd">            Each dict defines a clipping plane in 3D in data coordinates.</span>
+<span class="sd">            Valid dictionary keys are {'position', 'normal', and 'enabled'}.</span>
+<span class="sd">            Values on the negative side of the normal are discarded if the plane is enabled.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -984,7 +989,8 @@
             <span class="s1">'blending'</span><span class="p">:</span> <span class="n">blending</span><span class="p">,</span>
             <span class="s1">'visible'</span><span class="p">:</span> <span class="n">visible</span><span class="p">,</span>
             <span class="s1">'multiscale'</span><span class="p">:</span> <span class="n">multiscale</span><span class="p">,</span>
-            <span class="s1">'plane'</span><span class="p">:</span> <span class="n">plane</span><span class="p">,</span>
+            <span class="s1">'experimental_slicing_plane'</span><span class="p">:</span> <span class="n">experimental_slicing_plane</span><span class="p">,</span>
+            <span class="s1">'experimental_clipping_planes'</span><span class="p">:</span> <span class="n">experimental_clipping_planes</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="c1"># these arguments are *already* iterables in the single-channel case.</span>
@@ -996,6 +1002,7 @@
             <span class="s1">'affine'</span><span class="p">,</span>
             <span class="s1">'contrast_limits'</span><span class="p">,</span>
             <span class="s1">'metadata'</span><span class="p">,</span>
+            <span class="s1">'experimental_clipping_planes'</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="k">if</span> <span class="n">channel_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>

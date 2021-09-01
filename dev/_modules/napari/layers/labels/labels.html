@@ -736,16 +736,11 @@
 
     <span class="nd">@color</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
-
         <span class="k">if</span> <span class="ow">not</span> <span class="n">color</span><span class="p">:</span>
             <span class="n">color</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">DIRECT</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">color</span><span class="p">:</span>
             <span class="n">color</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'transparent'</span>
-
         <span class="k">if</span> <span class="kc">None</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">color</span><span class="p">:</span>
             <span class="n">color</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'black'</span>
 
@@ -753,9 +748,54 @@
             <span class="n">label</span><span class="p">:</span> <span class="n">transform_color</span><span class="p">(</span><span class="n">color_str</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">color_str</span> <span class="ow">in</span> <span class="n">color</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">}</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_color</span> <span class="o">=</span> <span class="n">colors</span>
+
+        <span class="c1"># `colors` may contain just the default None and background label</span>
+        <span class="c1"># colors, in which case we need to be in AUTO color mode. Otherwise,</span>
+        <span class="c1"># `colors` contains colors for all labels, and we should be in DIRECT</span>
+        <span class="c1"># mode.</span>
+
+        <span class="c1"># For more information</span>
+        <span class="c1"># - https://github.com/napari/napari/issues/2479</span>
+        <span class="c1"># - https://github.com/napari/napari/issues/2953</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_default_colors</span><span class="p">(</span><span class="n">colors</span><span class="p">):</span>
+            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">AUTO</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">color_mode</span> <span class="o">=</span> <span class="n">LabelColorMode</span><span class="o">.</span><span class="n">DIRECT</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="o">=</span> <span class="n">color_mode</span>
+
+    <span class="k">def</span> <span class="nf">_is_default_colors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+        <span class="sd">"""Returns True if color contains only default colors, otherwise False.</span>
+
+<span class="sd">        Default colors are black for `None` and transparent for</span>
+<span class="sd">        `self._background_label`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        color : Dict</span>
+<span class="sd">            Dictionary of label value to color array</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if color contains only default colors, otherwise False.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">'_color'</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">default_keys</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_background_label</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">default_keys</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">default_keys</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_color</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">color</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="nf">_ensure_int_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">"""Ensure data is integer by converting from bool if required, raising an error otherwise."""</span>
@@ -1615,12 +1655,5 @@
     <script src="../../../../_static/copybutton.js"></script>
     <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
     <script src="../../../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
-    <script async="async" src="https://unpkg.com/thebe@latest/lib/index.js"></script>
-    <script >
-        const thebe_selector = ".thebe"
-        const thebe_selector_input = "pre"
-        const thebe_selector_output = ".output"
-    </script>
-    <script async="async" src="../../../../_static/sphinx-thebe.js"></script>
     <script src="../../../../_static/scripts/main.js?digest=e931d09b2a40c1bb82b542effe772014573baf67"></script></body>
 </html>

@@ -276,6 +276,7 @@
         <h1>Source code for napari.plugins._plugin_manager</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">importlib</span>
 <span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">FunctionType</span>
@@ -295,6 +296,7 @@
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">HookImplementation</span>
 <span class="kn">from</span> <span class="nn">napari_plugin_engine</span> <span class="kn">import</span> <span class="n">PluginManager</span> <span class="k">as</span> <span class="n">PluginManager</span>
 <span class="kn">from</span> <span class="nn">napari_plugin_engine.hooks</span> <span class="kn">import</span> <span class="n">HookCaller</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">ValidationError</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">TypedDict</span>
 
 <span class="kn">from</span> <span class="nn">..settings</span> <span class="kn">import</span> <span class="n">get_settings</span>
@@ -302,6 +304,7 @@
 <span class="kn">from</span> <span class="nn">..utils._appdirs</span> <span class="kn">import</span> <span class="n">user_site_packages</span>
 <span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">EventedSet</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">camel_to_spaces</span><span class="p">,</span> <span class="n">running_as_bundled_app</span>
+<span class="kn">from</span> <span class="nn">..utils.theme</span> <span class="kn">import</span> <span class="n">Theme</span><span class="p">,</span> <span class="n">register_theme</span><span class="p">,</span> <span class="n">unregister_theme</span>
 <span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_builtins</span><span class="p">,</span> <span class="n">hook_specifications</span>
 
@@ -358,6 +361,7 @@
             <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">WidgetCallable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span>
         <span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_function_widgets</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Theme</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'linux'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">running_as_bundled_app</span><span class="p">():</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">user_site_packages</span><span class="p">())</span>
@@ -397,10 +401,15 @@
 
         <span class="n">plugin</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">name_or_object</span><span class="p">)</span>
 
-        <span class="c1"># remove widgets, sample data</span>
+        <span class="c1"># unregister any theme that was associated with the</span>
+        <span class="c1"># unregistered plugin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unregister_theme_colors</span><span class="p">(</span><span class="n">_name</span><span class="p">)</span>
+
+        <span class="c1"># remove widgets, sample data, theme data</span>
         <span class="k">for</span> <span class="n">_dict</span> <span class="ow">in</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_dock_widgets</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sample_data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_function_widgets</span><span class="p">,</span>
         <span class="p">):</span>
             <span class="n">_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -573,6 +582,92 @@
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample_data</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample_data</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># THEME DATA ------------------------------------</span>
+
+<div class="viewcode-block" id="NapariPluginManager.register_theme_colors"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.register_theme_colors">[docs]</a>    <span class="k">def</span> <span class="nf">register_theme_colors</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">]]],</span>
+        <span class="n">hookimpl</span><span class="p">:</span> <span class="n">HookImplementation</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">"""Register theme data dict returned by `napari_experimental_provide_theme`.</span>
+
+<span class="sd">        The `theme` data should be provided as an iterable containing dictionary</span>
+<span class="sd">        of values, where the ``folder`` value will be used as theme name.</span>
+<span class="sd">        """</span>
+        <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">hookimpl</span><span class="o">.</span><span class="n">plugin_name</span>
+        <span class="n">hook_name</span> <span class="o">=</span> <span class="s1">'`napari_experimental_provide_theme`'</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Dict</span><span class="p">):</span>
+            <span class="n">warn_message</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                <span class="s1">'Plugin </span><span class="si">{plugin_name!r}</span><span class="s1"> provided a non-dict object to </span><span class="si">{hook_name!r}</span><span class="s1">: data ignored'</span><span class="p">,</span>
+                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span>
+                <span class="n">hook_name</span><span class="o">=</span><span class="n">hook_name</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">warn_message</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">theme_name</span><span class="p">,</span> <span class="n">theme_colors</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">theme</span> <span class="o">=</span> <span class="n">Theme</span><span class="o">.</span><span class="n">parse_obj</span><span class="p">(</span><span class="n">theme_colors</span><span class="p">)</span>
+                <span class="n">register_theme</span><span class="p">(</span><span class="n">theme_name</span><span class="p">,</span> <span class="n">theme</span><span class="p">)</span>
+                <span class="n">_data</span><span class="p">[</span><span class="n">theme_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">theme</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="n">ValidationError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">warn_msg</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"In </span><span class="si">{hook_name!r}</span><span class="s2">, plugin </span><span class="si">{plugin_name!r}</span><span class="s2"> provided an invalid dict object"</span>
+                    <span class="s2">" for creating themes. </span><span class="si">{err!r}</span><span class="s2">"</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">hook_name</span><span class="o">=</span><span class="n">hook_name</span><span class="p">,</span>
+                    <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span>
+                    <span class="n">err</span><span class="o">=</span><span class="n">err</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">warn_msg</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">plugin_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.unregister_theme_colors"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.unregister_theme_colors">[docs]</a>    <span class="k">def</span> <span class="nf">unregister_theme_colors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">"""Unregister theme data from napari."""</span>
+        <span class="k">if</span> <span class="n">plugin_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># unregister all themes that were provided by the plugins</span>
+        <span class="k">for</span> <span class="n">theme_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]:</span>
+            <span class="n">unregister_theme</span><span class="p">(</span><span class="n">theme_name</span><span class="p">)</span>
+
+        <span class="c1"># since its possible that disabled/removed plugin was providing the</span>
+        <span class="c1"># current theme, we check for this explicitly and if this the case,</span>
+        <span class="c1"># theme is automatically changed to default `dark` theme</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="n">get_settings</span><span class="p">()</span>
+        <span class="n">current_theme</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">theme</span>
+        <span class="k">if</span> <span class="n">current_theme</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">[</span><span class="n">plugin_name</span><span class="p">]:</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">appearance</span><span class="o">.</span><span class="n">theme</span> <span class="o">=</span> <span class="s2">"dark"</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="n">message</span><span class="o">=</span><span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
+                    <span class="s2">"The current theme </span><span class="si">{current_theme!r}</span><span class="s2"> was provided by the"</span>
+                    <span class="s2">" plugin </span><span class="si">{plugin_name!r}</span><span class="s2"> which was disabled or removed."</span>
+                    <span class="s2">" Switched theme to the default."</span><span class="p">,</span>
+                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin_name</span><span class="p">,</span>
+                    <span class="n">current_theme</span><span class="o">=</span><span class="n">current_theme</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="NapariPluginManager.discover_themes"><a class="viewcode-back" href="../../../api/napari.plugins.NapariPluginManager.html#napari.plugins.NapariPluginManager.discover_themes">[docs]</a>    <span class="k">def</span> <span class="nf">discover_themes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""Trigger discovery of theme plugins.</span>
+
+<span class="sd">        As a "historic" hook, this should only need to be called once.</span>
+<span class="sd">        (historic here means that even plugins that are discovered after this</span>
+<span class="sd">        is called will be added.)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theme_data</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">napari_experimental_provide_theme</span><span class="o">.</span><span class="n">call_historic</span><span class="p">(</span>
+            <span class="n">result_callback</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">register_theme_colors</span><span class="p">),</span> <span class="n">with_impl</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span></div>
 
     <span class="c1"># FUNCTION &amp; DOCK WIDGETS -----------------------</span>
@@ -934,12 +1029,5 @@
     <script src="../../../_static/copybutton.js"></script>
     <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
     <script src="../../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
-    <script async="async" src="https://unpkg.com/thebe@latest/lib/index.js"></script>
-    <script >
-        const thebe_selector = ".thebe"
-        const thebe_selector_input = "pre"
-        const thebe_selector_output = ".output"
-    </script>
-    <script async="async" src="../../../_static/sphinx-thebe.js"></script>
     <script src="../../../_static/scripts/main.js?digest=e931d09b2a40c1bb82b542effe772014573baf67"></script></body>
 </html>

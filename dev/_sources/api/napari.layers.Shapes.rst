@@ -130,6 +130,7 @@ napari.layers.Shapes
       ~Shapes.edge_contrast_limits
       ~Shapes.edge_width
       ~Shapes.editable
+      ~Shapes.experimental_clipping_planes
       ~Shapes.extent
       ~Shapes.face_color
       ~Shapes.face_color_cycle

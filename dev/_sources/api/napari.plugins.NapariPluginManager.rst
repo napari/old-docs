@@ -45,6 +45,9 @@ napari.plugins.NapariPluginManager
       ~NapariPluginManager.discover_sample_data
    
    
+      ~NapariPluginManager.discover_themes
+   
+   
       ~NapariPluginManager.discover_widgets
    
    
@@ -111,6 +114,9 @@ napari.plugins.NapariPluginManager
       ~NapariPluginManager.register_sample_data
    
    
+      ~NapariPluginManager.register_theme_colors
+   
+   
       ~NapariPluginManager.set_blocked
    
    
@@ -118,6 +124,9 @@ napari.plugins.NapariPluginManager
    
    
       ~NapariPluginManager.unregister
+   
+   
+      ~NapariPluginManager.unregister_theme_colors
    
    
    

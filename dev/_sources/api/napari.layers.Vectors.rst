@@ -78,6 +78,7 @@ napari.layers.Vectors
       ~Vectors.edge_contrast_limits
       ~Vectors.edge_width
       ~Vectors.editable
+      ~Vectors.experimental_clipping_planes
       ~Vectors.extent
       ~Vectors.help
       ~Vectors.interactive

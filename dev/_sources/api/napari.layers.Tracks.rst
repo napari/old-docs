@@ -77,6 +77,7 @@ napari.layers.Tracks
       ~Tracks.display_tail
       ~Tracks.displayed_coordinates
       ~Tracks.editable
+      ~Tracks.experimental_clipping_planes
       ~Tracks.extent
       ~Tracks.graph
       ~Tracks.graph_connex

@@ -97,6 +97,7 @@ napari.layers.Points
       ~Points.edge_contrast_limits
       ~Points.edge_width
       ~Points.editable
+      ~Points.experimental_clipping_planes
       ~Points.extent
       ~Points.face_color
       ~Points.face_color_cycle

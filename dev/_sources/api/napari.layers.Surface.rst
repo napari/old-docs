@@ -80,6 +80,7 @@ napari.layers.Surface
       ~Surface.displayed_coordinates
       ~Surface.dtype
       ~Surface.editable
+      ~Surface.experimental_clipping_planes
       ~Surface.extent
       ~Surface.faces
       ~Surface.gamma

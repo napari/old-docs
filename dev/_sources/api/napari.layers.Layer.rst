@@ -69,6 +69,7 @@ napari.layers.Layer
       ~Layer.data
       ~Layer.displayed_coordinates
       ~Layer.editable
+      ~Layer.experimental_clipping_planes
       ~Layer.extent
       ~Layer.help
       ~Layer.interactive

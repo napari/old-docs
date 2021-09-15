@@ -97,12 +97,10 @@ napari.layers.Labels
       ~Labels.contour
       ~Labels.contrast_limits
       ~Labels.contrast_limits_range
-      ~Labels.coordinates
       ~Labels.cursor
       ~Labels.cursor_size
       ~Labels.data
       ~Labels.data_level
-      ~Labels.displayed_coordinates
       ~Labels.downsample_factors
       ~Labels.dtype
       ~Labels.editable
@@ -118,20 +116,17 @@ napari.layers.Labels
       ~Labels.loaded
       ~Labels.metadata
       ~Labels.mode
-      ~Labels.n_dimensional
       ~Labels.n_edit_dimensions
       ~Labels.name
       ~Labels.ndim
       ~Labels.num_colors
       ~Labels.opacity
-      ~Labels.position
       ~Labels.preserve_labels
       ~Labels.properties
       ~Labels.rendering
       ~Labels.rotate
       ~Labels.scale
       ~Labels.seed
-      ~Labels.selected
       ~Labels.selected_label
       ~Labels.shear
       ~Labels.show_selected_label

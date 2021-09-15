@@ -111,7 +111,6 @@ napari.components.ViewerModel
    .. autosummary::
       :inherited-members:
    
-      ~ViewerModel.active_layer
       ~ViewerModel.class_keymap
       ~ViewerModel.events
       ~ViewerModel.experimental

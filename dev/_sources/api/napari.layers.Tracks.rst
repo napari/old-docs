@@ -67,7 +67,6 @@ napari.layers.Tracks
       ~Tracks.color_by
       ~Tracks.colormap
       ~Tracks.colormaps_dict
-      ~Tracks.coordinates
       ~Tracks.current_time
       ~Tracks.cursor
       ~Tracks.cursor_size
@@ -75,7 +74,6 @@ napari.layers.Tracks
       ~Tracks.display_graph
       ~Tracks.display_id
       ~Tracks.display_tail
-      ~Tracks.displayed_coordinates
       ~Tracks.editable
       ~Tracks.experimental_clipping_planes
       ~Tracks.extent
@@ -90,12 +88,10 @@ napari.layers.Tracks
       ~Tracks.name
       ~Tracks.ndim
       ~Tracks.opacity
-      ~Tracks.position
       ~Tracks.properties
       ~Tracks.properties_to_color_by
       ~Tracks.rotate
       ~Tracks.scale
-      ~Tracks.selected
       ~Tracks.shear
       ~Tracks.source
       ~Tracks.tail_length

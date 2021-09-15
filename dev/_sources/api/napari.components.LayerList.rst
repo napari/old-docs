@@ -75,9 +75,6 @@ napari.components.LayerList
       ~LayerList.toggle_selected_visibility
    
    
-      ~LayerList.unselect_all
-   
-   
    
 
    
@@ -89,7 +86,6 @@ napari.components.LayerList
    
       ~LayerList.extent
       ~LayerList.ndim
-      ~LayerList.selected
       ~LayerList.selection
    
    

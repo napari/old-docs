@@ -123,7 +123,6 @@ napari.Viewer
    .. autosummary::
       :inherited-members:
    
-      ~Viewer.active_layer
       ~Viewer.class_keymap
       ~Viewer.events
       ~Viewer.experimental

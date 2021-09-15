@@ -66,11 +66,9 @@ napari.layers.Vectors
       ~Vectors.affine
       ~Vectors.blending
       ~Vectors.class_keymap
-      ~Vectors.coordinates
       ~Vectors.cursor
       ~Vectors.cursor_size
       ~Vectors.data
-      ~Vectors.displayed_coordinates
       ~Vectors.edge_color
       ~Vectors.edge_color_cycle
       ~Vectors.edge_color_mode
@@ -88,12 +86,10 @@ napari.layers.Vectors
       ~Vectors.name
       ~Vectors.ndim
       ~Vectors.opacity
-      ~Vectors.position
       ~Vectors.properties
       ~Vectors.property_choices
       ~Vectors.rotate
       ~Vectors.scale
-      ~Vectors.selected
       ~Vectors.shear
       ~Vectors.source
       ~Vectors.thumbnail

@@ -51,9 +51,6 @@ napari.layers.Shapes
       ~Shapes.create
    
    
-      ~Shapes.expand_shape
-   
-   
       ~Shapes.get_index_and_intersection
    
    
@@ -114,7 +111,6 @@ napari.layers.Shapes
       ~Shapes.affine
       ~Shapes.blending
       ~Shapes.class_keymap
-      ~Shapes.coordinates
       ~Shapes.current_edge_color
       ~Shapes.current_edge_width
       ~Shapes.current_face_color
@@ -122,7 +118,6 @@ napari.layers.Shapes
       ~Shapes.cursor
       ~Shapes.cursor_size
       ~Shapes.data
-      ~Shapes.displayed_coordinates
       ~Shapes.edge_color
       ~Shapes.edge_color_cycle
       ~Shapes.edge_color_mode
@@ -146,12 +141,10 @@ napari.layers.Shapes
       ~Shapes.ndim
       ~Shapes.nshapes
       ~Shapes.opacity
-      ~Shapes.position
       ~Shapes.properties
       ~Shapes.property_choices
       ~Shapes.rotate
       ~Shapes.scale
-      ~Shapes.selected
       ~Shapes.selected_data
       ~Shapes.shape_type
       ~Shapes.shear

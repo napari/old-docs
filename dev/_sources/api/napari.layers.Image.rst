@@ -74,12 +74,10 @@ napari.layers.Image
       ~Image.colormaps
       ~Image.contrast_limits
       ~Image.contrast_limits_range
-      ~Image.coordinates
       ~Image.cursor
       ~Image.cursor_size
       ~Image.data
       ~Image.data_level
-      ~Image.displayed_coordinates
       ~Image.downsample_factors
       ~Image.dtype
       ~Image.editable
@@ -97,11 +95,9 @@ napari.layers.Image
       ~Image.name
       ~Image.ndim
       ~Image.opacity
-      ~Image.position
       ~Image.rendering
       ~Image.rotate
       ~Image.scale
-      ~Image.selected
       ~Image.shear
       ~Image.source
       ~Image.thumbnail

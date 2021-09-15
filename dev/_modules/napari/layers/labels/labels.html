@@ -291,7 +291,6 @@
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
-<span class="kn">from</span> <span class="nn">...utils.events.event</span> <span class="kn">import</span> <span class="n">WarningEmitter</span>
 <span class="kn">from</span> <span class="nn">...utils.geometry</span> <span class="kn">import</span> <span class="n">clamp_point_to_bounding_box</span>
 <span class="kn">from</span> <span class="nn">...utils.status_messages</span> <span class="kn">import</span> <span class="n">generate_layer_status</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
@@ -433,8 +432,8 @@
 <span class="sd">        Opacity of the labels, must be between 0 and 1.</span>
 <span class="sd">    contiguous : bool</span>
 <span class="sd">        If `True`, the fill bucket changes only connected pixels of same label.</span>
-<span class="sd">    n_dimensional : bool</span>
-<span class="sd">        If `True`, paint and fill edit labels across all dimensions.</span>
+<span class="sd">    n_edit_dimensions : int</span>
+<span class="sd">        The number of dimensions across which labels will be edited.</span>
 <span class="sd">    contour : int</span>
 <span class="sd">        If greater than 0, displays contours of labels instead of shaded regions</span>
 <span class="sd">        with a thickness equal to its value.</span>
@@ -551,13 +550,6 @@
             <span class="n">mode</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">preserve_labels</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">properties</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
-            <span class="n">n_dimensional</span><span class="o">=</span><span class="n">WarningEmitter</span><span class="p">(</span>
-                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                    <span class="s2">"'Labels.events.n_dimensional' is deprecated and will be removed in napari v0.4.9. Use 'Labels.event.n_edit_dimensions' instead."</span><span class="p">,</span>
-                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                <span class="p">),</span>
-                <span class="nb">type</span><span class="o">=</span><span class="s1">'n_dimensional'</span><span class="p">,</span>
-            <span class="p">),</span>
             <span class="n">n_edit_dimensions</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">contiguous</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">brush_size</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
@@ -596,35 +588,6 @@
     <span class="k">def</span> <span class="nf">contiguous</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contiguous</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_contiguous</span> <span class="o">=</span> <span class="n">contiguous</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""bool: paint and fill edits labels across all dimensions."""</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'Labels.n_dimensional is deprecated. Use Labels.n_edit_dimensions instead.'</span><span class="p">,</span>
-                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="p">),</span>
-            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
-            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_edit_dimensions</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span>
-
-    <span class="nd">@n_dimensional</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_dimensional</span><span class="p">):</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                <span class="s1">'Labels.n_dimensional is deprecated. Use Labels.n_edit_dimensions instead.'</span><span class="p">,</span>
-                <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="p">),</span>
-            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
-            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="n">n_dimensional</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">n_edit_dimensions</span> <span class="o">=</span> <span class="mi">2</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">n_dimensional</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_edit_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1361,9 +1324,8 @@
 <div class="viewcode-block" id="Labels.fill"><a class="viewcode-back" href="../../../../api/napari.layers.Labels.html#napari.layers.Labels.fill">[docs]</a>    <span class="k">def</span> <span class="nf">fill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">new_label</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">"""Replace an existing label with a new label, either just at the</span>
 <span class="sd">        connected component if the `contiguous` flag is `True` or everywhere</span>
-<span class="sd">        if it is `False`, working either just in the current slice if</span>
-<span class="sd">        the `n_dimensional` flag is `False` or on the entire data if it is</span>
-<span class="sd">        `True`.</span>
+<span class="sd">        if it is `False`, working in the number of dimensions specified by</span>
+<span class="sd">        the `n_edit_dimensions` flag.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>

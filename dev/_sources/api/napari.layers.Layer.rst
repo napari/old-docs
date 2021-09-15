@@ -63,11 +63,9 @@ napari.layers.Layer
       ~Layer.affine
       ~Layer.blending
       ~Layer.class_keymap
-      ~Layer.coordinates
       ~Layer.cursor
       ~Layer.cursor_size
       ~Layer.data
-      ~Layer.displayed_coordinates
       ~Layer.editable
       ~Layer.experimental_clipping_planes
       ~Layer.extent
@@ -78,10 +76,8 @@ napari.layers.Layer
       ~Layer.name
       ~Layer.ndim
       ~Layer.opacity
-      ~Layer.position
       ~Layer.rotate
       ~Layer.scale
-      ~Layer.selected
       ~Layer.shear
       ~Layer.source
       ~Layer.thumbnail

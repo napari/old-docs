@@ -81,7 +81,6 @@ napari.layers.Points
       ~Points.affine
       ~Points.blending
       ~Points.class_keymap
-      ~Points.coordinates
       ~Points.current_edge_color
       ~Points.current_face_color
       ~Points.current_properties
@@ -89,7 +88,6 @@ napari.layers.Points
       ~Points.cursor
       ~Points.cursor_size
       ~Points.data
-      ~Points.displayed_coordinates
       ~Points.edge_color
       ~Points.edge_color_cycle
       ~Points.edge_color_mode
@@ -113,12 +111,10 @@ napari.layers.Points
       ~Points.name
       ~Points.ndim
       ~Points.opacity
-      ~Points.position
       ~Points.properties
       ~Points.property_choices
       ~Points.rotate
       ~Points.scale
-      ~Points.selected
       ~Points.selected_data
       ~Points.shear
       ~Points.size

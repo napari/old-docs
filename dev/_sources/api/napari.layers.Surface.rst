@@ -73,11 +73,9 @@ napari.layers.Surface
       ~Surface.colormaps
       ~Surface.contrast_limits
       ~Surface.contrast_limits_range
-      ~Surface.coordinates
       ~Surface.cursor
       ~Surface.cursor_size
       ~Surface.data
-      ~Surface.displayed_coordinates
       ~Surface.dtype
       ~Surface.editable
       ~Surface.experimental_clipping_planes
@@ -91,10 +89,8 @@ napari.layers.Surface
       ~Surface.name
       ~Surface.ndim
       ~Surface.opacity
-      ~Surface.position
       ~Surface.rotate
       ~Surface.scale
-      ~Surface.selected
       ~Surface.shading
       ~Surface.shear
       ~Surface.source

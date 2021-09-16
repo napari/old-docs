@@ -311,6 +311,7 @@
 
     <span class="n">started</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>  <span class="c1"># emitted when the work is started</span>
     <span class="n">finished</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">()</span>  <span class="c1"># emitted when the work is finished</span>
+    <span class="n">_finished</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted when the work is finished ro delete</span>
     <span class="n">returned</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted with return value</span>
     <span class="n">errored</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>  <span class="c1"># emitted with error object on Exception</span>
     <span class="n">warned</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">tuple</span><span class="p">)</span>  <span class="c1"># emitted with showwarning args on warning</span></div>
@@ -451,7 +452,8 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">errored</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="WorkerBase.work"><a class="viewcode-back" href="../../../api/napari.qt.threading.WorkerBase.html#napari.qt.threading.WorkerBase.work">[docs]</a>    <span class="k">def</span> <span class="nf">work</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="ne">Exception</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="sd">"""Main method to execute the worker.</span>
@@ -501,7 +503,7 @@
 <span class="sd">           V               V             V</span>
 <span class="sd">           worker.start -&gt; worker.run -&gt; worker.work</span>
 <span class="sd">        """</span>
-        <span class="k">if</span> <span class="bp">self</span> <span class="ow">in</span> <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_worker_set</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
                 <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
                     <span class="s1">'This worker is already started!'</span><span class="p">,</span>
@@ -512,10 +514,14 @@
         <span class="c1"># This will raise a RunTimeError if the worker is already deleted</span>
         <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
-        <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">WorkerBase</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_set_discard</span><span class="p">)</span>
         <span class="n">start_</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">QThreadPool</span><span class="o">.</span><span class="n">globalInstance</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
-        <span class="n">QTimer</span><span class="o">.</span><span class="n">singleShot</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">start_</span><span class="p">)</span></div></div>
+        <span class="n">QTimer</span><span class="o">.</span><span class="n">singleShot</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">start_</span><span class="p">)</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_set_discard</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_worker_set</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="FunctionWorker"><a class="viewcode-back" href="../../../api/napari.qt.threading.FunctionWorker.html#napari.qt.threading.FunctionWorker">[docs]</a><span class="k">class</span> <span class="nc">FunctionWorker</span><span class="p">(</span><span class="n">WorkerBase</span><span class="p">):</span>

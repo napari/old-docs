@@ -5,11 +5,6 @@
 
    
    
-   .. rubric:: Module Attributes
-
-   
-   .. autoattribute:: dask_cache
-   
    
 
    

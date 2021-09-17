@@ -224,6 +224,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../api/napari.types.SampleDict.html">napari.types.SampleDict</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/napari.types.TracebackType.html">napari.types.TracebackType</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/napari.types.TypedDict.html">napari.types.TypedDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api/napari.types.partial.html">napari.types.partial</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../api/napari.utils.html">napari.utils</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" type="checkbox"/><label for="toctree-checkbox-10"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -275,7 +276,7 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for napari.types</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">wraps</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">TracebackType</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
@@ -401,23 +402,37 @@
 
 <span class="k">def</span> <span class="nf">_register_types_with_magicgui</span><span class="p">():</span>
     <span class="sd">"""Register napari.types objects with magicgui."""</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">Future</span>
+
     <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">layers</span>
     <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">_magicgui</span> <span class="k">as</span> <span class="n">_mgui</span>
 
-    <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
-        <span class="n">LayerDataTuple</span><span class="p">,</span>
-        <span class="n">return_callback</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">add_layer_data_tuples_to_viewer</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
-        <span class="n">List</span><span class="p">[</span><span class="n">LayerDataTuple</span><span class="p">],</span>
-        <span class="n">return_callback</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">add_layer_data_tuples_to_viewer</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">for</span> <span class="n">layer_name</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">NAMES</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">_type</span> <span class="ow">in</span> <span class="p">(</span><span class="n">LayerDataTuple</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">LayerDataTuple</span><span class="p">]):</span>
         <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
-            <span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">layer_name</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="si">}</span><span class="s1">Data'</span><span class="p">),</span>
+            <span class="n">_type</span><span class="p">,</span>
+            <span class="n">return_callback</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">add_layer_data_tuples_to_viewer</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">9</span><span class="p">):</span>
+            <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
+                <span class="n">Future</span><span class="p">[</span><span class="n">_type</span><span class="p">],</span> <span class="n">return_callback</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">add_future_data</span>  <span class="c1"># type: ignore</span>
+            <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">layer_name</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">NAMES</span><span class="p">:</span>
+        <span class="n">data_type</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">layer_name</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="si">}</span><span class="s1">Data'</span><span class="p">)</span>
+        <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="p">,</span>
             <span class="n">choices</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">get_layers_data</span><span class="p">,</span>
             <span class="n">return_callback</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">add_layer_data_to_viewer</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">9</span><span class="p">):</span>
+            <span class="n">_mgui</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span>
+                <span class="n">Future</span><span class="p">[</span><span class="n">data_type</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">choices</span><span class="o">=</span><span class="n">_mgui</span><span class="o">.</span><span class="n">get_layers_data</span><span class="p">,</span>
+                <span class="n">return_callback</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span>
+                    <span class="n">_mgui</span><span class="o">.</span><span class="n">add_future_data</span><span class="p">,</span> <span class="n">_from_tuple</span><span class="o">=</span><span class="kc">False</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
 
 
 <span class="n">_register_types_with_magicgui</span><span class="p">()</span>

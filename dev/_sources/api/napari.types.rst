@@ -20,6 +20,7 @@
       SampleDict
       TracebackType
       TypedDict
+      partial
    
    
 

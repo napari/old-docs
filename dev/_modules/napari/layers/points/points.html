@@ -1636,6 +1636,7 @@
         <span class="n">colormapped</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">view_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_view_data</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">view_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Get the zoom factor required to fit all data in the thumbnail.</span>
             <span class="n">de</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
             <span class="n">min_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">de</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">]</span>
             <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
@@ -1644,6 +1645,8 @@
             <span class="n">zoom_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
             <span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+
+            <span class="c1"># Maybe subsample the points.</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">view_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_points_thumbnail</span><span class="p">:</span>
                 <span class="n">thumbnail_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span>
                     <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">view_data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_points_thumbnail</span>
@@ -1652,12 +1655,21 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">points</span> <span class="o">=</span> <span class="n">view_data</span>
                 <span class="n">thumbnail_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span>
+
+            <span class="c1"># Calculate the point coordinates in the thumbnail data space.</span>
+            <span class="n">thumbnail_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">zoom_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+                <span class="mi">1</span><span class="p">,</span>  <span class="c1"># smallest side should be 1 pixel wide</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+            <span class="p">)</span>
             <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span>
                 <span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">-</span> <span class="n">min_vals</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">zoom_factor</span>
             <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-            <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
-                <span class="n">coords</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="p">)</span>
+            <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">thumbnail_shape</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Draw single pixel points in the colormapped thumbnail.</span>
+            <span class="n">colormapped</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">thumbnail_shape</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">4</span><span class="p">,))</span>
+            <span class="n">colormapped</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="n">colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="o">.</span><span class="n">colors</span><span class="p">[</span><span class="n">thumbnail_indices</span><span class="p">]</span>
             <span class="n">colormapped</span><span class="p">[</span><span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">colors</span>
 

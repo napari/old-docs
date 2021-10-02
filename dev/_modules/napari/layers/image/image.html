@@ -576,13 +576,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_experimental_slicing_plane</span> <span class="o">=</span> <span class="n">SlicingPlane</span><span class="p">(</span>
             <span class="n">thickness</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">False</span>
         <span class="p">)</span>
+        <span class="c1"># Whether to calculate clims on the next set_view_slice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_should_calc_clims</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">contrast_limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-                <span class="n">dtype</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'dtype'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">normalize_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="n">normalize_dtype</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'dtype'</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="n">get_dtype_limits</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_should_calc_clims</span> <span class="o">=</span> <span class="n">dtype</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">contrast_limits_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_data_range</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
@@ -970,8 +973,9 @@
             <span class="bp">self</span><span class="p">,</span> <span class="n">image_indices</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">thumbnail_source</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_slice</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_keep_autoscale</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_keep_autoscale</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_calc_clims</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reset_contrast_limits</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_should_calc_clims</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_SliceDataClass</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

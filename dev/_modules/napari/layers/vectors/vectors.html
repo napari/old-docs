@@ -292,7 +292,7 @@
 <span class="kn">from</span> <span class="nn">..utils.color_manager</span> <span class="kn">import</span> <span class="n">ColorManager</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">ColorType</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">get_current_properties</span><span class="p">,</span> <span class="n">prepare_properties</span>
-<span class="kn">from</span> <span class="nn">._vector_utils</span> <span class="kn">import</span> <span class="n">generate_vector_meshes</span><span class="p">,</span> <span class="n">vectors_to_coordinates</span>
+<span class="kn">from</span> <span class="nn">._vector_utils</span> <span class="kn">import</span> <span class="n">fix_data_vectors</span><span class="p">,</span> <span class="n">generate_vector_meshes</span>
 
 
 <div class="viewcode-block" id="Vectors"><a class="viewcode-back" href="../../../../api/napari.layers.Vectors.html#napari.layers.Vectors">[docs]</a><span class="k">class</span> <span class="nc">Vectors</span><span class="p">(</span><span class="n">Layer</span><span class="p">):</span>
@@ -307,6 +307,9 @@
 <span class="sd">        D dimensions. An (N1, N2, ..., ND, D) array is interpreted as</span>
 <span class="sd">        "image-like" data where there is a length D vector of the</span>
 <span class="sd">        projections at each pixel.</span>
+<span class="sd">    ndim : int</span>
+<span class="sd">        Number of dimensions for vectors. When data is not None, ndim must be D.</span>
+<span class="sd">        An empty vectors layer can be instantiated with arbitrary ndim.</span>
 <span class="sd">    properties : dict {str: array (N,)}, DataFrame</span>
 <span class="sd">        Properties for each vector. Each property should be an array of length N,</span>
 <span class="sd">        where N is the number of vectors.</span>
@@ -421,8 +424,9 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">data</span><span class="p">,</span>
+        <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
+        <span class="n">ndim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">property_choices</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">edge_width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -444,10 +448,14 @@
         <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">experimental_clipping_planes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
+        <span class="k">if</span> <span class="n">ndim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+
+        <span class="n">data</span><span class="p">,</span> <span class="n">ndim</span> <span class="o">=</span> <span class="n">fix_data_vectors</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">ndim</span><span class="p">)</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span>
-            <span class="mi">2</span><span class="p">,</span>
+            <span class="n">ndim</span><span class="p">,</span>
             <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
             <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
@@ -477,7 +485,7 @@
         <span class="c1"># length attribute</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_length</span> <span class="o">=</span> <span class="n">length</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">vectors_to_coordinates</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
 
         <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">generate_vector_meshes</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">)],</span>
@@ -523,7 +531,7 @@
     <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vectors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="n">previous_n_vectors</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">vectors_to_coordinates</span><span class="p">(</span><span class="n">vectors</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fix_data_vectors</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
         <span class="n">n_vectors</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
         <span class="n">vertices</span><span class="p">,</span> <span class="n">triangles</span> <span class="o">=</span> <span class="n">generate_vector_meshes</span><span class="p">(</span>
@@ -624,6 +632,7 @@
                 <span class="s1">'data'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
                 <span class="s1">'properties'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
                 <span class="s1">'property_choices'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span>
+                <span class="s1">'ndim'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">state</span>

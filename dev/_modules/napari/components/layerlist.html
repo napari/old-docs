@@ -280,11 +280,12 @@
 <span></span><span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Labels</span><span class="p">,</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">..layers.image.image</span> <span class="kn">import</span> <span class="n">_ImageBase</span>
 <span class="kn">from</span> <span class="nn">..layers.utils._link_layers</span> <span class="kn">import</span> <span class="n">get_linked_layers</span><span class="p">,</span> <span class="n">layer_is_linked</span>
 <span class="kn">from</span> <span class="nn">..utils._dtype</span> <span class="kn">import</span> <span class="n">normalize_dtype</span>
 <span class="kn">from</span> <span class="nn">..utils.events.containers</span> <span class="kn">import</span> <span class="n">SelectableEventedList</span>
@@ -402,6 +403,48 @@
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_extent_world</span><span class="p">([</span><span class="n">layer</span><span class="o">.</span><span class="n">extent</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">])</span>
 
+    <span class="k">def</span> <span class="nf">_get_min_and_max</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mins_list</span><span class="p">,</span> <span class="n">maxes_list</span><span class="p">):</span>
+
+        <span class="c1"># Reverse dimensions since it is the last dimensions that are</span>
+        <span class="c1"># displayed.</span>
+        <span class="n">mins_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">mins</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">mins</span> <span class="ow">in</span> <span class="n">mins_list</span><span class="p">]</span>
+        <span class="n">maxes_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">maxes</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">maxes</span> <span class="ow">in</span> <span class="n">maxes_list</span><span class="p">]</span>
+
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="c1"># Taking the nanmin and nanmax of an axis of all nan</span>
+            <span class="c1"># raises a warning and returns nan for that axis</span>
+            <span class="c1"># as we have do an explicit nan_to_num below this</span>
+            <span class="c1"># behaviour is acceptable and we can filter the</span>
+            <span class="c1"># warning</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
+                <span class="s1">'ignore'</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span>
+                    <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'All-NaN axis encountered'</span><span class="p">,</span> <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">min_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">mins_list</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)),</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">max_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">maxes_list</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)),</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># 512 element default extent as documented in `_get_extent_world`</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">min_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">min_v</span><span class="p">,</span> <span class="n">nan</span><span class="o">=-</span><span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">max_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">max_v</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">511.5</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="c1"># In NumPy &lt; 1.17, nan_to_num doesn't have a nan kwarg</span>
+            <span class="n">min_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">min_v</span><span class="p">)</span>
+            <span class="n">min_v</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">min_v</span><span class="p">)]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span>
+            <span class="n">max_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">max_v</span><span class="p">)</span>
+            <span class="n">max_v</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_v</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">511.5</span>
+
+        <span class="c1"># switch back to original order</span>
+        <span class="k">return</span> <span class="n">min_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">max_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">_get_extent_world</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_extent_list</span><span class="p">):</span>
         <span class="sd">"""Extent of layers in world coordinates.</span>
 
@@ -413,45 +456,15 @@
 <span class="sd">        extent_world : array, shape (2, D)</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">min_v</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
-            <span class="n">max_v</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+            <span class="n">min_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="o">-</span><span class="mf">0.5</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+            <span class="n">max_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mf">511.5</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">extrema</span> <span class="o">=</span> <span class="p">[</span><span class="n">extent</span><span class="o">.</span><span class="n">world</span> <span class="k">for</span> <span class="n">extent</span> <span class="ow">in</span> <span class="n">layer_extent_list</span><span class="p">]</span>
-            <span class="n">mins</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">extrema</span><span class="p">]</span>
-            <span class="n">maxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">extrema</span><span class="p">]</span>
+            <span class="n">mins</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">extrema</span><span class="p">]</span>
+            <span class="n">maxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">extrema</span><span class="p">]</span>
+            <span class="n">min_v</span><span class="p">,</span> <span class="n">max_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_min_and_max</span><span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="n">maxs</span><span class="p">)</span>
 
-            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-                <span class="c1"># Taking the nanmin and nanmax of an axis of all nan</span>
-                <span class="c1"># raises a warning and returns nan for that axis</span>
-                <span class="c1"># as we have do an explict nan_to_num below this</span>
-                <span class="c1"># behaviour is acceptable and we can filter the</span>
-                <span class="c1"># warning</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
-                    <span class="s1">'ignore'</span><span class="p">,</span>
-                    <span class="n">message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span>
-                        <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s1">'All-NaN axis encountered'</span><span class="p">,</span> <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="p">),</span>
-                <span class="p">)</span>
-                <span class="n">min_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span>
-                    <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">mins</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)),</span>
-                    <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">max_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span>
-                    <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">maxs</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)),</span>
-                    <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                <span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">min_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">min_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">nan</span><span class="o">=-</span><span class="mf">0.5</span><span class="p">)</span>
-            <span class="n">max_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">max_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">nan</span><span class="o">=</span><span class="mf">511.5</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
-            <span class="c1"># In NumPy &lt; 1.17, nan_to_num doesn't have a nan kwarg</span>
-            <span class="n">min_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">min_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">min_vals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">min_vals</span><span class="p">)]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span>
-            <span class="n">max_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">max_v</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">max_vals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_vals</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">511.5</span>
-
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">min_vals</span><span class="p">,</span> <span class="n">max_vals</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">min_v</span><span class="p">,</span> <span class="n">max_v</span><span class="p">])</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_step_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -467,18 +480,22 @@
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_step_size</span><span class="p">([</span><span class="n">layer</span><span class="o">.</span><span class="n">extent</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">])</span>
 
+    <span class="k">def</span> <span class="nf">_step_size_from_scales</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scales</span><span class="p">):</span>
+        <span class="c1"># Reverse order so last axes of scale with different ndim are aligned</span>
+        <span class="n">scales</span> <span class="o">=</span> <span class="p">[</span><span class="n">scale</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="n">scales</span><span class="p">]</span>
+        <span class="n">full_scales</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">scales</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)))</span>
+        <span class="p">)</span>
+        <span class="c1"># restore original order</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">full_scales</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">_get_step_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_extent_list</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">scales</span> <span class="o">=</span> <span class="p">[</span><span class="n">extent</span><span class="o">.</span><span class="n">step</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">extent</span> <span class="ow">in</span> <span class="n">layer_extent_list</span><span class="p">]</span>
-            <span class="n">full_scales</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                    <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">scales</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">))</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">T</span>
-            <span class="p">)</span>
-            <span class="n">min_scales</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">full_scales</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">min_scales</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">scales</span> <span class="o">=</span> <span class="p">[</span><span class="n">extent</span><span class="o">.</span><span class="n">step</span> <span class="k">for</span> <span class="n">extent</span> <span class="ow">in</span> <span class="n">layer_extent_list</span><span class="p">]</span>
+            <span class="n">min_scales</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_size_from_scales</span><span class="p">(</span><span class="n">scales</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">min_scales</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">extent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Extent</span><span class="p">:</span>
@@ -489,6 +506,58 @@
             <span class="n">world</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_extent_world</span><span class="p">(</span><span class="n">extent_list</span><span class="p">),</span>
             <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_step_size</span><span class="p">(</span><span class="n">extent_list</span><span class="p">),</span>
         <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_ranges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+        <span class="sd">"""Get ranges for Dims.range in world coordinates.</span>
+
+<span class="sd">        This shares some code in common with the `extent` property, but</span>
+<span class="sd">        determines Dims.range settings for each dimension such that each</span>
+<span class="sd">        range is aligned to pixel centers at the finest scale.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Determine minimum step size across all layers</span>
+            <span class="n">layer_extent_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">extent</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
+            <span class="n">scales</span> <span class="o">=</span> <span class="p">[</span><span class="n">extent</span><span class="o">.</span><span class="n">step</span> <span class="k">for</span> <span class="n">extent</span> <span class="ow">in</span> <span class="n">layer_extent_list</span><span class="p">]</span>
+            <span class="n">min_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_size_from_scales</span><span class="p">(</span><span class="n">scales</span><span class="p">)</span>
+
+            <span class="c1"># Pixel-based layers need to be offset by 0.5 * min_steps to align</span>
+            <span class="c1"># Dims.range with pixel centers in world coordinates</span>
+            <span class="n">pixel_offsets</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="n">min_steps</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">_ImageBase</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">min_steps</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span>
+            <span class="p">]</span>
+
+            <span class="c1"># Non-pixel layers need an offset of the range stop by min_steps since the upper</span>
+            <span class="c1"># limit of Dims.range is non-inclusive.</span>
+            <span class="n">point_offsets</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">min_steps</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">_ImageBase</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">min_steps</span>
+                <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span>
+            <span class="p">]</span>
+
+            <span class="c1"># Determine world coordinate extents similarly to</span>
+            <span class="c1"># `_get_extent_world`, but including offsets calculated above.</span>
+            <span class="n">extrema</span> <span class="o">=</span> <span class="p">[</span><span class="n">extent</span><span class="o">.</span><span class="n">world</span> <span class="k">for</span> <span class="n">extent</span> <span class="ow">in</span> <span class="n">layer_extent_list</span><span class="p">]</span>
+            <span class="n">mins</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">o1</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">o1</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">extrema</span><span class="p">,</span> <span class="n">pixel_offsets</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">maxs</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">o1</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">+</span> <span class="n">o2</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+                <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">o1</span><span class="p">,</span> <span class="n">o2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">extrema</span><span class="p">,</span> <span class="n">pixel_offsets</span><span class="p">,</span> <span class="n">point_offsets</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">min_v</span><span class="p">,</span> <span class="n">max_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_min_and_max</span><span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="n">maxs</span><span class="p">)</span>
+
+            <span class="c1"># form range tuples, switching back to original dimension order</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">min_v</span><span class="p">,</span> <span class="n">max_v</span><span class="p">,</span> <span class="n">min_steps</span><span class="p">)</span>
+            <span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">ndim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>

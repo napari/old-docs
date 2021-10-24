@@ -51,6 +51,9 @@ napari.layers.Tracks
       ~Tracks.world_to_data
    
    
+      ~Tracks.world_to_displayed_data
+   
+   
    
 
    

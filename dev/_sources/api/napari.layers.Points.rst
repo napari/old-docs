@@ -69,6 +69,9 @@ napari.layers.Points
       ~Points.world_to_data
    
    
+      ~Points.world_to_displayed_data
+   
+   
    
 
    

@@ -57,6 +57,9 @@ napari.layers.Image
       ~Image.world_to_data
    
    
+      ~Image.world_to_displayed_data
+   
+   
    
 
    

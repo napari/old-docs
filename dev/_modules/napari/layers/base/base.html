@@ -1412,6 +1412,29 @@
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">coords</span><span class="p">))</span></div>
 
+<div class="viewcode-block" id="Layer.world_to_displayed_data"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.world_to_displayed_data">[docs]</a>    <span class="k">def</span> <span class="nf">world_to_displayed_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+        <span class="sd">"""Convert world to data coordinates for displayed dimensions only.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position : tuple, list, 1D array</span>
+<span class="sd">            Position in world coordinates. If longer then the</span>
+<span class="sd">            number of dimensions of the layer, the later</span>
+<span class="sd">            dimensions will be used.</span>
+<span class="sd">        dims_displayed : list, 1D array</span>
+<span class="sd">            Indices of displayed dimensions of the data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            Position in data coordinates for the displayed dimensions only</span>
+<span class="sd">        """</span>
+        <span class="n">position_nd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_data</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="n">position_ndisplay</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position_nd</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position_ndisplay</span><span class="p">)</span></div>
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_data_to_world</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Affine</span><span class="p">:</span>
         <span class="sd">"""The transform from data to world coordinates.</span>
@@ -1443,9 +1466,31 @@
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">normalized_vector</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_display_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims_displayed_mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_world_to_displayed_data_ray</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">vector_world</span><span class="p">,</span> <span class="n">dims_displayed</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="sd">"""Convert an orientation from world to displayed data coordinates.</span>
+
+<span class="sd">        For example, this would be used to convert the view ray.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vector_world : tuple, list, 1D array</span>
+<span class="sd">            A vector in world coordinates.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            Vector in data coordinates.</span>
+<span class="sd">        """</span>
+        <span class="n">vector_data_nd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data_ray</span><span class="p">(</span><span class="n">vector_world</span><span class="p">))</span>
+        <span class="n">vector_data_ndisplay</span> <span class="o">=</span> <span class="n">vector_data_nd</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span>
+        <span class="n">vector_data_ndisplay</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">vector_data_ndisplay</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vector_data_ndisplay</span>
+
+    <span class="k">def</span> <span class="nf">_display_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="sd">"""An axis aligned (self._ndisplay, 2) bounding box around the data"""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">[:,</span> <span class="n">dims_displayed_mask</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">[:,</span> <span class="n">dims_displayed</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
 
 <div class="viewcode-block" id="Layer.get_ray_intersections"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.get_ray_intersections">[docs]</a>    <span class="k">def</span> <span class="nf">get_ray_intersections</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1488,28 +1533,27 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="c1"># create a mask to select the in view dimensions</span>
-            <span class="n">dims_displayed</span> <span class="o">=</span> <span class="n">dims_displayed</span>
             <span class="n">dims_displayed_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
             <span class="n">dims_displayed_mask</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
             <span class="c1"># create the bounding box in data coordinates</span>
-            <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box</span><span class="p">(</span><span class="n">dims_displayed_mask</span><span class="p">)</span>
+            <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span>
 
             <span class="c1"># get the view direction in data coords (only displayed dims)</span>
             <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">view_dir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data_ray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">))[</span>
-                    <span class="n">dims_displayed_mask</span>
-                <span class="p">]</span>
+                <span class="n">view_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data_ray</span><span class="p">(</span>
+                    <span class="n">view_direction</span><span class="p">,</span> <span class="n">dims_displayed</span>
+                <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">view_dir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)[</span><span class="n">dims_displayed_mask</span><span class="p">]</span>
+                <span class="n">view_dir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
 
             <span class="c1"># Get the clicked point in data coords (only displayed dims)</span>
             <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">world_to_data</span><span class="p">(</span><span class="n">position</span><span class="p">))[</span>
-                    <span class="n">dims_displayed_mask</span>
-                <span class="p">]</span>
+                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_displayed_data</span><span class="p">(</span>
+                    <span class="n">position</span><span class="p">,</span> <span class="n">dims_displayed</span>
+                <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)[</span><span class="n">dims_displayed_mask</span><span class="p">]</span>
+                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
 
             <span class="c1"># Determine the front and back faces</span>
             <span class="n">front_face_normal</span><span class="p">,</span> <span class="n">back_face_normal</span> <span class="o">=</span> <span class="n">find_front_back_face</span><span class="p">(</span>
@@ -1531,9 +1575,9 @@
 
                 <span class="c1"># add the coordinates for the axes not displayed</span>
                 <span class="n">start_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-                <span class="n">start_point</span><span class="p">[</span><span class="n">dims_displayed_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_point_disp_dims</span>
+                <span class="n">start_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_point_disp_dims</span>
                 <span class="n">end_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-                <span class="n">end_point</span><span class="p">[</span><span class="n">dims_displayed_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_point_disp_dims</span>
+                <span class="n">end_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_point_disp_dims</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># if the click doesn't intersect the data bounding box,</span>

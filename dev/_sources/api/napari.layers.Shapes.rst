@@ -99,6 +99,9 @@ napari.layers.Shapes
       ~Shapes.world_to_data
    
    
+      ~Shapes.world_to_displayed_data
+   
+   
    
 
    

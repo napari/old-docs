@@ -75,6 +75,9 @@ napari.layers.Labels
       ~Labels.world_to_data
    
    
+      ~Labels.world_to_displayed_data
+   
+   
    
 
    

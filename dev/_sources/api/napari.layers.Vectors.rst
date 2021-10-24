@@ -54,6 +54,9 @@ napari.layers.Vectors
       ~Vectors.world_to_data
    
    
+      ~Vectors.world_to_displayed_data
+   
+   
    
 
    

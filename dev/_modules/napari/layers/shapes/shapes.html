@@ -765,22 +765,6 @@
             <span class="n">properties</span><span class="p">,</span> <span class="n">property_choices</span><span class="p">,</span> <span class="n">num_data</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="p">)</span>
 
-        <span class="c1"># make the text</span>
-        <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_text</span> <span class="o">=</span> <span class="n">TextManager</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">copied_text</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-            <span class="n">copied_text</span><span class="p">[</span><span class="s1">'properties'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span>
-            <span class="n">copied_text</span><span class="p">[</span><span class="s1">'n_text'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_text</span> <span class="o">=</span> <span class="n">TextManager</span><span class="p">(</span><span class="o">**</span><span class="n">copied_text</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span>
-                    <span class="s1">'text should be a string, array, or dict'</span><span class="p">,</span>
-                    <span class="n">deferred</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-
         <span class="c1"># The following shape properties are for the new shapes that will</span>
         <span class="c1"># be drawn. Each shape has a corresponding property with the</span>
         <span class="c1"># value for itself</span>
@@ -864,6 +848,12 @@
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_properties</span> <span class="o">=</span> <span class="n">get_current_properties</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_properties</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_property_choices</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_text</span> <span class="o">=</span> <span class="n">TextManager</span><span class="o">.</span><span class="n">_from_layer</span><span class="p">(</span>
+            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+            <span class="n">n_text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nshapes</span><span class="p">,</span>
+            <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="c1"># Trigger generation of view slice and thumbnail</span>
@@ -1808,13 +1798,17 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">view_text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">_view_text_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_view_text_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
         <span class="sd">"""Get the coordinates of the text elements in view</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        text_coords : (N x D) np.ndarray</span>
 <span class="sd">            Array of coordinates for the N text elements in view</span>
+<span class="sd">        anchor_x : str</span>
+<span class="sd">            The vispy text anchor for the x axis</span>
+<span class="sd">        anchor_y : str</span>
+<span class="sd">            The vispy text anchor for the y axis</span>
 <span class="sd">        """</span>
         <span class="c1"># get the coordinates of the vertices for the shapes in view</span>
         <span class="n">in_view_shapes_coords</span> <span class="o">=</span> <span class="p">[</span>
@@ -2513,8 +2507,10 @@
 
     <span class="nd">@text</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_text</span><span class="o">.</span><span class="n">_set_text</span><span class="p">(</span>
-            <span class="n">text</span><span class="p">,</span> <span class="n">n_text</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_text</span><span class="o">.</span><span class="n">_update_from_layer</span><span class="p">(</span>
+            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+            <span class="n">n_text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nshapes</span><span class="p">,</span>
+            <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="Shapes.refresh_text"><a class="viewcode-back" href="../../../../api/napari.layers.Shapes.html#napari.layers.Shapes.refresh_text">[docs]</a>    <span class="k">def</span> <span class="nf">refresh_text</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

@@ -57,6 +57,9 @@ napari.layers.Surface
       ~Surface.world_to_data
    
    
+      ~Surface.world_to_displayed_data
+   
+   
    
 
    

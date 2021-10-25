@@ -277,7 +277,9 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for napari.viewer</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span></span><span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span> <span class="nn">weakref</span> <span class="kn">import</span> <span class="n">WeakSet</span>
 
 <span class="kn">import</span> <span class="nn">magicgui</span> <span class="k">as</span> <span class="nn">mgui</span>
 
@@ -310,6 +312,7 @@
 <span class="sd">    """</span>
 
     <span class="n">_window</span><span class="p">:</span> <span class="s1">'Window'</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore</span>
+    <span class="n">_instances</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">ClassVar</span><span class="p">[</span><span class="n">WeakSet</span><span class="p">]</span> <span class="o">=</span> <span class="n">WeakSet</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -331,6 +334,7 @@
         <span class="kn">from</span> <span class="nn">.window</span> <span class="kn">import</span> <span class="n">Window</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_window</span> <span class="o">=</span> <span class="n">Window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instances</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="c1"># Expose private window publically. This is needed to keep window off pydantic model</span>
     <span class="nd">@property</span>
@@ -402,7 +406,31 @@
             <span class="c1"># going away:</span>
             <span class="c1"># https://github.com/napari/napari/issues/1500</span>
             <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
-                <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span></div></div>
+                <span class="n">chunk_loader</span><span class="o">.</span><span class="n">on_layer_deleted</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instances</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Viewer.close_all"><a class="viewcode-back" href="../../api/napari.view_layers.Viewer.html#napari.Viewer.close_all">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">close_all</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Class metod, Close all existing viewer instances.</span>
+
+<span class="sd">        This is mostly exposed to avoid leaking of viewers when running tests.</span>
+<span class="sd">        As having many non-closed viewer can adversely affect performances.</span>
+
+<span class="sd">        It will return the number of viewer closed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int :</span>
+<span class="sd">            number of viewer closed.</span>
+
+<span class="sd">        """</span>
+        <span class="c1"># copy to not iterate while changing.</span>
+        <span class="n">viewers</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instances</span><span class="p">]</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">viewers</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">viewer</span> <span class="ow">in</span> <span class="n">viewers</span><span class="p">:</span>
+            <span class="n">viewer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">ret</span></div></div>
 
 
 <div class="viewcode-block" id="current_viewer"><a class="viewcode-back" href="../../api/napari.html#napari.current_viewer">[docs]</a><span class="k">def</span> <span class="nf">current_viewer</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Viewer</span><span class="p">:</span>

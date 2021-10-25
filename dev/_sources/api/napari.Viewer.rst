@@ -51,6 +51,9 @@ napari.Viewer
       ~Viewer.close
    
    
+      ~Viewer.close_all
+   
+   
       ~Viewer.construct
    
    

@@ -277,18 +277,14 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for napari.utils.progress</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">inspect</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
 
-<span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
+<span class="kn">from</span> <span class="nn">napari.utils.events.event</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
 
-<span class="n">_tqdm_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="n">p</span><span class="o">.</span><span class="n">name</span>
-    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">tqdm</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">inspect</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">"self"</span>
-<span class="p">}</span>
+<span class="kn">from</span> <span class="nn">..utils.events.containers</span> <span class="kn">import</span> <span class="n">EventedSet</span>
+<span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 
 
 <div class="viewcode-block" id="progress"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress">[docs]</a><span class="k">class</span> <span class="nc">progress</span><span class="p">(</span><span class="n">tqdm</span><span class="p">):</span>
@@ -297,11 +293,13 @@
 <span class="sd">    directly by wrapping an iterable or by providing a total number</span>
 <span class="sd">    of expected updates.</span>
 
+<span class="sd">    While this interface is primarily designed to be displayed in</span>
+<span class="sd">    the viewer, it can also be used without a viewer open, in which</span>
+<span class="sd">    case it behaves identically to tqdm and produces the progress</span>
+<span class="sd">    bar in the terminal.</span>
+
 <span class="sd">    See tqdm.tqdm API for valid args and kwargs:</span>
 <span class="sd">    https://tqdm.github.io/docs/tqdm/</span>
-
-<span class="sd">    Also, any keyword arguments to the :class:`ProgressBar` `QWidget`</span>
-<span class="sd">    are also accepted and will be passed to the ``ProgressBar``.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -336,6 +334,12 @@
 <span class="sd">    """</span>
 
     <span class="n">monitor_interval</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># set to 0 to disable the thread</span>
+    <span class="c1"># to give us a way to hook into the creation and update of progress objects</span>
+    <span class="c1"># without progress knowing anything about a Viewer, we track all instances in</span>
+    <span class="c1"># this evented *class* attribute, accessed through `progress._all_instances`</span>
+    <span class="c1"># this allows the ActivityDialog to find out about new progress objects and</span>
+    <span class="c1"># hook up GUI progress bars to its update events</span>
+    <span class="n">_all_instances</span><span class="p">:</span> <span class="n">EventedSet</span><span class="p">[</span><span class="s1">'progress'</span><span class="p">]</span> <span class="o">=</span> <span class="n">EventedSet</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -346,95 +350,58 @@
         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">pbar_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-</span> <span class="n">_tqdm_kwargs</span><span class="p">}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_group_token</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="c1"># get progress bar added to viewer</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">.._qt.dialogs.activity_dialog</span> <span class="kn">import</span> <span class="n">get_pbar</span>
-
-            <span class="n">pbar</span> <span class="o">=</span> <span class="n">get_pbar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nest_under</span><span class="o">=</span><span class="n">nest_under</span><span class="p">,</span> <span class="o">**</span><span class="n">pbar_kwargs</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-            <span class="n">pbar</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">kwargs</span><span class="p">[</span><span class="s1">'gui'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span> <span class="o">=</span> <span class="n">pbar</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EmitterGroup</span><span class="p">(</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">overflow</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="n">Event</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nest_under</span> <span class="o">=</span> <span class="n">nest_under</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_init</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-            <span class="k">return</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
-
-        <span class="k">if</span> <span class="n">desc</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="n">trans</span><span class="o">.</span><span class="n">_</span><span class="p">(</span><span class="s2">"progress"</span><span class="p">))</span>
+        <span class="n">progress</span><span class="o">.</span><span class="n">_all_instances</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_init</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc</span>
 
 <div class="viewcode-block" id="progress.display"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress.display">[docs]</a>    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pos</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">"""Update the display."""</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">msg</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">pos</span><span class="p">)</span>
-
+        <span class="sd">"""Update the display and emit eta event."""</span>
+        <span class="c1"># just plain tqdm if we don't have gui</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">gui</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_init</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c1"># TODO: This could break if user is formatting their own terminal tqdm</span>
+        <span class="n">etas</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">etas</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'|'</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">_set_eta</span><span class="p">(</span><span class="n">etas</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-                <span class="k">pass</span></div>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">eta</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">etas</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="progress.update"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">"""Update progress value by n and emit value event"""</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="progress.increment_with_overflow"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress.increment_with_overflow">[docs]</a>    <span class="k">def</span> <span class="nf">increment_with_overflow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Update if not exceeding total, else set indeterminate range."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">overflow</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="progress.set_description"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress.set_description">[docs]</a>    <span class="k">def</span> <span class="nf">set_description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">desc</span><span class="p">):</span>
-        <span class="sd">"""Update progress bar description"""</span>
+        <span class="sd">"""Update progress description and emit description event."""</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="n">desc</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">_set_description</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">desc</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">description</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">desc</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="progress.close"><a class="viewcode-back" href="../../../api/napari.utils.progress.html#napari.utils.progress.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""Closes and deletes the progress bar widget"""</span>
+        <span class="sd">"""Close progress object and emit event."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">close_pbar</span><span class="p">()</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
-
-    <span class="k">def</span> <span class="nf">close_pbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="p">:</span>
-            <span class="k">return</span>
-
-        <span class="kn">from</span> <span class="nn">napari._qt.widgets.qt_progress_bar</span> <span class="kn">import</span> <span class="p">(</span>
-            <span class="n">ProgressBar</span><span class="p">,</span>
-            <span class="n">ProgressBarGroup</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="n">parent_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parent_widget</span><span class="p">,</span> <span class="n">ProgressBarGroup</span><span class="p">):</span>
-            <span class="n">pbar_children</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="n">child</span>
-                <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">parent_widget</span><span class="o">.</span><span class="n">children</span><span class="p">()</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">ProgressBar</span><span class="p">)</span>
-            <span class="p">]</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">isVisible</span><span class="p">()</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">pbar_children</span><span class="p">):</span>
-                <span class="n">parent_widget</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_pbar</span> <span class="o">=</span> <span class="kc">None</span></div>
+        <span class="n">progress</span><span class="o">.</span><span class="n">_all_instances</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
 
 
 <div class="viewcode-block" id="progrange"><a class="viewcode-back" href="../../../api/napari.utils.html#napari.utils.progrange">[docs]</a><span class="k">def</span> <span class="nf">progrange</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>

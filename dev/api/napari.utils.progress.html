@@ -286,10 +286,12 @@
 progress bars in the napari viewer. Progress bars can be created
 directly by wrapping an iterable or by providing a total number
 of expected updates.</p>
+<p>While this interface is primarily designed to be displayed in
+the viewer, it can also be used without a viewer open, in which
+case it behaves identically to tqdm and produces the progress
+bar in the terminal.</p>
 <p>See tqdm.tqdm API for valid args and kwargs:
 <a class="reference external" href="https://tqdm.github.io/docs/tqdm/">https://tqdm.github.io/docs/tqdm/</a></p>
-<p>Also, any keyword arguments to the <code class="xref py py-class docutils literal notranslate"><span class="pre">ProgressBar</span></code> <cite>QWidget</cite>
-are also accepted and will be passed to the <code class="docutils literal notranslate"><span class="pre">ProgressBar</span></code>.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">long_running</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">progress</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">)):</span>
@@ -328,12 +330,12 @@ are also accepted and will be passed to the <code class="docutils literal notran
 <dl class="py method">
 <dt id="napari.utils.progress.close">
 <code class="sig-name descname"><span class="pre">close</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/progress.html#progress.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.utils.progress.close" title="Permalink to this definition">¶</a></dt>
-<dd><p>Closes and deletes the progress bar widget</p>
+<dd><p>Close progress object and emit event.</p>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.utils.progress.display">
 <code class="sig-name descname"><span class="pre">display</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/progress.html#progress.display"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.utils.progress.display" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update the display.</p>
+<dd><p>Update the display and emit eta event.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
@@ -539,7 +541,7 @@ If specified, will only <cite>display()</cite> if <cite>acquire()</cite> returns
 <dl class="py method">
 <dt id="napari.utils.progress.set_description">
 <code class="sig-name descname"><span class="pre">set_description</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">desc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/progress.html#progress.set_description"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.utils.progress.set_description" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update progress bar description</p>
+<dd><p>Update progress description and emit description event.</p>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.utils.progress.set_description_str">
@@ -585,31 +587,8 @@ updating may not work (it will print a new line at each refresh).</p>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.utils.progress.update">
-<code class="sig-name descname"><span class="pre">update</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#napari.utils.progress.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Manually update the progress bar, useful for streams
-such as reading files.
-E.g.:
-&gt;&gt;&gt; t = tqdm(total=filesize) # Initialise
-&gt;&gt;&gt; for current_buffer in stream:
-…    …
-…    t.update(len(current_buffer))
-&gt;&gt;&gt; t.close()
-The last line is highly recommended, but possibly not necessary if
-<cite>t.update()</cite> will be called in such a way that <cite>filesize</cite> will be
-exactly reached and printed.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a><em>, </em><em>optional</em>) – Increment to add to the internal counter of iterations
-[default: 1]. If using float, consider specifying <cite>{n:.3f}</cite>
-or similar in <cite>bar_format</cite>, or specifying <cite>unit_scale</cite>.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>out</strong> – True if a <cite>display()</cite> was triggered.</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)">None</a></p>
-</dd>
-</dl>
+<code class="sig-name descname"><span class="pre">update</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/utils/progress.html#progress.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.utils.progress.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update progress value by n and emit value event</p>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.utils.progress.wrapattr">

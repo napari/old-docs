@@ -39,6 +39,9 @@ napari.layers.Vectors
       ~Vectors.get_value
    
    
+      ~Vectors.projected_distance_from_mouse_drag
+   
+   
       ~Vectors.refresh
    
    
@@ -52,9 +55,6 @@ napari.layers.Vectors
    
    
       ~Vectors.world_to_data
-   
-   
-      ~Vectors.world_to_displayed_data
    
    
    

@@ -39,6 +39,9 @@ napari.layers.Layer
       ~Layer.get_value
    
    
+      ~Layer.projected_distance_from_mouse_drag
+   
+   
       ~Layer.refresh
    
    
@@ -49,9 +52,6 @@ napari.layers.Layer
    
    
       ~Layer.world_to_data
-   
-   
-      ~Layer.world_to_displayed_data
    
    
    

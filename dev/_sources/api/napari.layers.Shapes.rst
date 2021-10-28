@@ -72,6 +72,9 @@ napari.layers.Shapes
       ~Shapes.move_to_front
    
    
+      ~Shapes.projected_distance_from_mouse_drag
+   
+   
       ~Shapes.refresh
    
    
@@ -97,9 +100,6 @@ napari.layers.Shapes
    
    
       ~Shapes.world_to_data
-   
-   
-      ~Shapes.world_to_displayed_data
    
    
    

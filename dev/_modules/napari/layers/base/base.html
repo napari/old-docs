@@ -305,6 +305,7 @@
 <span class="kn">from</span> <span class="nn">...utils.transforms</span> <span class="kn">import</span> <span class="n">Affine</span><span class="p">,</span> <span class="n">CompositeAffine</span><span class="p">,</span> <span class="n">TransformChain</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">.._source</span> <span class="kn">import</span> <span class="n">current_source</span>
+<span class="kn">from</span> <span class="nn">..utils.interactivity_utils</span> <span class="kn">import</span> <span class="n">drag_data_to_projected_distance</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">coerce_affine</span><span class="p">,</span>
     <span class="n">compute_multiscale_level_and_corners</span><span class="p">,</span>
@@ -1366,6 +1367,49 @@
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
+<div class="viewcode-block" id="Layer.projected_distance_from_mouse_drag"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.projected_distance_from_mouse_drag">[docs]</a>    <span class="k">def</span> <span class="nf">projected_distance_from_mouse_drag</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">vector</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="p">):</span>
+        <span class="sd">"""Calculate the length of the projection of a line between two mouse</span>
+<span class="sd">        clicks onto a vector (or array of vectors) in data coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start_position : np.ndarray</span>
+<span class="sd">            Starting point of the drag vector in data coordinates</span>
+<span class="sd">        end_position : np.ndarray</span>
+<span class="sd">            End point of the drag vector in data coordinates</span>
+<span class="sd">        view_direction : np.ndarray</span>
+<span class="sd">            Vector defining the plane normal of the plane onto which the drag</span>
+<span class="sd">            vector is projected.</span>
+<span class="sd">        vector : np.ndarray</span>
+<span class="sd">            (3,) unit vector or (n, 3) array thereof on which to project the drag</span>
+<span class="sd">            vector from start_event to end_event. This argument is defined in data</span>
+<span class="sd">            coordinates.</span>
+<span class="sd">        dims_displayed: Union[List, np.ndarray]</span>
+<span class="sd">            (3,) list of currently displayed dimensions</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        projected_distance : (1, ) or (n, ) np.ndarray of float</span>
+<span class="sd">        """</span>
+        <span class="n">start_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data</span><span class="p">(</span>
+            <span class="n">start_position</span><span class="p">,</span> <span class="n">dims_displayed</span>
+        <span class="p">)</span>
+        <span class="n">end_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data</span><span class="p">(</span>
+            <span class="n">end_position</span><span class="p">,</span> <span class="n">dims_displayed</span>
+        <span class="p">)</span>
+        <span class="n">view_direction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data_ray</span><span class="p">(</span>
+            <span class="n">view_direction</span><span class="p">,</span> <span class="n">dims_displayed</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">drag_data_to_projected_distance</span><span class="p">(</span>
+            <span class="n">start_position</span><span class="p">,</span> <span class="n">end_position</span><span class="p">,</span> <span class="n">view_direction</span><span class="p">,</span> <span class="n">vector</span>
+        <span class="p">)</span></div>
+
     <span class="nd">@contextmanager</span>
     <span class="k">def</span> <span class="nf">block_update_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_properties</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1412,7 +1456,7 @@
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">simplified</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">coords</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="Layer.world_to_displayed_data"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.world_to_displayed_data">[docs]</a>    <span class="k">def</span> <span class="nf">world_to_displayed_data</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">_world_to_displayed_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
         <span class="sd">"""Convert world to data coordinates for displayed dimensions only.</span>
@@ -1433,7 +1477,7 @@
 <span class="sd">        """</span>
         <span class="n">position_nd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_data</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
         <span class="n">position_ndisplay</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position_nd</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position_ndisplay</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">position_ndisplay</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_data_to_world</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Affine</span><span class="p">:</span>
@@ -1549,7 +1593,7 @@
 
             <span class="c1"># Get the clicked point in data coords (only displayed dims)</span>
             <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_displayed_data</span><span class="p">(</span>
+                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data</span><span class="p">(</span>
                     <span class="n">position</span><span class="p">,</span> <span class="n">dims_displayed</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>

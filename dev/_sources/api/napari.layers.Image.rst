@@ -39,6 +39,9 @@ napari.layers.Image
       ~Image.get_value
    
    
+      ~Image.projected_distance_from_mouse_drag
+   
+   
       ~Image.refresh
    
    
@@ -55,9 +58,6 @@ napari.layers.Image
    
    
       ~Image.world_to_data
-   
-   
-      ~Image.world_to_displayed_data
    
    
    

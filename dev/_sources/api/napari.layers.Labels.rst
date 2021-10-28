@@ -51,6 +51,9 @@ napari.layers.Labels
       ~Labels.paint
    
    
+      ~Labels.projected_distance_from_mouse_drag
+   
+   
       ~Labels.redo
    
    
@@ -73,9 +76,6 @@ napari.layers.Labels
    
    
       ~Labels.world_to_data
-   
-   
-      ~Labels.world_to_displayed_data
    
    
    

@@ -45,6 +45,9 @@ napari.layers.Points
       ~Points.interaction_box
    
    
+      ~Points.projected_distance_from_mouse_drag
+   
+   
       ~Points.refresh
    
    
@@ -67,9 +70,6 @@ napari.layers.Points
    
    
       ~Points.world_to_data
-   
-   
-      ~Points.world_to_displayed_data
    
    
    

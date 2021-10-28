@@ -39,6 +39,9 @@ napari.layers.Tracks
       ~Tracks.get_value
    
    
+      ~Tracks.projected_distance_from_mouse_drag
+   
+   
       ~Tracks.refresh
    
    
@@ -49,9 +52,6 @@ napari.layers.Tracks
    
    
       ~Tracks.world_to_data
-   
-   
-      ~Tracks.world_to_displayed_data
    
    
    

@@ -60,6 +60,9 @@ napari.components.Camera
       ~Camera.schema_json
    
    
+      ~Camera.set_view_direction
+   
+   
       ~Camera.update
    
    
@@ -79,6 +82,7 @@ napari.components.Camera
       :inherited-members:
    
       ~Camera.events
+      ~Camera.up_direction
       ~Camera.view_direction
    
    

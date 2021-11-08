@@ -124,6 +124,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/3D_interactivity.html">3D interactivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/event_loop.html">An Introduction to the Event Loop in napari</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/connecting_events.html">Hooking up your own events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../guides/events_reference.html">Events Reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/threading.html">Multithreading in napari</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/magicgui.html">Using <code class="docutils literal notranslate"><span class="pre">magicgui</span></code> in napari</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../guides/perfmon.html">Performance Monitoring</a></li>
@@ -280,6 +281,7 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">validator</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.transform</span> <span class="kn">import</span> <span class="n">Rotation</span> <span class="k">as</span> <span class="n">R</span>
 
 <span class="kn">from</span> <span class="nn">..utils.events</span> <span class="kn">import</span> <span class="n">EventedModel</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">ensure_n_tuple</span>
@@ -291,7 +293,8 @@
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    center : 3-tuple</span>
-<span class="sd">        Center of the camera. In 2D viewing the last two values are used.</span>
+<span class="sd">        Center of rotation for the camera.</span>
+<span class="sd">        In 2D viewing the last two values are used.</span>
 <span class="sd">    zoom : float</span>
 <span class="sd">        Scale from canvas pixels to world pixels.</span>
 <span class="sd">    angles : 3-tuple</span>
@@ -318,11 +321,12 @@
         <span class="k">return</span> <span class="n">ensure_n_tuple</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">view_direction</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">view_direction</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
         <span class="sd">"""3D view direction vector of the camera.</span>
 
 <span class="sd">        View direction is calculated from the Euler angles and returned as a</span>
-<span class="sd">        (3,) array.</span>
+<span class="sd">        3-tuple. This direction is in 3D scene coordinates, the world coordinate</span>
+<span class="sd">        system for three currently displayed dimensions.</span>
 <span class="sd">        """</span>
         <span class="n">ang</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">angles</span><span class="p">)</span>
         <span class="n">view_direction</span> <span class="o">=</span> <span class="p">(</span>
@@ -331,6 +335,81 @@
             <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">ang</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">view_direction</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">up_direction</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="sd">"""3D direction vector pointing up on the canvas.</span>
+
+<span class="sd">        Up direction is calculated from the Euler angles and returned as a</span>
+<span class="sd">        3-tuple. This direction is in 3D scene coordinates, the world coordinate</span>
+<span class="sd">        system for three currently displayed dimensions.</span>
+<span class="sd">        """</span>
+        <span class="n">rotation_matrix</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">from_euler</span><span class="p">(</span>
+            <span class="n">seq</span><span class="o">=</span><span class="s1">'yzx'</span><span class="p">,</span> <span class="n">angles</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">angles</span><span class="p">,</span> <span class="n">degrees</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rotation_matrix</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+<div class="viewcode-block" id="Camera.set_view_direction"><a class="viewcode-back" href="../../../api/napari.components.Camera.html#napari.components.Camera.set_view_direction">[docs]</a>    <span class="k">def</span> <span class="nf">set_view_direction</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">up_direction</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="p">):</span>
+        <span class="sd">"""Set camera angles from direction vectors.</span>
+
+<span class="sd">        Both the view direction and the up direction are specified in 3D scene</span>
+<span class="sd">        coordinates, the world coordinate system for three currently displayed</span>
+<span class="sd">        dimensions.</span>
+
+<span class="sd">        The provided up direction must not be parallel to the provided</span>
+<span class="sd">        view direction. The provided up direction does not need to be orthogonal</span>
+<span class="sd">        to the view direction. The final up direction will be a vector orthogonal</span>
+<span class="sd">        to the view direction, aligned with the provided up direction.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        view_direction : 3-tuple of float</span>
+<span class="sd">            The desired view direction vector in 3D scene coordinates, the world</span>
+<span class="sd">            coordinate system for three currently displayed dimensions.</span>
+<span class="sd">        up_direction : 3-tuple of float</span>
+<span class="sd">            A direction vector which will point upwards on the canvas. Defaults</span>
+<span class="sd">            to (0, -1, 0) unless the view direction is parallel to the y-axis,</span>
+<span class="sd">            in which case will default to (-1, 0, 0).</span>
+<span class="sd">        """</span>
+        <span class="c1"># default behaviour of up direction</span>
+        <span class="n">view_direction_along_y_axis</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">view_direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">view_direction</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">up_direction_along_y_axis</span> <span class="o">=</span> <span class="p">(</span><span class="n">up_direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">up_direction</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">view_direction_along_y_axis</span> <span class="ow">and</span> <span class="n">up_direction_along_y_axis</span><span class="p">:</span>
+            <span class="n">up_direction</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># align up direction along z axis</span>
+
+        <span class="c1"># xyz ordering for vispy, normalise vectors for rotation matrix</span>
+        <span class="n">view_direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">view_direction</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)</span>
+
+        <span class="n">up_direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">up_direction</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">up_direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">view_direction</span><span class="p">,</span> <span class="n">up_direction</span><span class="p">)</span>
+        <span class="n">up_direction</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">up_direction</span><span class="p">)</span>
+
+        <span class="c1"># explicit check for parallel view direction and up direction</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">view_direction</span><span class="p">,</span> <span class="n">up_direction</span><span class="p">),</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"view direction and up direction are parallel"</span><span class="p">)</span>
+
+        <span class="n">x_direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">up_direction</span><span class="p">,</span> <span class="n">view_direction</span><span class="p">)</span>
+        <span class="n">x_direction</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">x_direction</span><span class="p">)</span>
+
+        <span class="c1"># construct rotation matrix, convert to euler angles</span>
+        <span class="n">rotation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">up_direction</span><span class="p">,</span> <span class="n">view_direction</span><span class="p">,</span> <span class="n">x_direction</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">euler_angles</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">from_matrix</span><span class="p">(</span><span class="n">rotation_matrix</span><span class="p">)</span><span class="o">.</span><span class="n">as_euler</span><span class="p">(</span>
+            <span class="n">seq</span><span class="o">=</span><span class="s1">'yzx'</span><span class="p">,</span> <span class="n">degrees</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">angles</span> <span class="o">=</span> <span class="n">euler_angles</span></div>
 
 <div class="viewcode-block" id="Camera.calculate_nd_view_direction"><a class="viewcode-back" href="../../../api/napari.components.Camera.html#napari.components.Camera.calculate_nd_view_direction">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_nd_view_direction</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>

@@ -290,6 +290,7 @@
 <span class="kn">import</span> <span class="nn">magicgui</span> <span class="k">as</span> <span class="nn">mgui</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
+<span class="kn">from</span> <span class="nn">..._vendor.cpython.functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span> <span class="nn">...utils._dask_utils</span> <span class="kn">import</span> <span class="n">configure_dask</span>
 <span class="kn">from</span> <span class="nn">...utils._magicgui</span> <span class="kn">import</span> <span class="n">add_layer_to_viewer</span><span class="p">,</span> <span class="n">get_layers</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">EmitterGroup</span><span class="p">,</span> <span class="n">Event</span>
@@ -312,6 +313,7 @@
     <span class="n">compute_multiscale_level_and_corners</span><span class="p">,</span>
     <span class="n">convert_to_uint8</span><span class="p">,</span>
     <span class="n">dims_displayed_world_to_layer</span><span class="p">,</span>
+    <span class="n">get_extent_world</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">..utils.plane</span> <span class="kn">import</span> <span class="n">ClippingPlane</span><span class="p">,</span> <span class="n">ClippingPlaneList</span>
 <span class="kn">from</span> <span class="nn">._base_constants</span> <span class="kn">import</span> <span class="n">Blending</span>
@@ -562,6 +564,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_dims_point</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">corner_pixels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">ndim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_editable</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_array_like</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_thumbnail_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
@@ -897,7 +900,11 @@
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_update_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">"""Updates dims model, which is useful after data has been changed."""</span>
+        <span class="sd">"""Update the dims model and clear the extent cache.</span>
+
+<span class="sd">        This function needs to be called whenever data or transform information</span>
+<span class="sd">        changes, and should be called before events get emitted.</span>
+<span class="sd">        """</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ndim</span><span class="p">()</span>
 
         <span class="n">old_ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ndim</span>
@@ -919,6 +926,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">old_ndim</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_position</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_ndim</span> <span class="o">=</span> <span class="n">ndim</span>
+        <span class="k">if</span> <span class="s1">'extent'</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">extent</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
@@ -953,36 +962,22 @@
 <span class="sd">        extent_world : array, shape (2, D)</span>
 <span class="sd">        """</span>
         <span class="c1"># Get full nD bounding box</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_extent_world</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_get_extent_world</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_extent</span><span class="p">):</span>
-        <span class="sd">"""Range of layer in world coordinates base on provided data_extent</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        extent_world : array, shape (2, D)</span>
-<span class="sd">        """</span>
-        <span class="n">D</span> <span class="o">=</span> <span class="n">data_extent</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">full_data_extent</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="o">*</span><span class="n">data_extent</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
-            <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">D</span>
+        <span class="k">return</span> <span class="n">get_extent_world</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_to_world</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_array_like</span>
         <span class="p">)</span>
-        <span class="n">full_world_extent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_to_world</span><span class="p">(</span><span class="n">full_data_extent</span><span class="p">)</span>
-        <span class="n">world_extent</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">full_world_extent</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">full_world_extent</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-            <span class="p">]</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">world_extent</span>
 
-    <span class="nd">@property</span>
+    <span class="nd">@cached_property</span>
     <span class="k">def</span> <span class="nf">extent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Extent</span><span class="p">:</span>
         <span class="sd">"""Extent of layer in data and world coordinates."""</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
+        <span class="n">extent_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span>
+        <span class="n">data_to_world</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_to_world</span>
+        <span class="n">extent_world</span> <span class="o">=</span> <span class="n">get_extent_world</span><span class="p">(</span>
+            <span class="n">extent_data</span><span class="p">,</span> <span class="n">data_to_world</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_array_like</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">Extent</span><span class="p">(</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-            <span class="n">world</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_extent_world</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
-            <span class="n">step</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_to_world</span><span class="o">.</span><span class="n">scale</span><span class="p">),</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">extent_data</span><span class="p">,</span>
+            <span class="n">world</span><span class="o">=</span><span class="n">extent_world</span><span class="p">,</span>
+            <span class="n">step</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">data_to_world</span><span class="o">.</span><span class="n">scale</span><span class="p">),</span>
         <span class="p">)</span>
 
     <span class="nd">@property</span>

@@ -27,6 +27,9 @@ napari.layers.Image
       ~Image.block_update_properties
    
    
+      ~Image.click_plane_from_click_data
+   
+   
       ~Image.create
    
    

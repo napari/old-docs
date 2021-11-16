@@ -48,6 +48,9 @@ napari.layers.Shapes
       ~Shapes.block_update_properties
    
    
+      ~Shapes.click_plane_from_click_data
+   
+   
       ~Shapes.create
    
    

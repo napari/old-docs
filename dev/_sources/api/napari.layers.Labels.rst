@@ -27,6 +27,9 @@ napari.layers.Labels
       ~Labels.block_update_properties
    
    
+      ~Labels.click_plane_from_click_data
+   
+   
       ~Labels.create
    
    

@@ -27,6 +27,9 @@ napari.layers.Vectors
       ~Vectors.block_update_properties
    
    
+      ~Vectors.click_plane_from_click_data
+   
+   
       ~Vectors.create
    
    

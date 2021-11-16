@@ -296,11 +296,13 @@
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">...utils.events</span> <span class="kn">import</span> <span class="n">Event</span>
 <span class="kn">from</span> <span class="nn">...utils.events.custom_types</span> <span class="kn">import</span> <span class="n">Array</span>
+<span class="kn">from</span> <span class="nn">...utils.geometry</span> <span class="kn">import</span> <span class="n">project_points_onto_plane</span><span class="p">,</span> <span class="n">rotate_points</span>
 <span class="kn">from</span> <span class="nn">...utils.transforms</span> <span class="kn">import</span> <span class="n">Affine</span>
 <span class="kn">from</span> <span class="nn">...utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
 <span class="kn">from</span> <span class="nn">..base</span> <span class="kn">import</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">no_op</span>
 <span class="kn">from</span> <span class="nn">..utils._color_manager_constants</span> <span class="kn">import</span> <span class="n">ColorMode</span>
 <span class="kn">from</span> <span class="nn">..utils.color_manager</span> <span class="kn">import</span> <span class="n">ColorManager</span>
+<span class="kn">from</span> <span class="nn">..utils.interactivity_utils</span> <span class="kn">import</span> <span class="n">displayed_plane_from_nd_line_segment</span>
 <span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">coerce_current_properties</span><span class="p">,</span>
     <span class="n">get_current_properties</span><span class="p">,</span>
@@ -1474,7 +1476,7 @@
     <span class="k">def</span> <span class="nf">_set_editable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">editable</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">"""Set editable mode based on layer properties."""</span>
         <span class="k">if</span> <span class="n">editable</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ndisplay</span> <span class="o">&lt;</span> <span class="mi">3</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">editable</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">editable</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">PAN_ZOOM</span>
 
@@ -1522,7 +1524,7 @@
             <span class="k">return</span> <span class="p">[],</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">"""Value of the data at a position in data coordinates.</span>
+        <span class="sd">"""Index of the point at a given 2D position in data coordinates.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1550,6 +1552,144 @@
                 <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
 
         <span class="k">return</span> <span class="n">selection</span>
+
+    <span class="k">def</span> <span class="nf">_get_value_3d</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">start_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">end_point</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="sd">"""Get the layer data value along a ray</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            The start position of the ray used to interrogate the data.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            The end position of the ray used to interrogate the data.</span>
+<span class="sd">        dims_displayed : List[int]</span>
+<span class="sd">            The indices of the dimensions currently displayed in the Viewer.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : Union[int, None]</span>
+<span class="sd">            The data value along the supplied ray.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">start_point</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">end_point</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># if the ray doesn't intersect the data volume, no points could have been intersected</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">plane_point</span><span class="p">,</span> <span class="n">plane_normal</span> <span class="o">=</span> <span class="n">displayed_plane_from_nd_line_segment</span><span class="p">(</span>
+            <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span><span class="p">,</span> <span class="n">dims_displayed</span>
+        <span class="p">)</span>
+
+        <span class="c1"># project the in view points onto the plane</span>
+        <span class="n">projected_points</span><span class="p">,</span> <span class="n">projection_distances</span> <span class="o">=</span> <span class="n">project_points_onto_plane</span><span class="p">(</span>
+            <span class="n">points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_view_data</span><span class="p">,</span>
+            <span class="n">plane_point</span><span class="o">=</span><span class="n">plane_point</span><span class="p">,</span>
+            <span class="n">plane_normal</span><span class="o">=</span><span class="n">plane_normal</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># rotate points and plane to be axis aligned with normal [0, 0, 1]</span>
+        <span class="n">rotated_points</span><span class="p">,</span> <span class="n">rotation_matrix</span> <span class="o">=</span> <span class="n">rotate_points</span><span class="p">(</span>
+            <span class="n">points</span><span class="o">=</span><span class="n">projected_points</span><span class="p">,</span>
+            <span class="n">current_plane_normal</span><span class="o">=</span><span class="n">plane_normal</span><span class="p">,</span>
+            <span class="n">new_plane_normal</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">rotated_click_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rotation_matrix</span><span class="p">,</span> <span class="n">plane_point</span><span class="p">)</span>
+
+        <span class="c1"># find the points the click intersects</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rotated_points</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">rotated_click_point</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">in_slice_matches</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
+            <span class="n">distances</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_view_size</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">in_slice_matches</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># find the point that is most in the foreground</span>
+            <span class="n">candidate_point_distances</span> <span class="o">=</span> <span class="n">projection_distances</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+            <span class="n">closest_index</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">candidate_point_distances</span><span class="p">)]</span>
+            <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span><span class="p">[</span><span class="n">closest_index</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">selection</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">selection</span>
+
+    <span class="k">def</span> <span class="nf">_display_bounding_box_augmented</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="sd">"""An augmented, axis-aligned (self._ndisplay, 2) bounding box.</span>
+
+<span class="sd">        This bounding box for includes the full size of displayed points</span>
+<span class="sd">        and enables calculation of intersections in `Layer._get_value_3d()`.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_view_size</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">max_point_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_view_size</span><span class="p">)</span>
+        <span class="n">bounding_box</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">bounding_box</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">max_point_size</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">bounding_box</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">max_point_size</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">return</span> <span class="n">bounding_box</span>
+
+<div class="viewcode-block" id="Points.get_ray_intersections"><a class="viewcode-back" href="../../../../api/napari.layers.Points.html#napari.layers.Points.get_ray_intersections">[docs]</a>    <span class="k">def</span> <span class="nf">get_ray_intersections</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">position</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">world</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]:</span>
+        <span class="sd">"""Get the start and end point for the ray extending</span>
+<span class="sd">        from a point through the displayed bounding box.</span>
+
+<span class="sd">        This method overrides the base layer, replacing the bounding box used</span>
+<span class="sd">        to calculate intersections with a larger one which includes the size</span>
+<span class="sd">        of points in view.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position</span>
+<span class="sd">            the position of the point in nD coordinates. World vs. data</span>
+<span class="sd">            is set by the world keyword argument.</span>
+<span class="sd">        view_direction : np.ndarray</span>
+<span class="sd">            a unit vector giving the direction of the ray in nD coordinates.</span>
+<span class="sd">            World vs. data is set by the world keyword argument.</span>
+<span class="sd">        dims_displayed</span>
+<span class="sd">            a list of the dimensions currently being displayed in the viewer.</span>
+<span class="sd">        world : bool</span>
+<span class="sd">            True if the provided coordinates are in world coordinates.</span>
+<span class="sd">            Default value is True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            The point on the axis-aligned data bounding box that the cursor click</span>
+<span class="sd">            intersects with. This is the point closest to the camera.</span>
+<span class="sd">            The point is the full nD coordinates of the layer data.</span>
+<span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
+<span class="sd">            None is returned.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            The point on the axis-aligned data bounding box that the cursor click</span>
+<span class="sd">            intersects with. This is the point farthest from the camera.</span>
+<span class="sd">            The point is the full nD coordinates of the layer data.</span>
+<span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
+<span class="sd">            None is returned.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="c1"># create the bounding box in data coordinates</span>
+        <span class="n">bounding_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box_augmented</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bounding_box</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ray_intersections</span><span class="p">(</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">view_direction</span><span class="o">=</span><span class="n">view_direction</span><span class="p">,</span>
+            <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+            <span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">,</span>
+            <span class="n">bounding_box</span><span class="o">=</span><span class="n">bounding_box</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span></div>
 
     <span class="k">def</span> <span class="nf">_set_view_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Sets the view given the indices to slice with."""</span>

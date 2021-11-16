@@ -27,6 +27,9 @@ napari.layers.Layer
       ~Layer.block_update_properties
    
    
+      ~Layer.click_plane_from_click_data
+   
+   
       ~Layer.create
    
    

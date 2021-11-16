@@ -27,6 +27,9 @@ napari.layers.Surface
       ~Surface.block_update_properties
    
    
+      ~Surface.click_plane_from_click_data
+   
+   
       ~Surface.create
    
    

@@ -30,6 +30,9 @@ napari.layers.Points
       ~Points.block_update_properties
    
    
+      ~Points.click_plane_from_click_data
+   
+   
       ~Points.create
    
    

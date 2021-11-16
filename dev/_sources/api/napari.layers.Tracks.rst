@@ -27,6 +27,9 @@ napari.layers.Tracks
       ~Tracks.block_update_properties
    
    
+      ~Tracks.click_plane_from_click_data
+   
+   
       ~Tracks.create
    
    

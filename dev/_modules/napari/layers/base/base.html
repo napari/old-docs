@@ -1534,6 +1534,35 @@
         <span class="sd">"""An axis aligned (self._ndisplay, 2) bounding box around the data"""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_data</span><span class="p">[:,</span> <span class="n">dims_displayed</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
 
+<div class="viewcode-block" id="Layer.click_plane_from_click_data"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.click_plane_from_click_data">[docs]</a>    <span class="k">def</span> <span class="nf">click_plane_from_click_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">click_position</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="sd">"""Calculate a (point, normal) plane parallel to the canvas in data</span>
+<span class="sd">        coordinates, centered on the centre of rotation of the camera.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        click_position : np.ndarray</span>
+<span class="sd">            click position in world coordinates from mouse event.</span>
+<span class="sd">        view_direction : np.ndarray</span>
+<span class="sd">            view direction in world coordinates from mouse event.</span>
+<span class="sd">        dims_displayed : List</span>
+<span class="sd">            dimensions of the data array currently in view.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        click_plane : Tuple[np.ndarray, np.ndarray]</span>
+<span class="sd">            tuple of (plane_position, plane_normal) in data coordinates.</span>
+<span class="sd">        """</span>
+        <span class="n">click_position</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">click_position</span><span class="p">)</span>
+        <span class="n">view_direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)</span>
+        <span class="n">plane_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_data</span><span class="p">(</span><span class="n">click_position</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+        <span class="n">plane_normal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_data_ray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">plane_position</span><span class="p">,</span> <span class="n">plane_normal</span></div>
+
 <div class="viewcode-block" id="Layer.get_ray_intersections"><a class="viewcode-back" href="../../../../api/napari.layers.Layer.html#napari.layers.Layer.get_ray_intersections">[docs]</a>    <span class="k">def</span> <span class="nf">get_ray_intersections</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">position</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
@@ -1573,63 +1602,102 @@
 <span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
 <span class="sd">            None is returned.</span>
 <span class="sd">        """</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="c1"># create a mask to select the in view dimensions</span>
-            <span class="n">dims_displayed_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-            <span class="n">dims_displayed_mask</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
-            <span class="c1"># create the bounding box in data coordinates</span>
-            <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span>
+        <span class="c1"># create the bounding box in data coordinates</span>
+        <span class="n">bounding_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_bounding_box</span><span class="p">(</span><span class="n">dims_displayed</span><span class="p">)</span>
+        <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ray_intersections</span><span class="p">(</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">view_direction</span><span class="o">=</span><span class="n">view_direction</span><span class="p">,</span>
+            <span class="n">dims_displayed</span><span class="o">=</span><span class="n">dims_displayed</span><span class="p">,</span>
+            <span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">,</span>
+            <span class="n">bounding_box</span><span class="o">=</span><span class="n">bounding_box</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span></div>
 
-            <span class="c1"># get the view direction in data coords (only displayed dims)</span>
-            <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">view_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data_ray</span><span class="p">(</span>
-                    <span class="n">view_direction</span><span class="p">,</span> <span class="n">dims_displayed</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">view_dir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+    <span class="k">def</span> <span class="nf">_get_ray_intersections</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">position</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">view_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dims_displayed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">world</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">bounding_box</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]:</span>
+        <span class="sd">"""Get the start and end point for the ray extending</span>
+<span class="sd">        from a point through the data bounding box.</span>
 
-            <span class="c1"># Get the clicked point in data coords (only displayed dims)</span>
-            <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data</span><span class="p">(</span>
-                    <span class="n">position</span><span class="p">,</span> <span class="n">dims_displayed</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">click_pos_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position</span>
+<span class="sd">            the position of the point in nD coordinates. World vs. data</span>
+<span class="sd">            is set by the world keyword argument.</span>
+<span class="sd">        view_direction : np.ndarray</span>
+<span class="sd">            a unit vector giving the direction of the ray in nD coordinates.</span>
+<span class="sd">            World vs. data is set by the world keyword argument.</span>
+<span class="sd">        dims_displayed</span>
+<span class="sd">            a list of the dimensions currently being displayed in the viewer.</span>
+<span class="sd">        world : bool</span>
+<span class="sd">            True if the provided coordinates are in world coordinates.</span>
+<span class="sd">            Default value is True.</span>
+<span class="sd">        bounding_box: np.ndarray</span>
+<span class="sd">            A (2, 3) bounding box around the data currently in view</span>
 
-            <span class="c1"># Determine the front and back faces</span>
-            <span class="n">front_face_normal</span><span class="p">,</span> <span class="n">back_face_normal</span> <span class="o">=</span> <span class="n">find_front_back_face</span><span class="p">(</span>
-                <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">view_dir</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        start_point : np.ndarray</span>
+<span class="sd">            The point on the axis-aligned data bounding box that the cursor click</span>
+<span class="sd">            intersects with. This is the point closest to the camera.</span>
+<span class="sd">            The point is the full nD coordinates of the layer data.</span>
+<span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
+<span class="sd">            None is returned.</span>
+<span class="sd">        end_point : np.ndarray</span>
+<span class="sd">            The point on the axis-aligned data bounding box that the cursor click</span>
+<span class="sd">            intersects with. This is the point farthest from the camera.</span>
+<span class="sd">            The point is the full nD coordinates of the layer data.</span>
+<span class="sd">            If the click does not intersect the axis-aligned data bounding box,</span>
+<span class="sd">            None is returned."""</span>
+        <span class="c1"># get the view direction and click position in data coords</span>
+        <span class="c1"># for the displayed dimensions only</span>
+        <span class="k">if</span> <span class="n">world</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">view_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data_ray</span><span class="p">(</span>
+                <span class="n">view_direction</span><span class="p">,</span> <span class="n">dims_displayed</span>
             <span class="p">)</span>
-
-            <span class="c1"># Get the locations in the plane where the ray intersects</span>
-            <span class="k">if</span> <span class="n">front_face_normal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">back_face_normal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">start_point_disp_dims</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
-                        <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">front_face_normal</span>
-                    <span class="p">)</span>
-                <span class="p">)</span>
-                <span class="n">end_point_disp_dims</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
-                        <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">back_face_normal</span>
-                    <span class="p">)</span>
-                <span class="p">)</span>
-
-                <span class="c1"># add the coordinates for the axes not displayed</span>
-                <span class="n">start_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-                <span class="n">start_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_point_disp_dims</span>
-                <span class="n">end_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-                <span class="n">end_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_point_disp_dims</span>
-
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># if the click doesn't intersect the data bounding box,</span>
-                <span class="c1"># return None</span>
-                <span class="n">start_point</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">end_point</span> <span class="o">=</span> <span class="kc">None</span>
-
-            <span class="k">return</span> <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span>
+            <span class="n">click_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_world_to_displayed_data</span><span class="p">(</span>
+                <span class="n">position</span><span class="p">,</span> <span class="n">dims_displayed</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span></div>
+            <span class="n">view_dir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">view_direction</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+            <span class="n">click_pos_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)[</span><span class="n">dims_displayed</span><span class="p">]</span>
+
+        <span class="c1"># Determine the front and back faces</span>
+        <span class="n">front_face_normal</span><span class="p">,</span> <span class="n">back_face_normal</span> <span class="o">=</span> <span class="n">find_front_back_face</span><span class="p">(</span>
+            <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">bounding_box</span><span class="p">,</span> <span class="n">view_dir</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">front_face_normal</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">back_face_normal</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># click does not intersect the data bounding box</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="c1"># Calculate ray-bounding box face intersections</span>
+        <span class="n">start_point_displayed_dimensions</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
+                <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bounding_box</span><span class="p">,</span> <span class="n">front_face_normal</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">end_point_displayed_dimensions</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">intersect_line_with_axis_aligned_bounding_box_3d</span><span class="p">(</span>
+                <span class="n">click_pos_data</span><span class="p">,</span> <span class="n">view_dir</span><span class="p">,</span> <span class="n">bounding_box</span><span class="p">,</span> <span class="n">back_face_normal</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># add the coordinates for the axes not displayed</span>
+        <span class="n">start_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="n">start_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_point_displayed_dimensions</span>
+        <span class="n">end_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="n">end_point</span><span class="p">[</span><span class="n">dims_displayed</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_point_displayed_dimensions</span>
+
+        <span class="k">return</span> <span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_displayed_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

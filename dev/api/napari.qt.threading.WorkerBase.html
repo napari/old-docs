@@ -282,8 +282,8 @@
 <h1>napari.qt.threading.WorkerBase<a class="headerlink" href="#napari-qt-threading-workerbase" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="napari.qt.threading.WorkerBase">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">napari.qt.threading.</span></code><code class="sig-name descname"><span class="pre">WorkerBase</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*args</span></em>, <em class="sig-param"><span class="pre">SignalsClass=&lt;class</span> <span class="pre">'napari._qt.qthreading.WorkerBaseSignals'&gt;</span></em>, <em class="sig-param"><span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#WorkerBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">PyQt5.QtCore.QRunnable</span></code></p>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">napari.qt.threading.</span></code><code class="sig-name descname"><span class="pre">WorkerBase</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">func=None</span></em>, <em class="sig-param"><span class="pre">SignalsClass=&lt;class</span> <span class="pre">'superqt.utils._qthreading.WorkerBaseSignals'&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">PyQt5.QtCore.QRunnable</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">superqt.utils._qthreading._R</span></code>]</p>
 <p>Base class for creating a Worker that can run in another thread.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -317,6 +317,48 @@
 <code class="sig-name descname"><span class="pre">autoDelete</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> → <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.autoDelete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 <dl class="py method">
+<dt id="napari.qt.threading.WorkerBase.await_workers">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">await_workers</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msecs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase.await_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.await_workers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ask all workers to quit, and wait up to <cite>msec</cite> for quit.</p>
+<p>Attempts to clean up all running workers by calling <code class="docutils literal notranslate"><span class="pre">worker.quit()</span></code>
+method.  Any workers in the <code class="docutils literal notranslate"><span class="pre">WorkerBase._worker_set</span></code> set will have this
+method.</p>
+<p>By default, this function will block indefinitely, until worker threads
+finish.  If a timeout is provided, a <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> will be raised if
+the workers do not gracefully exit in the time requests, but the threads
+will NOT be killed.  It is (currently) left to the user to use their OS
+to force-quit rogue threads.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>If the user does not put any yields in their function, and the function
+is super long, it will just hang… For instance, there’s no graceful
+way to kill this thread in python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@thread_worker</span>
+<span class="k">def</span> <span class="nf">ZZZzzz</span><span class="p">():</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10000000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is why it’s always advisable to use a generator that periodically
+yields for long-running computations in another thread.</p>
+<p>See <a class="reference external" href="https://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread">this stack-overflow post</a>
+for a good discussion on the difficulty of killing a rogue python thread:</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>msecs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>optional</em>) – Waits up to msecs milliseconds for all threads to exit and removes all
+threads from the thread pool. If msecs is <cite>None</cite> (the default), the
+timeout is ignored (waits for the last thread to exit).</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.10)"><strong>RuntimeError</strong></a> – If a timeout is provided and workers do not quit successfully within
+    the time allotted.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.create">
 <code class="sig-name descname"><span class="pre">create</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">Callable[[],</span> <span class="pre">None]</span></em><span class="sig-paren">)</span> → <span class="pre">QRunnable</span><a class="headerlink" href="#napari.qt.threading.WorkerBase.create" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -332,7 +374,7 @@
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.quit">
-<code class="sig-name descname"><span class="pre">quit</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#WorkerBase.quit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.quit" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">quit</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase.quit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.quit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Send a request to abort the worker.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -348,7 +390,7 @@ method, and exiting if <code class="docutils literal notranslate"><span class="p
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.run">
-<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#WorkerBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.run" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Start the worker.</p>
 <p>The end-user should never need to call this function.
 But it cannot be made private or renamed, since it is called by Qt.</p>
@@ -366,6 +408,11 @@ worker.start -&gt; worker.run -&gt; worker.work
 method, and emits a few signals.  Subclasses should NOT override this
 method (except with good reason), and instead should implement
 <a class="reference internal" href="#napari.qt.threading.WorkerBase.work" title="napari.qt.threading.WorkerBase.work"><code class="xref py py-meth docutils literal notranslate"><span class="pre">work()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.setAutoDelete">
@@ -373,7 +420,7 @@ method (except with good reason), and instead should implement
 <dd></dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.start">
-<code class="sig-name descname"><span class="pre">start</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#WorkerBase.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.start" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">start</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.start" title="Permalink to this definition">¶</a></dt>
 <dd><p>Start this worker in a thread and add it to the global threadpool.</p>
 <p>The order of method calls when starting a worker is:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>calls QThreadPool.globalInstance().start(worker)
@@ -384,10 +431,15 @@ V               V             V
 worker.start -&gt; worker.run -&gt; worker.work
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.WorkerBase.work">
-<code class="sig-name descname"><span class="pre">work</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#WorkerBase.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.work" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">work</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#WorkerBase.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.WorkerBase.work" title="Permalink to this definition">¶</a></dt>
 <dd><p>Main method to execute the worker.</p>
 <p>The end-user should never need to call this function.
 But subclasses must implement this method (See
@@ -411,7 +463,7 @@ exit if True.</p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a>, ~_R]</p>
 </dd>
 </dl>
 </dd></dl>

@@ -21,6 +21,9 @@ napari.qt.threading.WorkerBase
       ~WorkerBase.autoDelete
    
    
+      ~WorkerBase.await_workers
+   
+   
       ~WorkerBase.create
    
    

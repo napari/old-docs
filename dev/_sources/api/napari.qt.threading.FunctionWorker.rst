@@ -21,6 +21,9 @@ napari.qt.threading.FunctionWorker
       ~FunctionWorker.autoDelete
    
    
+      ~FunctionWorker.await_workers
+   
+   
       ~FunctionWorker.create
    
    

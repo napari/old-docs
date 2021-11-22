@@ -283,27 +283,7 @@
 <dl class="py class">
 <dt id="napari.qt.threading.FunctionWorker">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">napari.qt.threading.</span></code><code class="sig-name descname"><span class="pre">FunctionWorker</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#FunctionWorker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.FunctionWorker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">napari._qt.qthreading.WorkerBase</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">napari._qt.qthreading._R</span></code>]</p>
-<p>QRunnable with signals that wraps a simple long-running function.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p><code class="docutils literal notranslate"><span class="pre">FunctionWorker</span></code> does not provide a way to stop a very long-running
-function (e.g. <code class="docutils literal notranslate"><span class="pre">time.sleep(10000)</span></code>).  So whenever possible, it is
-better to implement your long running function as a generator that
-yields periodically, and use the <a class="reference internal" href="napari.qt.threading.GeneratorWorker.html#napari.qt.threading.GeneratorWorker" title="napari.qt.threading.GeneratorWorker"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneratorWorker</span></code></a> instead.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>func</strong> (<em>Callable</em>) – A function to call in another thread</p></li>
-<li><p><strong>*args</strong> – will be passed to the function</p></li>
-<li><p><strong>**kwargs</strong> – will be passed to the function</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.10)"><strong>TypeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">func</span></code> is a generator function and not a regular function.</p>
-</dd>
-</dl>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">superqt.utils._qthreading.FunctionWorker</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">napari._qt.qthreading._R</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">napari._qt.qthreading._NotifyingMixin</span></code></p>
 <p class="rubric">Methods</p>
 <p class="rubric">Attributes</p>
 <dl class="py method">
@@ -320,6 +300,48 @@ yields periodically, and use the <a class="reference internal" href="napari.qt.t
 <dt id="napari.qt.threading.FunctionWorker.autoDelete">
 <code class="sig-name descname"><span class="pre">autoDelete</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> → <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a><a class="headerlink" href="#napari.qt.threading.FunctionWorker.autoDelete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+<dl class="py method">
+<dt id="napari.qt.threading.FunctionWorker.await_workers">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">await_workers</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msecs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#napari.qt.threading.FunctionWorker.await_workers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ask all workers to quit, and wait up to <cite>msec</cite> for quit.</p>
+<p>Attempts to clean up all running workers by calling <code class="docutils literal notranslate"><span class="pre">worker.quit()</span></code>
+method.  Any workers in the <code class="docutils literal notranslate"><span class="pre">WorkerBase._worker_set</span></code> set will have this
+method.</p>
+<p>By default, this function will block indefinitely, until worker threads
+finish.  If a timeout is provided, a <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> will be raised if
+the workers do not gracefully exit in the time requests, but the threads
+will NOT be killed.  It is (currently) left to the user to use their OS
+to force-quit rogue threads.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>If the user does not put any yields in their function, and the function
+is super long, it will just hang… For instance, there’s no graceful
+way to kill this thread in python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@thread_worker</span>
+<span class="k">def</span> <span class="nf">ZZZzzz</span><span class="p">():</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10000000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is why it’s always advisable to use a generator that periodically
+yields for long-running computations in another thread.</p>
+<p>See <a class="reference external" href="https://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread">this stack-overflow post</a>
+for a good discussion on the difficulty of killing a rogue python thread:</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>msecs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>optional</em>) – Waits up to msecs milliseconds for all threads to exit and removes all
+threads from the thread pool. If msecs is <cite>None</cite> (the default), the
+timeout is ignored (waits for the last thread to exit).</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.10)"><strong>RuntimeError</strong></a> – If a timeout is provided and workers do not quit successfully within
+    the time allotted.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.FunctionWorker.create">
 <code class="sig-name descname"><span class="pre">create</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">Callable[[],</span> <span class="pre">None]</span></em><span class="sig-paren">)</span> → <span class="pre">QRunnable</span><a class="headerlink" href="#napari.qt.threading.FunctionWorker.create" title="Permalink to this definition">¶</a></dt>
@@ -370,6 +392,11 @@ worker.start -&gt; worker.run -&gt; worker.work
 method, and emits a few signals.  Subclasses should NOT override this
 method (except with good reason), and instead should implement
 <a class="reference internal" href="#napari.qt.threading.FunctionWorker.work" title="napari.qt.threading.FunctionWorker.work"><code class="xref py py-meth docutils literal notranslate"><span class="pre">work()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.FunctionWorker.setAutoDelete">
@@ -388,10 +415,15 @@ V               V             V
 worker.start -&gt; worker.run -&gt; worker.work
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py method">
 <dt id="napari.qt.threading.FunctionWorker.work">
-<code class="sig-name descname"><span class="pre">work</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/napari/_qt/qthreading.html#FunctionWorker.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.FunctionWorker.work" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">work</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superqt/utils/_qthreading.html#FunctionWorker.work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#napari.qt.threading.FunctionWorker.work" title="Permalink to this definition">¶</a></dt>
 <dd><p>Main method to execute the worker.</p>
 <p>The end-user should never need to call this function.
 But subclasses must implement this method (See

@@ -284,7 +284,6 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">pathlib</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
@@ -294,29 +293,11 @@
 <span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">LayerData</span>
 <span class="kn">from</span> <span class="nn">..utils.misc</span> <span class="kn">import</span> <span class="n">abspath_or_url</span>
 <span class="kn">from</span> <span class="nn">..utils.translations</span> <span class="kn">import</span> <span class="n">trans</span>
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">plugin_manager</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_npe2</span><span class="p">,</span> <span class="n">plugin_manager</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">npe2.manifest.contributions</span> <span class="kn">import</span> <span class="n">WriterContribution</span>
-
-
-<span class="k">def</span> <span class="nf">_read_with_npe2</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">LayerData</span><span class="p">],</span> <span class="n">HookImplementation</span><span class="p">]]:</span>
-    <span class="sd">"""Try to return data for `path`, from reader plugins using a manifest."""</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">npe2.io_utils</span> <span class="kn">import</span> <span class="n">read_get_reader</span>
-    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">layer_data</span><span class="p">,</span> <span class="n">reader</span> <span class="o">=</span> <span class="n">read_get_reader</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
-    <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">'hookimpl'</span><span class="p">,</span> <span class="p">(</span><span class="s1">'plugin_name'</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">layer_data</span><span class="p">,</span> <span class="n">hookimpl</span><span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">plugin_name</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">read_data_with_plugins</span><span class="p">(</span>
@@ -358,7 +339,7 @@
 <span class="sd">        If ``plugin`` is specified but raises an Exception while reading.</span>
 <span class="sd">    """</span>
     <span class="n">hookimpl</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HookImplementation</span><span class="p">]</span>
-    <span class="n">res</span> <span class="o">=</span> <span class="n">_read_with_npe2</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">plugin</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">_npe2</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">plugin</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">_ld</span><span class="p">,</span> <span class="n">hookimpl</span> <span class="o">=</span> <span class="n">res</span>
         <span class="k">return</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">_is_null_layer_sentinel</span><span class="p">(</span><span class="n">_ld</span><span class="p">)</span> <span class="k">else</span> <span class="n">_ld</span><span class="p">,</span> <span class="n">hookimpl</span>
@@ -563,53 +544,6 @@
     <span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_write_layers_with_npe2</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">],</span>
-    <span class="n">plugin_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">writer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">WriterContribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">"""</span>
-<span class="sd">    Write layers to a file using an NPE2 plugin.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    path : str</span>
-<span class="sd">        The path (file, directory, url) to write.</span>
-<span class="sd">    layer_type : str</span>
-<span class="sd">        All lower-class name of the layer class to be written.</span>
-<span class="sd">    plugin_name : str, optional</span>
-<span class="sd">        Name of the plugin to write data with. If None then all plugins</span>
-<span class="sd">        corresponding to appropriate hook specification will be looped</span>
-<span class="sd">        through to find the first one that can write the data.</span>
-<span class="sd">    command_id : str, optional</span>
-<span class="sd">        npe2 command identifier that uniquely identifies the command to ivoke</span>
-<span class="sd">        to save layers. If specified, overrides, the plugin_name.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    list of str</span>
-<span class="sd">        Empty list when no plugin was found, otherwise a list of file paths, if any,</span>
-<span class="sd">        that were written.</span>
-<span class="sd">    """</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span> <span class="nn">npe2</span>
-    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">[]</span>
-
-    <span class="n">layer_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">as_layer_data_tuple</span><span class="p">()</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">]</span>
-
-    <span class="k">if</span> <span class="n">writer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">npe2</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">layer_data</span><span class="o">=</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin_name</span>
-        <span class="p">)</span>
-
-    <span class="n">n</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ltc</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">for</span> <span class="n">ltc</span> <span class="ow">in</span> <span class="n">writer</span><span class="o">.</span><span class="n">layer_type_constraints</span><span class="p">())</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="n">layer_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">2</span><span class="p">])</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">layer_data</span><span class="p">)</span>
-    <span class="n">res</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">res</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">res</span> <span class="ow">or</span> <span class="p">[]</span>
-
-
 <span class="k">def</span> <span class="nf">_write_multiple_layers_with_plugins</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">],</span>
@@ -652,7 +586,7 @@
 <span class="sd">    """</span>
 
     <span class="c1"># Try to use NPE2 first</span>
-    <span class="n">written_paths</span> <span class="o">=</span> <span class="n">_write_layers_with_npe2</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">_writer</span><span class="p">)</span>
+    <span class="n">written_paths</span> <span class="o">=</span> <span class="n">_npe2</span><span class="o">.</span><span class="n">write_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">_writer</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">written_paths</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">written_paths</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Falling back to original plugin engine."</span><span class="p">)</span>
@@ -754,9 +688,7 @@
 <span class="sd">    """</span>
 
     <span class="c1"># Try to use NPE2 first</span>
-    <span class="n">written_paths</span> <span class="o">=</span> <span class="n">_write_layers_with_npe2</span><span class="p">(</span>
-        <span class="n">path</span><span class="p">,</span> <span class="p">[</span><span class="n">layer</span><span class="p">],</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">_writer</span>
-    <span class="p">)</span>
+    <span class="n">written_paths</span> <span class="o">=</span> <span class="n">_npe2</span><span class="o">.</span><span class="n">write_layers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">[</span><span class="n">layer</span><span class="p">],</span> <span class="n">plugin_name</span><span class="p">,</span> <span class="n">_writer</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">written_paths</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">written_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Falling back to original plugin engine."</span><span class="p">)</span>

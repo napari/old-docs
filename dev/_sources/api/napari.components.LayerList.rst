@@ -14,7 +14,6 @@ napari.components.LayerList
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -88,10 +87,12 @@ napari.components.LayerList
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~LayerList.extent
       ~LayerList.ndim
       ~LayerList.selection
+      ~LayerList.events
    
    
+
+   .. rubric:: Details

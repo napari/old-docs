@@ -14,7 +14,6 @@ napari.layers.Layer
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Layer
    
    
       ~Layer.create
+   
+   
+      ~Layer.data_to_world
    
    
       ~Layer.get_ray_intersections
@@ -64,7 +66,6 @@ napari.layers.Layer
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Layer.affine
       ~Layer.blending
@@ -90,5 +91,11 @@ napari.layers.Layer
       ~Layer.translate
       ~Layer.translate_grid
       ~Layer.visible
+      ~Layer.mouse_move_callbacks
+      ~Layer.mouse_wheel_callbacks
+      ~Layer.mouse_drag_callbacks
+      ~Layer.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

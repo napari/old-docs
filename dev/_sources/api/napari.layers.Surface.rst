@@ -14,7 +14,6 @@ napari.layers.Surface
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Surface
    
    
       ~Surface.create
+   
+   
+      ~Surface.data_to_world
    
    
       ~Surface.get_ray_intersections
@@ -70,7 +72,6 @@ napari.layers.Surface
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Surface.affine
       ~Surface.blending
@@ -106,5 +107,11 @@ napari.layers.Surface
       ~Surface.vertex_values
       ~Surface.vertices
       ~Surface.visible
+      ~Surface.mouse_move_callbacks
+      ~Surface.mouse_wheel_callbacks
+      ~Surface.mouse_drag_callbacks
+      ~Surface.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

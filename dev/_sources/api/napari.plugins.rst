@@ -8,7 +8,7 @@
    .. rubric:: Module Attributes
 
    
-   .. autoattribute:: menu_item_template
+   .. autoattribute:: napari.plugins.menu_item_template
    
    
 

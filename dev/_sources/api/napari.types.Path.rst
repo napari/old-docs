@@ -14,7 +14,6 @@ napari.types.Path
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -69,6 +68,9 @@ napari.types.Path
       ~Path.is_mount
    
    
+      ~Path.is_relative_to
+   
+   
       ~Path.is_reserved
    
    
@@ -111,6 +113,9 @@ napari.types.Path
       ~Path.read_text
    
    
+      ~Path.readlink
+   
+   
       ~Path.relative_to
    
    
@@ -147,6 +152,9 @@ napari.types.Path
       ~Path.with_name
    
    
+      ~Path.with_stem
+   
+   
       ~Path.with_suffix
    
    
@@ -163,7 +171,6 @@ napari.types.Path
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Path.anchor
       ~Path.drive
@@ -177,3 +184,5 @@ napari.types.Path
       ~Path.suffixes
    
    
+
+   .. rubric:: Details

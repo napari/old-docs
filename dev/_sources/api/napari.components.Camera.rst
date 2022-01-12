@@ -14,11 +14,13 @@ napari.components.Camera
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
       ~Camera.asdict
+   
+   
+      ~Camera.calculate_nd_up_direction
    
    
       ~Camera.calculate_nd_view_direction
@@ -79,10 +81,16 @@ napari.components.Camera
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Camera.events
       ~Camera.up_direction
       ~Camera.view_direction
+      ~Camera.center
+      ~Camera.zoom
+      ~Camera.angles
+      ~Camera.perspective
+      ~Camera.interactive
    
    
+
+   .. rubric:: Details

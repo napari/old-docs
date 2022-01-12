@@ -14,7 +14,6 @@ napari.qt.threading.FunctionWorker
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -49,9 +48,15 @@ napari.qt.threading.FunctionWorker
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~FunctionWorker.abort_requested
       ~FunctionWorker.is_running
+      ~FunctionWorker.returned
+      ~FunctionWorker.errored
+      ~FunctionWorker.warned
+      ~FunctionWorker.started
+      ~FunctionWorker.finished
    
    
+
+   .. rubric:: Details

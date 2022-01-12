@@ -14,7 +14,6 @@ napari.layers.Tracks
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Tracks
    
    
       ~Tracks.create
+   
+   
+      ~Tracks.data_to_world
    
    
       ~Tracks.get_ray_intersections
@@ -64,7 +66,6 @@ napari.layers.Tracks
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Tracks.affine
       ~Tracks.blending
@@ -83,6 +84,7 @@ napari.layers.Tracks
       ~Tracks.editable
       ~Tracks.experimental_clipping_planes
       ~Tracks.extent
+      ~Tracks.features
       ~Tracks.graph
       ~Tracks.graph_connex
       ~Tracks.graph_times
@@ -111,5 +113,11 @@ napari.layers.Tracks
       ~Tracks.translate_grid
       ~Tracks.use_fade
       ~Tracks.visible
+      ~Tracks.mouse_move_callbacks
+      ~Tracks.mouse_wheel_callbacks
+      ~Tracks.mouse_drag_callbacks
+      ~Tracks.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

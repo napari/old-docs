@@ -14,7 +14,6 @@ napari.components.ViewerModel
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -87,6 +86,9 @@ napari.components.ViewerModel
       ~ViewerModel.reset_view
    
    
+      ~ViewerModel.rounded_division
+   
+   
       ~ViewerModel.schema
    
    
@@ -109,10 +111,29 @@ napari.components.ViewerModel
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~ViewerModel.class_keymap
       ~ViewerModel.events
       ~ViewerModel.experimental
+      ~ViewerModel.axes
+      ~ViewerModel.camera
+      ~ViewerModel.cursor
+      ~ViewerModel.dims
+      ~ViewerModel.grid
+      ~ViewerModel.layers
+      ~ViewerModel.scale_bar
+      ~ViewerModel.text_overlay
+      ~ViewerModel.overlays
+      ~ViewerModel.help
+      ~ViewerModel.status
+      ~ViewerModel.tooltip
+      ~ViewerModel.theme
+      ~ViewerModel.title
+      ~ViewerModel.mouse_move_callbacks
+      ~ViewerModel.mouse_wheel_callbacks
+      ~ViewerModel.mouse_drag_callbacks
+      ~ViewerModel.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

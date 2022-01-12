@@ -14,7 +14,6 @@ napari.utils.perf.PerfEvent
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -28,7 +27,6 @@ napari.utils.perf.PerfEvent
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~PerfEvent.duration_ms
       ~PerfEvent.duration_ns
@@ -37,3 +35,5 @@ napari.utils.perf.PerfEvent
       ~PerfEvent.start_us
    
    
+
+   .. rubric:: Details

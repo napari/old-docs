@@ -14,7 +14,6 @@ napari.qt.threading.GeneratorWorkerSignals
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -142,7 +141,6 @@ napari.qt.threading.GeneratorWorkerSignals
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~GeneratorWorkerSignals.aborted
       ~GeneratorWorkerSignals.destroyed
@@ -158,3 +156,5 @@ napari.qt.threading.GeneratorWorkerSignals
       ~GeneratorWorkerSignals.yielded
    
    
+
+   .. rubric:: Details

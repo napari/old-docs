@@ -14,7 +14,6 @@ napari.types.TracebackType
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -25,7 +24,6 @@ napari.types.TracebackType
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~TracebackType.tb_frame
       ~TracebackType.tb_lasti
@@ -33,3 +31,5 @@ napari.types.TracebackType
       ~TracebackType.tb_next
    
    
+
+   .. rubric:: Details

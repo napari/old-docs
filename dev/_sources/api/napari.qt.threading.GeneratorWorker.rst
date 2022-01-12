@@ -14,7 +14,6 @@ napari.qt.threading.GeneratorWorker
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -61,10 +60,20 @@ napari.qt.threading.GeneratorWorker
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~GeneratorWorker.abort_requested
       ~GeneratorWorker.is_paused
       ~GeneratorWorker.is_running
+      ~GeneratorWorker.yielded
+      ~GeneratorWorker.paused
+      ~GeneratorWorker.resumed
+      ~GeneratorWorker.aborted
+      ~GeneratorWorker.returned
+      ~GeneratorWorker.errored
+      ~GeneratorWorker.warned
+      ~GeneratorWorker.started
+      ~GeneratorWorker.finished
    
    
+
+   .. rubric:: Details

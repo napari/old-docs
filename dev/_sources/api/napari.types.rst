@@ -19,7 +19,6 @@
       Path
       SampleDict
       TracebackType
-      TypedDict
       partial
    
    
@@ -37,6 +36,7 @@
    .. autofunction:: ShapesData
    .. autofunction:: SurfaceData
    .. autofunction:: TracksData
+   .. autofunction:: TypedDict
    .. autofunction:: VectorsData
    .. autofunction:: image_reader_to_layerdata_reader
    .. autofunction:: wraps

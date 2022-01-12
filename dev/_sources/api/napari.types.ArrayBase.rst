@@ -14,7 +14,6 @@ napari.types.ArrayBase
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -193,7 +192,6 @@ napari.types.ArrayBase
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~ArrayBase.T
       ~ArrayBase.base
@@ -212,3 +210,5 @@ napari.types.ArrayBase
       ~ArrayBase.strides
    
    
+
+   .. rubric:: Details

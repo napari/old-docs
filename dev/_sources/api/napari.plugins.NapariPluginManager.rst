@@ -14,7 +14,6 @@ napari.plugins.NapariPluginManager
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -136,9 +135,11 @@ napari.plugins.NapariPluginManager
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~NapariPluginManager.ENTRY_POINT
       ~NapariPluginManager.hooks
+      ~NapariPluginManager.plugins
    
    
+
+   .. rubric:: Details

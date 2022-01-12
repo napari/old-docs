@@ -14,7 +14,6 @@ napari.utils.Colormap
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -76,9 +75,14 @@ napari.utils.Colormap
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Colormap.colorbar
       ~Colormap.events
+      ~Colormap.colors
+      ~Colormap.name
+      ~Colormap.interpolation
+      ~Colormap.controls
    
    
+
+   .. rubric:: Details

@@ -14,7 +14,6 @@ napari.components.Dims
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -85,7 +84,6 @@ napari.components.Dims
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Dims.displayed
       ~Dims.displayed_order
@@ -93,5 +91,14 @@ napari.components.Dims
       ~Dims.not_displayed
       ~Dims.nsteps
       ~Dims.point
+      ~Dims.ndim
+      ~Dims.ndisplay
+      ~Dims.last_used
+      ~Dims.range
+      ~Dims.current_step
+      ~Dims.order
+      ~Dims.axis_labels
    
    
+
+   .. rubric:: Details

@@ -14,7 +14,6 @@ napari.layers.Labels
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Labels
    
    
       ~Labels.create
+   
+   
+      ~Labels.data_to_world
    
    
       ~Labels.fill
@@ -88,7 +90,6 @@ napari.layers.Labels
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Labels.affine
       ~Labels.attenuation
@@ -107,12 +108,14 @@ napari.layers.Labels
       ~Labels.cursor_size
       ~Labels.data
       ~Labels.data_level
+      ~Labels.data_raw
       ~Labels.downsample_factors
       ~Labels.dtype
       ~Labels.editable
       ~Labels.experimental_clipping_planes
       ~Labels.experimental_slicing_plane
       ~Labels.extent
+      ~Labels.features
       ~Labels.gamma
       ~Labels.help
       ~Labels.interactive
@@ -141,5 +144,11 @@ napari.layers.Labels
       ~Labels.translate
       ~Labels.translate_grid
       ~Labels.visible
+      ~Labels.mouse_move_callbacks
+      ~Labels.mouse_wheel_callbacks
+      ~Labels.mouse_drag_callbacks
+      ~Labels.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

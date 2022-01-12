@@ -14,7 +14,6 @@ napari.types.SampleDict
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -55,4 +54,13 @@ napari.types.SampleDict
 
    
    
+   .. rubric:: Attributes
+
+   .. autosummary::
    
+      ~SampleDict.display_name
+      ~SampleDict.data
+   
+   
+
+   .. rubric:: Details

@@ -14,7 +14,6 @@ napari.utils.nbscreenshot
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -23,3 +22,5 @@ napari.utils.nbscreenshot
    
    
    
+
+   .. rubric:: Details

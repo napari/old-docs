@@ -14,7 +14,6 @@ napari.qt.threading.WorkerBaseSignals
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -142,7 +141,6 @@ napari.qt.threading.WorkerBaseSignals
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~WorkerBaseSignals.destroyed
       ~WorkerBaseSignals.errored
@@ -154,3 +152,5 @@ napari.qt.threading.WorkerBaseSignals
       ~WorkerBaseSignals.warned
    
    
+
+   .. rubric:: Details

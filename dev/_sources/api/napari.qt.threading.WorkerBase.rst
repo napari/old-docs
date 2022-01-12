@@ -14,7 +14,6 @@ napari.qt.threading.WorkerBase
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -49,9 +48,15 @@ napari.qt.threading.WorkerBase
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~WorkerBase.abort_requested
       ~WorkerBase.is_running
+      ~WorkerBase.returned
+      ~WorkerBase.errored
+      ~WorkerBase.warned
+      ~WorkerBase.started
+      ~WorkerBase.finished
    
    
+
+   .. rubric:: Details

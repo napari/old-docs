@@ -14,7 +14,6 @@ napari.layers.Vectors
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Vectors
    
    
       ~Vectors.create
+   
+   
+      ~Vectors.data_to_world
    
    
       ~Vectors.get_ray_intersections
@@ -67,7 +69,6 @@ napari.layers.Vectors
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Vectors.affine
       ~Vectors.blending
@@ -84,6 +85,8 @@ napari.layers.Vectors
       ~Vectors.editable
       ~Vectors.experimental_clipping_planes
       ~Vectors.extent
+      ~Vectors.feature_defaults
+      ~Vectors.features
       ~Vectors.help
       ~Vectors.interactive
       ~Vectors.length
@@ -102,5 +105,11 @@ napari.layers.Vectors
       ~Vectors.translate
       ~Vectors.translate_grid
       ~Vectors.visible
+      ~Vectors.mouse_move_callbacks
+      ~Vectors.mouse_wheel_callbacks
+      ~Vectors.mouse_drag_callbacks
+      ~Vectors.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

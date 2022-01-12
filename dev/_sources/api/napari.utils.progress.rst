@@ -14,7 +14,6 @@ napari.utils.progress
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -97,10 +96,11 @@ napari.utils.progress
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~progress.format_dict
       ~progress.monitor
       ~progress.monitor_interval
    
    
+
+   .. rubric:: Details

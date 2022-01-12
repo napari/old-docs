@@ -14,7 +14,6 @@ napari.layers.Image
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -31,6 +30,9 @@ napari.layers.Image
    
    
       ~Image.create
+   
+   
+      ~Image.data_to_world
    
    
       ~Image.get_ray_intersections
@@ -70,7 +72,6 @@ napari.layers.Image
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Image.affine
       ~Image.attenuation
@@ -84,6 +85,7 @@ napari.layers.Image
       ~Image.cursor_size
       ~Image.data
       ~Image.data_level
+      ~Image.data_raw
       ~Image.downsample_factors
       ~Image.dtype
       ~Image.editable
@@ -98,6 +100,7 @@ napari.layers.Image
       ~Image.level_shapes
       ~Image.loaded
       ~Image.metadata
+      ~Image.mode
       ~Image.name
       ~Image.ndim
       ~Image.opacity
@@ -110,5 +113,11 @@ napari.layers.Image
       ~Image.translate
       ~Image.translate_grid
       ~Image.visible
+      ~Image.mouse_move_callbacks
+      ~Image.mouse_wheel_callbacks
+      ~Image.mouse_drag_callbacks
+      ~Image.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

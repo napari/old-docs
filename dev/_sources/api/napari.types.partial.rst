@@ -14,7 +14,6 @@ napari.types.partial
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -25,10 +24,11 @@ napari.types.partial
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~partial.args
       ~partial.func
       ~partial.keywords
    
    
+
+   .. rubric:: Details

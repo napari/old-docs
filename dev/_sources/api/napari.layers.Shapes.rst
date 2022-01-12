@@ -14,7 +14,6 @@ napari.layers.Shapes
    .. rubric:: Methods
 
    .. autosummary::
-      :inherited-members:
    
    
    
@@ -52,6 +51,9 @@ napari.layers.Shapes
    
    
       ~Shapes.create
+   
+   
+      ~Shapes.data_to_world
    
    
       ~Shapes.get_index_and_intersection
@@ -112,7 +114,6 @@ napari.layers.Shapes
    .. rubric:: Attributes
 
    .. autosummary::
-      :inherited-members:
    
       ~Shapes.affine
       ~Shapes.blending
@@ -138,6 +139,8 @@ napari.layers.Shapes
       ~Shapes.face_color_mode
       ~Shapes.face_colormap
       ~Shapes.face_contrast_limits
+      ~Shapes.feature_defaults
+      ~Shapes.features
       ~Shapes.help
       ~Shapes.interactive
       ~Shapes.loaded
@@ -161,5 +164,11 @@ napari.layers.Shapes
       ~Shapes.translate_grid
       ~Shapes.visible
       ~Shapes.z_index
+      ~Shapes.mouse_move_callbacks
+      ~Shapes.mouse_wheel_callbacks
+      ~Shapes.mouse_drag_callbacks
+      ~Shapes.mouse_double_click_callbacks
    
    
+
+   .. rubric:: Details

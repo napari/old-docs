@@ -371,12 +371,7 @@
 <span class="kn">from</span> <span class="nn">..utils._color_manager_constants</span> <span class="kn">import</span> <span class="n">ColorMode</span>
 <span class="kn">from</span> <span class="nn">..utils.color_manager</span> <span class="kn">import</span> <span class="n">ColorManager</span>
 <span class="kn">from</span> <span class="nn">..utils.color_transformations</span> <span class="kn">import</span> <span class="n">ColorType</span>
-<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">_features_from_layer</span><span class="p">,</span>
-    <span class="n">_features_to_choices</span><span class="p">,</span>
-    <span class="n">_features_to_properties</span><span class="p">,</span>
-    <span class="n">_resize_features</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">..utils.layer_utils</span> <span class="kn">import</span> <span class="n">_FeatureTable</span>
 <span class="kn">from</span> <span class="nn">._vector_utils</span> <span class="kn">import</span> <span class="n">fix_data_vectors</span><span class="p">,</span> <span class="n">generate_vector_meshes</span>
 
 
@@ -589,7 +584,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_mesh_triangles</span> <span class="o">=</span> <span class="n">triangles</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_displayed_stored</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_displayed</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_defaults</span> <span class="o">=</span> <span class="n">_features_from_layer</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span> <span class="o">=</span> <span class="n">_FeatureTable</span><span class="o">.</span><span class="n">from_layer</span><span class="p">(</span>
             <span class="n">features</span><span class="o">=</span><span class="n">features</span><span class="p">,</span>
             <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">,</span>
             <span class="n">property_choices</span><span class="o">=</span><span class="n">property_choices</span><span class="p">,</span>
@@ -642,11 +637,7 @@
         <span class="c1"># Adjust the props/color arrays when the number of vectors has changed</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blocker_all</span><span class="p">():</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blocker_all</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_features</span> <span class="o">=</span> <span class="n">_resize_features</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_features</span><span class="p">,</span>
-                    <span class="n">n_vectors</span><span class="p">,</span>
-                    <span class="n">defaults</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_feature_defaults</span><span class="p">,</span>
-                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">n_vectors</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">n_vectors</span> <span class="o">&lt;</span> <span class="n">previous_n_vectors</span><span class="p">:</span>
                     <span class="c1"># If there are now fewer points, remove the size and colors of the</span>
                     <span class="c1"># extra ones</span>
@@ -681,18 +672,14 @@
 <span class="sd">        ----------</span>
 <span class="sd">        .. [1]: https://data-apis.org/dataframe-protocol/latest/API.html</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_features</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">values</span>
 
     <span class="nd">@features</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">features</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">features</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_defaults</span> <span class="o">=</span> <span class="n">_features_from_layer</span><span class="p">(</span>
-            <span class="n">features</span><span class="o">=</span><span class="n">features</span><span class="p">,</span>
-            <span class="n">num_data</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
-        <span class="p">)</span>
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">set_values</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">num_data</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">color_properties</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">color_properties</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">color_mode</span> <span class="o">=</span> <span class="n">ColorMode</span><span class="o">.</span><span class="n">DIRECT</span>
@@ -717,7 +704,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
         <span class="sd">"""dict {str: array (N,)}, DataFrame: Annotations for each point"""</span>
-        <span class="k">return</span> <span class="n">_features_to_properties</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_features</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">properties</span><span class="p">()</span>
 
     <span class="nd">@properties</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Array</span><span class="p">]):</span>
@@ -729,11 +716,11 @@
 
 <span class="sd">        See `features` for more details on the type of this property.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_defaults</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">defaults</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">property_choices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="n">_features_to_choices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_features</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">choices</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Get dictionary of layer state.</span>
@@ -833,12 +820,11 @@
 
     <span class="nd">@edge_color</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">edge_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_color</span><span class="p">:</span> <span class="n">ColorType</span><span class="p">):</span>
-        <span class="n">current_properties</span> <span class="o">=</span> <span class="n">_features_to_properties</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_feature_defaults</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">_set_color</span><span class="p">(</span>
             <span class="n">color</span><span class="o">=</span><span class="n">edge_color</span><span class="p">,</span>
             <span class="n">n_colors</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
             <span class="n">properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
-            <span class="n">current_properties</span><span class="o">=</span><span class="n">current_properties</span><span class="p">,</span>
+            <span class="n">current_properties</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_feature_manager</span><span class="o">.</span><span class="n">currents</span><span class="p">(),</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">edge_color</span><span class="p">()</span>
 

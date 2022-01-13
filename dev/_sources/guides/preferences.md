@@ -239,14 +239,14 @@ Plugins settings.
 * <small>Type: `Set[str]`.</small>
 * <small>Default: `set()`.</small>
 
-#### Reader plugin extension association.
+#### File extension readers
 
 *Assign file extensions to specific reader plugins*
 
 * <small>Access programmatically with `SETTINGS.plugins.extension2reader`.</small>
 * <small>Type: `Mapping[str, str]`.</small>
 * <small>Default: `{}`.</small>
-
+* <small>UI: This setting can be configured via the preferences dialog.</small>
 #### Writer plugin extension association.
 
 *Assign file extensions to specific writer plugins*

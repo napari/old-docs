@@ -92,6 +92,7 @@ napari.layers.Vectors
       ~Vectors.length
       ~Vectors.loaded
       ~Vectors.metadata
+      ~Vectors.n_dimensional
       ~Vectors.name
       ~Vectors.ndim
       ~Vectors.opacity

@@ -128,6 +128,7 @@ napari.layers.Points
       ~Points.selected_data
       ~Points.shading
       ~Points.shear
+      ~Points.shown
       ~Points.size
       ~Points.source
       ~Points.symbol

@@ -504,6 +504,8 @@
 <span class="sd">                Shading and depth buffer are changed to give a 3D spherical look to the points</span>
 <span class="sd">    experimental_canvas_size_limits : tuple of float</span>
 <span class="sd">        Lower and upper limits for the size of points in canvas pixels.</span>
+<span class="sd">    shown : 1-D array of bool</span>
+<span class="sd">        Whether to show each point.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -596,6 +598,8 @@
 <span class="sd">        Shading mode.</span>
 <span class="sd">    experimental_canvas_size_limits : tuple of float</span>
 <span class="sd">        Lower and upper limits for the size of points in canvas pixels.</span>
+<span class="sd">    shown : 1-D array of bool</span>
+<span class="sd">        Whether each point is shown.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -604,7 +608,7 @@
 <span class="sd">    _view_size : array (M, )</span>
 <span class="sd">        Size of the point markers in the currently viewed slice.</span>
 <span class="sd">    _indices_view : array (M, )</span>
-<span class="sd">        Integer indices of the points in the currently viewed slice.</span>
+<span class="sd">        Integer indices of the points in the currently viewed slice and are shown.</span>
 <span class="sd">    _selected_view :</span>
 <span class="sd">        Integer indices of selected points in the currently viewed slice within</span>
 <span class="sd">        the `_view_data` array.</span>
@@ -660,6 +664,7 @@
         <span class="n">experimental_clipping_planes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">shading</span><span class="o">=</span><span class="s1">'none'</span><span class="p">,</span>
         <span class="n">experimental_canvas_size_limits</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000</span><span class="p">),</span>
+        <span class="n">shown</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">if</span> <span class="n">ndim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
@@ -748,7 +753,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_drag_up</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># initialize view data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__indices_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_view_size_scale</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_drag_box</span> <span class="o">=</span> <span class="kc">None</span>
@@ -777,8 +782,10 @@
             <span class="n">properties</span><span class="o">=</span><span class="n">color_properties</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">experimental_canvas_size_limits</span> <span class="o">=</span> <span class="n">experimental_canvas_size_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shown</span> <span class="o">=</span> <span class="n">shown</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experimental_canvas_size_limits</span> <span class="o">=</span> <span class="n">experimental_canvas_size_limits</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shading</span> <span class="o">=</span> <span class="n">shading</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_antialias</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -812,6 +819,7 @@
                             <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="o">.</span><span class="n">_remove</span><span class="p">(</span>
                                 <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="o">.</span><span class="n">colors</span><span class="p">))</span>
                             <span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
 
                     <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">cur_npoints</span><span class="p">:</span>
@@ -832,6 +840,11 @@
                         <span class="c1"># add new colors</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">n_colors</span><span class="o">=</span><span class="n">adding</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_face</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">n_colors</span><span class="o">=</span><span class="n">adding</span><span class="p">)</span>
+
+                        <span class="n">shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="kc">True</span><span class="p">],</span> <span class="n">adding</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shown</span><span class="p">,</span> <span class="n">shown</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+                        <span class="p">)</span>
 
                         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
@@ -1095,6 +1108,18 @@
             <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">experimental_canvas_size_limits</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Boolean array determining which points to show</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span>
+
+    <span class="nd">@shown</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">shown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shown</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">shown</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edge_width</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
@@ -1401,6 +1426,7 @@
                 <span class="s1">'features'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">,</span>
                 <span class="s1">'shading'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shading</span><span class="p">,</span>
                 <span class="s1">'experimental_canvas_size_limits'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">experimental_canvas_size_limits</span><span class="p">,</span>
+                <span class="s1">'shown'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shown</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">state</span>
@@ -1536,6 +1562,17 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_highlight</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_indices_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__indices_view</span>
+
+    <span class="nd">@_indices_view</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">_indices_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shown</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__indices_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__indices_view</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">shown</span><span class="p">[</span><span class="n">value</span><span class="p">]]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_view_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -1854,7 +1891,7 @@
         <span class="c1"># get the indices of points in view</span>
         <span class="n">indices</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_view_size_scale</span> <span class="o">=</span> <span class="n">scale</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indices_view</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="c1"># get the selected points that are in view</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_selected_view</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span>
@@ -1991,6 +2028,7 @@
         <span class="n">index</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_data</span><span class="p">)</span>
         <span class="n">index</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shown</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">blocker_all</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_edge</span><span class="o">.</span><span class="n">_remove</span><span class="p">(</span><span class="n">indices_to_remove</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
@@ -2051,6 +2089,9 @@
             <span class="p">]</span>
             <span class="n">data</span><span class="p">[:,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">shown</span><span class="p">,</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">'shown'</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clipboard</span><span class="p">[</span><span class="s1">'size'</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
             <span class="p">)</span>
@@ -2091,6 +2132,7 @@
                 <span class="s1">'data'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">'edge_color'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge_color</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">'face_color'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">face_color</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
+                <span class="s1">'shown'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shown</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">'size'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">'features'</span><span class="p">:</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                 <span class="s1">'indices'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice_indices</span><span class="p">,</span>

@@ -459,9 +459,12 @@
 <span class="sd">        of the specified property that are mapped to 0 and 1, respectively.</span>
 <span class="sd">        The default value is None. If set the none, the clims will be set to</span>
 <span class="sd">        (property.min(), property.max())</span>
+<span class="sd">    out_of_slice_display : bool</span>
+<span class="sd">        If True, renders points not just in central plane but also slightly out of slice</span>
+<span class="sd">        according to specified point marker size.</span>
 <span class="sd">    n_dimensional : bool</span>
-<span class="sd">        If True, renders points not just in central plane but also in all</span>
-<span class="sd">        n-dimensions according to specified point marker size.</span>
+<span class="sd">        This property will soon be deprecated in favor of 'out_of_slice_display'.</span>
+<span class="sd">        Use that instead.</span>
 <span class="sd">    name : str</span>
 <span class="sd">        Name of the layer.</span>
 <span class="sd">    metadata : dict</span>
@@ -564,9 +567,9 @@
 <span class="sd">    current_face_color : str</span>
 <span class="sd">        Size of the marker edge for the next point to be added or the currently</span>
 <span class="sd">        selected point.</span>
-<span class="sd">    n_dimensional : bool</span>
-<span class="sd">        If True, renders points not just in central plane but also in all</span>
-<span class="sd">        n-dimensions according to specified point marker size.</span>
+<span class="sd">    out_of_slice_display : bool</span>
+<span class="sd">        If True, renders points not just in central plane but also slightly out of slice</span>
+<span class="sd">        according to specified point marker size.</span>
 <span class="sd">    selected_data : set</span>
 <span class="sd">        Integer indices of any selected points.</span>
 <span class="sd">    mode : str</span>
@@ -648,7 +651,8 @@
         <span class="n">face_color_cycle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">face_colormap</span><span class="o">=</span><span class="s1">'viridis'</span><span class="p">,</span>
         <span class="n">face_contrast_limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">n_dimensional</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">out_of_slice_display</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">n_dimensional</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -699,7 +703,15 @@
             <span class="n">properties</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">current_properties</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">symbol</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="n">out_of_slice_display</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">n_dimensional</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
+            <span class="c1"># n_dimensional=WarningEmitter(</span>
+            <span class="c1"># trans._(</span>
+            <span class="c1"># "'n_dimensional' is deprecated and will be removed in napari v0.5.0, "</span>
+            <span class="c1"># "use 'out_of_slice_display' instead."</span>
+            <span class="c1"># ),</span>
+            <span class="c1"># type='n_dimensional',</span>
+            <span class="c1"># ),</span>
             <span class="n">highlight</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">shading</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
             <span class="n">_antialias</span><span class="o">=</span><span class="n">Event</span><span class="p">,</span>
@@ -726,7 +738,6 @@
 
         <span class="c1"># Save the point style params</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">symbol</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span> <span class="o">=</span> <span class="n">n_dimensional</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">edge_width</span> <span class="o">=</span> <span class="n">edge_width</span>
 
         <span class="c1"># The following point properties are for the new points that will</span>
@@ -781,6 +792,11 @@
             <span class="n">categorical_colormap</span><span class="o">=</span><span class="n">face_color_cycle</span><span class="p">,</span>
             <span class="n">properties</span><span class="o">=</span><span class="n">color_properties</span><span class="p">,</span>
         <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n_dimensional</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out_of_slice_display</span> <span class="o">=</span> <span class="n">n_dimensional</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out_of_slice_display</span> <span class="o">=</span> <span class="n">out_of_slice_display</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
@@ -1007,15 +1023,43 @@
         <span class="k">return</span> <span class="n">extrema</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">"""bool: renders points as n-dimensional."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span>
+    <span class="k">def</span> <span class="nf">out_of_slice_display</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""bool: renders points slightly out of slice."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_of_slice_display</span>
 
-    <span class="nd">@n_dimensional</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_dimensional</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_dimensional</span> <span class="o">=</span> <span class="n">n_dimensional</span>
+    <span class="nd">@out_of_slice_display</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">out_of_slice_display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_of_slice_display</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_of_slice_display</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">out_of_slice_display</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">out_of_slice_display</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">n_dimensional</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        This property will soon be deprecated in favor of `out_of_slice_display`. Use that instead.</span>
+<span class="sd">        """</span>
+        <span class="c1"># warnings.warn(</span>
+        <span class="c1"># trans._(</span>
+        <span class="c1"># "'n_dimensional' is deprecated and will be removed in napari v0.5.0, "</span>
+        <span class="c1"># "use 'out_of_slice_display' instead."</span>
+        <span class="c1"># ),</span>
+        <span class="c1"># DeprecationWarning,</span>
+        <span class="c1"># stacklevel=2,</span>
+        <span class="c1"># )</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_of_slice_display</span>
+
+    <span class="nd">@n_dimensional</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">n_dimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># warnings.warn(</span>
+        <span class="c1"># trans._(</span>
+        <span class="c1"># "'n_dimensional' is deprecated and will be removed in napari v0.5.0, "</span>
+        <span class="c1"># "use 'out_of_slice_display' instead."</span>
+        <span class="c1"># ),</span>
+        <span class="c1"># DeprecationWarning,</span>
+        <span class="c1"># stacklevel=2,</span>
+        <span class="c1"># )</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_of_slice_display</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">symbol</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -1419,7 +1463,8 @@
                 <span class="s1">'properties'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
                 <span class="s1">'property_choices'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">property_choices</span><span class="p">,</span>
                 <span class="s1">'text'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">dict</span><span class="p">(),</span>
-                <span class="s1">'n_dimensional'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dimensional</span><span class="p">,</span>
+                <span class="s1">'out_of_slice_display'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_slice_display</span><span class="p">,</span>
+                <span class="s1">'n_dimensional'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_slice_display</span><span class="p">,</span>
                 <span class="s1">'size'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
                 <span class="s1">'ndim'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span>
                 <span class="s1">'data'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
@@ -1686,7 +1731,7 @@
 <span class="sd">        slice_indices : list</span>
 <span class="sd">            Indices of points in the currently viewed slice.</span>
 <span class="sd">        scale : float, (N, ) array</span>
-<span class="sd">            If in `n_dimensional` mode then the scale factor of points, where</span>
+<span class="sd">            If in `out_of_slice_display` mode then the scale factor of points, where</span>
 <span class="sd">            values of 1 corresponds to points located in the slice, and values</span>
 <span class="sd">            less than 1 correspond to points located in neighboring slices.</span>
 <span class="sd">        """</span>
@@ -1694,7 +1739,7 @@
         <span class="n">not_disp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims_not_displayed</span><span class="p">)</span>
         <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dims_indices</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dimensional</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_slice_display</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">distances</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">-</span> <span class="n">indices</span><span class="p">[</span><span class="n">not_disp</span><span class="p">])</span>
                 <span class="n">sizes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[:,</span> <span class="n">not_disp</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
                 <span class="n">matches</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">distances</span> <span class="o">&lt;=</span> <span class="n">sizes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>

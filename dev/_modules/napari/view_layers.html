@@ -279,6 +279,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../api/napari.view_layers.html">napari.view_layers</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/napari.view_layers.Dims.html">napari.view_layers.Dims</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/napari.view_layers.Viewer.html">napari.view_layers.Viewer</a></li>
 </ul>
 </li>
@@ -378,6 +379,8 @@
 
 <span class="kn">from</span> <span class="nn">numpydoc.docscrape</span> <span class="kn">import</span> <span class="n">NumpyDocString</span> <span class="k">as</span> <span class="n">_NumpyDocString</span>
 
+<span class="kn">from</span> <span class="nn">napari.components.dims</span> <span class="kn">import</span> <span class="n">Dims</span>
+
 <span class="kn">from</span> <span class="nn">.viewer</span> <span class="kn">import</span> <span class="n">Viewer</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
@@ -469,16 +472,23 @@
 
 
 <span class="n">_viewer_params</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">Viewer</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
+<span class="n">_dims_params</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">Dims</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
 
 
 <span class="k">def</span> <span class="nf">_make_viewer_then</span><span class="p">(</span><span class="n">add_method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Viewer</span><span class="p">:</span>
     <span class="sd">"""Utility function that creates a viewer, adds a layer, returns viewer."""</span>
     <span class="n">vkwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_viewer_params</span><span class="p">}</span>
+    <span class="c1"># separate dims kwargs because we want to set those after adding data</span>
+    <span class="n">dims_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">vkwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">vkwargs</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_dims_params</span>
+    <span class="p">}</span>
     <span class="n">viewer</span> <span class="o">=</span> <span class="n">Viewer</span><span class="p">(</span><span class="o">**</span><span class="n">vkwargs</span><span class="p">)</span>
     <span class="k">if</span> <span class="s1">'kwargs'</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"kwargs"</span><span class="p">))</span>
     <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">viewer</span><span class="p">,</span> <span class="n">add_method</span><span class="p">)</span>
     <span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">arg_name</span><span class="p">,</span> <span class="n">arg_val</span> <span class="ow">in</span> <span class="n">dims_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">viewer</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">arg_name</span><span class="p">,</span> <span class="n">arg_val</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">viewer</span>
 
 

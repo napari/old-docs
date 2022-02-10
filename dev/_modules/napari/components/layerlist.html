@@ -368,6 +368,7 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
+<span class="kn">from</span> <span class="nn">.._vendor.cpython.functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span> <span class="nn">..layers</span> <span class="kn">import</span> <span class="n">Layer</span>
 <span class="kn">from</span> <span class="nn">..layers.image.image</span> <span class="kn">import</span> <span class="n">_ImageBase</span>
 <span class="kn">from</span> <span class="nn">..utils.context</span> <span class="kn">import</span> <span class="n">create_context</span>
@@ -417,6 +418,19 @@
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">event</span><span class="o">.</span><span class="n">removed</span><span class="p">:</span>
             <span class="n">layer</span><span class="o">.</span><span class="n">_on_selection</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">_process_delete_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="n">Layer</span><span class="p">):</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clean_cache</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clean_cache</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_clean_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">cached_properties</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">'extent'</span><span class="p">,</span>
+            <span class="s1">'_extent_world'</span><span class="p">,</span>
+            <span class="s1">'_step_size'</span><span class="p">,</span>
+            <span class="s1">'_ranges'</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">cached_properties</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">__newlike__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">LayerList</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
@@ -436,7 +450,7 @@
 <span class="sd">            Coerced, unique name.</span>
 <span class="sd">        """</span>
         <span class="n">existing_layers</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">layer</span><span class="p">}</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">existing_layers</span><span class="p">:</span>
                 <span class="n">name</span> <span class="o">=</span> <span class="n">inc_name_count</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">name</span>
@@ -450,6 +464,8 @@
         <span class="sd">"""Insert ``value`` before index."""</span>
         <span class="n">new_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_check</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="n">new_layer</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coerce_name</span><span class="p">(</span><span class="n">new_layer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clean_cache</span><span class="p">()</span>
+        <span class="n">new_layer</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">set_data</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clean_cache</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">new_layer</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="LayerList.move_selected"><a class="viewcode-back" href="../../../api/napari.components.LayerList.html#napari.components.LayerList.move_selected">[docs]</a>    <span class="k">def</span> <span class="nf">move_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">insert</span><span class="p">):</span>
@@ -482,7 +498,7 @@
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selection</span><span class="p">:</span>
             <span class="n">layer</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">visible</span></div>
 
-    <span class="nd">@property</span>
+    <span class="nd">@cached_property</span>
     <span class="k">def</span> <span class="nf">_extent_world</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">"""Extent of layers in world coordinates.</span>
 
@@ -551,7 +567,7 @@
 
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">min_v</span><span class="p">,</span> <span class="n">max_v</span><span class="p">])</span>
 
-    <span class="nd">@property</span>
+    <span class="nd">@cached_property</span>
     <span class="k">def</span> <span class="nf">_step_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">"""Ideal step size between planes in world coordinates.</span>
 
@@ -582,7 +598,7 @@
             <span class="n">min_scales</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_size_from_scales</span><span class="p">(</span><span class="n">scales</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">min_scales</span>
 
-    <span class="nd">@property</span>
+    <span class="nd">@cached_property</span>
     <span class="k">def</span> <span class="nf">extent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Extent</span><span class="p">:</span>
         <span class="sd">"""Extent of layers in data and world coordinates."""</span>
         <span class="n">extent_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="o">.</span><span class="n">extent</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
@@ -592,7 +608,7 @@
             <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_step_size</span><span class="p">(</span><span class="n">extent_list</span><span class="p">),</span>
         <span class="p">)</span>
 
-    <span class="nd">@property</span>
+    <span class="nd">@cached_property</span>
     <span class="k">def</span> <span class="nf">_ranges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
         <span class="sd">"""Get ranges for Dims.range in world coordinates.</span>
 

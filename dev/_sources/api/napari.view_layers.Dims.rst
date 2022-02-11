@@ -17,9 +17,6 @@ napari.view\_layers.Dims
    
    
    
-      ~Dims.asdict
-   
-   
       ~Dims.construct
    
    

@@ -17,9 +17,6 @@ napari.components.Dims
    
    
    
-      ~Dims.asdict
-   
-   
       ~Dims.construct
    
    

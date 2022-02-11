@@ -17,9 +17,6 @@ napari.utils.Colormap
    
    
    
-      ~Colormap.asdict
-   
-   
       ~Colormap.construct
    
    

@@ -41,9 +41,6 @@ napari.view\_layers.Viewer
       ~Viewer.add_vectors
    
    
-      ~Viewer.asdict
-   
-   
       ~Viewer.bind_key
    
    

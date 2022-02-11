@@ -17,9 +17,6 @@ napari.components.Camera
    
    
    
-      ~Camera.asdict
-   
-   
       ~Camera.calculate_nd_up_direction
    
    
